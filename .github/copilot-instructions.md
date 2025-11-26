@@ -12,22 +12,12 @@ It uses a **Hybrid Architecture** with a Python Backend and React Frontend in a 
 1.  **Backend is Truth:** Frontend never calculates. It displays state provided by the backend.
 2.  **Data-Driven:** Rules are defined in JSON/Database, not hardcoded logic.
 3.  **Micro-Frontend Simulation:** The frontend is modular (Host, DM View, Player Sheet).
-4.  **Microservice-Ready:** The backend must be loosely coupled. Separate Data Persistence from Business Logic so they can be split into different services later.
 
 ## Technology Stack
 
 - **Backend:** Python (FastAPI), Pydantic, PostgreSQL.
 - **Frontend:** React, TypeScript, Vite, pnpm workspaces, shadcn/ui.
 - **Styling:** Tailwind CSS.
-- **Reference:** [libsrd5](https://github.com/kupka/libsrd5) (Use this for SRD data structure logic).
-
-## Future Extensibility (Keep in Mind)
-
-- **Effect Processor:** A future engine component will parse `effects` lists in models. Ensure all models have this field.
-- **Modding:**
-  - **Frontend:** Style mods via CSS variables/JSON themes.
-  - **Backend:** Content mods (JSON) and Logic mods (swappable functions).
-  - **Config:** Components should be swappable via configuration.
 
 ## Development Guidelines
 

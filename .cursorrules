@@ -10,19 +10,25 @@ You are working on the **Open RPG Engine**, a modular, SRD 5.1-based Virtual Tab
 1.  **Single Source of Truth (Backend):** The Frontend NEVER calculates game values (HP, AC, Rolls). It sends **Commands** (Intent) and renders the **View Model** (State) received from the Backend.
 2.  **Logic as Data:** Game mechanics (Feats, Spells) are JSON objects with triggers/effects, NOT Python classes.
 3.  **Strict Contracts:** Communication is strictly typed. Pydantic Models (Backend) <-> TypeScript Interfaces (Frontend).
+4.  **Microservice-Ready:** Design the backend with loose coupling between Data (Persistence) and Logic (Rules). They should be separable into distinct services later.
+5.  **Moddability:**
+    - **Frontend:** Support Style Mods (CSS Variables/Themes).
+    - **Backend:** Support Content Mods (JSON Data) and Logic Mods (Swappable Processors).
 
 ## Tech Stack
 
 - **Backend:** Python 3.11+, FastAPI, Pydantic, PostgreSQL (Async/Tortoise ORM).
 - **Frontend:** React, pnpm workspaces, Vite, Tailwind CSS, shadcn/ui.
-- **Architecture:** Monorepo.
+- **Reference Library:** [libsrd5](https://github.com/kupka/libsrd5) (Use for data structure inspiration).
+- **Architecture:** Monorepo (Microservice-ready).
 
 ## Coding Rules
 
 - **Backend:**
   - Use Pydantic for ALL data structures.
-  - Include an `effects: List[Effect]` field in models for future logic processing.
+  - Include an `effects: List[Effect]` field in models for the future **Effect Processor**.
   - Follow CQRS: Separate Command (Write) and Query (Read) logic.
+  - Keep Business Logic separate from DB Models to allow future splitting.
 - **Frontend:**
   - Use Functional Components and Hooks.
   - No business logic in components. Components only render data.
