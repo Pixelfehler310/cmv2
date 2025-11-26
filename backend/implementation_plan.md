@@ -36,68 +36,85 @@ Focus: Administration, Data Persistence, and serving static content (SRD).
 - [x] Create and run Tests for `MonsterModel` implicit `Actions` (from Items, Spells, Effects)
 - [x] Create and run Tests for `CharacterModel` implicit `Actions` (from Items, Spells, Effects)
 
-## Phase 2: The "Calculator" (Automation)
-Focus: Automating calculations, dice rolls, and basic rules.
+## Phase 2: The "Calculator" (Core Rules & Instances)
+Focus: Automating calculations, managing specific instances of data, and the static effect engine. This ensures the "View Model" sent to the frontend is fully calculated.
 
-### Milestone 2.1: Dice & Basic Rules
-- [ ] Implement Dice Rolling Utility/Service
-- [ ] Implement Attribute Modifier Calculation Logic
-- [ ] Create and run Tests for Milestone 2.1
+### Milestone 2.1: Dice & Core Mechanics
+- [x] **Dice Service:** Implement `DiceRoller` (parse "1d20+5", return result + breakdown).
+- [x] **Rules Engine:** Implement Attribute Modifier logic (`(Score - 10) // 2`).
+- [x] **Rules Engine:** Implement Proficiency Bonus logic based on Level/CR.
+- [x] **Tests:** Verify dice parsing and basic rule calculations.
 
-### Milestone 2.2: Effect Engine V1 (Static Bonuses)
-- [ ] Define `EffectModel` JSON Structure
-- [ ] Implement `EffectEngine` (Apply static modifiers)
-- [ ] Integrate Effect Engine into Character View Model calculation
-- [ ] Create and run Tests for Milestone 2.2
+### Milestone 2.2: Instance Management (Inventory & State)
+- [x] **Item Instances:** Implement logic for items *inside* an inventory (equipped status, quantity, attunement).
+- [x] **Spell Instances:** Implement logic for Prepared Spells and Spell Slots.
+- [x] **Monster Instances:** Create `MonsterInstance` Model (linked to Template, but with unique ID, current HP, position).
+- [x] **Inventory Manager:** Logic to Add/Remove/Equip items on Characters/Monsters.
+- [x] **Tests:** Verify inventory operations and instance state tracking.
 
-### Milestone 2.3: Actions & Combat
-- [ ] Define `ActionModel` (JSON structure for Actions)
-- [ ] Implement Command Pattern for Actions (e.g., `POST /action/execute`)
-- [ ] Implement Combat Logic (Hit/Miss, Damage Calculation)
-- [ ] Create and run Tests for Milestone 2.3
+### Milestone 2.3: Effect Engine V1 (Static Modifiers)
+- [x] **Effect Model:** Define the JSON structure for Effects (Trigger, Condition, Operation).
+- [x] **Effect Processor:** Implement the engine to apply *static* modifiers (e.g., "+1 AC", "Resistance to Fire").
+- [x] **Integration:** Apply effects to `CharacterModel` and `MonsterInstance` to generate the final View Model.
+- [x] **Tests:** Verify that equipping a shield increases AC, etc.
 
-### Milestone 2.4: State Machine for the Game itself and the frontend.
-- [ ] Implement State Machine for the Game itself and the frontend (webhook based) // TODO plan in detail
-- [ ] Requirements: 
-- [ ] Action System (Attack, Cast Spell, Use Item, Use Ability, Use Feature)
-- [ ] Inventory System (Add and Remove and Use items, Passive Effects)
-- [ ] Turn System (End Turn, Pass Turn, Skip Turn)
-- [ ] Action / Bonus Action / Reaction System / Rest, ...
-- [ ] Instance Management:
-    - [ ] Implement `MonsterInstance` Model (linked to `Monster` template, with `current_hp`, `campaign_id`, etc.)
-    - [ ] Implement `ItemInstance` logic (within Inventory)
-    - [ ] Implement `SpellInstance` logic (Prepared/Known)
-- [ ] Create and run Tests for Milestone 2.4
+### Milestone 2.4: Character & Entity Model Refinement
+- [ ] **Refactor `CharacterModel`:**
+    - [ ] Extract `Species` (Race) into its own model (Name, Traits, Speed, Size, Ability Bonuses).
+    - [ ] Extract `Class` into its own model (Name, Hit Die, Proficiencies, Features).
+    - [ ] Extract `Background` into its own model (Name, Skills, Tools, Equipment).
+    - [ ] Update `CharacterModel` to reference these via Foreign Keys.
+- [ ] **Implement Feats & Features:**
+    - [ ] Create `FeatModel` (Name, Description, Effects).
+    - [ ] Create `FeatureModel` (for Class/Species features).
+- [ ] **Implement Factions:**
+    - [ ] Create `FactionModel` (Name, Description, Reputation tracking).
+- [ ] **Custom Actions:**
+    - [ ] Implement support for `Custom Actions` on `CharacterModel`.
+- [ ] **Update Tests:**
+    - [ ] Update `test_logic_routers.py` to handle new Character creation flow (seed Species/Class first).
+    - [ ] Update `test_schemas.py` to validate new nested structures or ID references.
+    - [ ] Add tests for `Species`, `Class`, and `Background` CRUD and integrity.
 
-### Milestone 2.5: User, Wiki and Campaign Management (Add Homebrewed Content via Visual, form based Editors)
-- [ ] Implement User Management (Authentication, Authorization) ! Relations (Campaigns + Characters)
-- [ ] Implement Campaign Management (Create, Read, Update, Delete) ! Relations
-- [ ] Implement Character Management (Create, Read, Update, Delete) ! Relations
-- [ ] Implement Monster Management (Create, Read, Update, Delete) ! Relations
-- [ ] Implement Spell Management (Create, Read, Update, Delete) ! Relations
-- [ ] Implement Item Management (Create, Read, Update, Delete) ! Relations
-- [ ] Implement Combat / Encounter Designer (Create, Read, Update, Delete) ! Relations
-- [ ] Implement Wiki Management (Create, Read, Update, Delete) ! Relations
-- [ ] Create and run Tests for Milestone 2.5
+### Milestone 2.5: Data Ingestion (SRD & D&D 5e API)
+- [ ] Convert `libsrd5` data into JSON.
+- [ ] Write adapters to convert `dnd5e-api` JSON data into the internal data types for each entity (Items, Spells, Monsters, etc.).
+- [ ] Implement a setup request/script that ingests all relevant D&D 5e data into the database using these adapters.
 
+## Phase 3: The "Game Master" (State & Simulation)
+Focus: Managing the game flow, combat, turns, and user interactions. This handles the "Commands" coming from the frontend.
 
-## Phase 3: The Platform (Modding & Advanced)
-Focus: Modding support, dynamic effects, and community ecosystem.
+### Milestone 3.1: Action System (The Command Pattern)
+- [ ] **Action Model:** Define the structure for Actions (Attack, Cast, Dash, etc.).
+- [ ] **Command Handler:** Implement the endpoint/logic to receive commands (`POST /action/execute`).
+- [ ] **Action Resolver:** Logic to resolve generic actions (Attack Roll -> Hit/Miss -> Damage).
+- [ ] **Tests:** Verify that sending an attack command results in correct HP deduction.
 
-### Milestone 3.1: Effect Engine V2 (Dynamic)
-- [ ] Implement Triggers and Conditions for Effects
-- [ ] Integrate `simpleeval` for safe formula evaluation
-- [ ] Create and run Tests for Milestone 3.1
+### Milestone 3.2: Combat & Turn System
+- [ ] **Initiative Tracker:** Logic to roll and sort initiative.
+- [ ] **Turn Manager:** Track Current Turn, Round, and Phase (Start/End of turn).
+- [ ] **Action Economy:** Track usage of Action, Bonus Action, Reaction per turn.
+- [ ] **Tests:** Verify turn passing and action economy restrictions.
 
-### Milestone 3.2: Advanced Features
-- [ ] Chat Window with Whisper functionality
-- [ ] Implement Dice Roller with more complex dice expressions (e.g., "2d6+3")
-- [ ] Campaign Visual Designer (Node Based)
-- [ ] Google (and co) - OAuth
+### Milestone 3.3: Real-Time Session State
+- [ ] **WebSocket Manager:** Implement broadcasting of state changes to connected clients.
+- [ ] **Session State:** Manage active users and their selected characters.
+- [ ] **Synchronization:** Ensure frontend receives updated View Models after every action.
 
-### Milestone 3.2: Mod Loader
-- [ ] Implement Mod Loading System (File System Watcher/Scanner)
-- [ ] Implement Layered Data Merging (Core < Community < Homebrew)
-- [ ] Create and run Tests for Milestone 3.2
+## Phase 4: The Platform (Management & Expansion)
+Focus: User management, advanced modding, and content creation tools.
 
+### Milestone 4.1: User & Campaign Management
+- [ ] **User Auth:** Implement Authentication and Authorization.
+- [ ] **Campaign Management:** Full CRUD for Campaigns (invites, GM assignment).
+- [ ] **Wiki/Notes:** Implement a system for campaign notes and wiki entries.
 
+### Milestone 4.2: Effect Engine V2 (Dynamic & Scripting)
+- [ ] **Dynamic Effects:** Implement Triggers (ON_HIT, ON_TURN_START) and Conditions.
+- [ ] **Safe Evaluation:** Integrate `simpleeval` for formula parsing.
+- [ ] **Tests:** Verify complex effects (e.g., "Deal extra 1d6 damage if target is wounded").
+
+### Milestone 4.3: Modding System
+- [ ] **Mod Loader:** File system watcher for `/mods` directory.
+- [ ] **Data Merging:** Logic to merge Core < Community < Homebrew data.
+- [ ] **Export/Import:** Tools to export campaign data as modules.

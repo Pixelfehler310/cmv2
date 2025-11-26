@@ -1,6 +1,7 @@
 from typing import List, Dict, Optional, Any
 from pydantic import BaseModel, Field
 from .base import GameEntity
+from .effect import Effect
 
 class MonsterBase(GameEntity):
     size: str
@@ -29,7 +30,7 @@ class MonsterBase(GameEntity):
     actions: List[Dict[str, Any]] = Field(default_factory=list)
     legendary_actions: List[Dict[str, Any]] = Field(default_factory=list)
     inventory: List[Dict[str, Any]] = Field(default_factory=list)
-    effects: List[Dict[str, Any]] = Field(default_factory=list)
+    effects: List[Effect] = Field(default_factory=list)
 
 class MonsterCreate(MonsterBase):
     pass

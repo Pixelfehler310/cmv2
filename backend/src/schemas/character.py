@@ -1,6 +1,8 @@
 from typing import List, Dict, Optional, Any
 from pydantic import BaseModel, Field, ConfigDict
 from .base import GameEntity
+from .item_instance import ItemInstance
+from .effect import Effect
 
 class CharacterBase(BaseModel):
     name: str
@@ -29,11 +31,11 @@ class CharacterBase(BaseModel):
     speed: int = 30
     initiative: int = 0
     
-    inventory: List[Dict[str, Any]] = Field(default_factory=list)
+    inventory: List[ItemInstance] = Field(default_factory=list)
     spells: List[Dict[str, Any]] = Field(default_factory=list)
     spell_slots: Dict[str, int] = Field(default_factory=dict)
     actions: List[Dict[str, Any]] = Field(default_factory=list)
-    effects: List[Dict[str, Any]] = Field(default_factory=list)
+    effects: List[Effect] = Field(default_factory=list)
 
 class CharacterCreate(CharacterBase):
     pass
