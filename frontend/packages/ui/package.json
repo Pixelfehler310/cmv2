@@ -4,6 +4,10 @@
     "private": true,
     "main": "./index.ts",
     "types": "./index.ts",
+    "scripts": {
+        "build": "tsc",
+        "test": "echo \"No tests for ui package\""
+    },
     "peerDependencies": {
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
@@ -12,5 +16,10 @@
     "devDependencies": {
         "react": "^18.2.0",
         "typescript": "^5.0.0"
+    },
+    "dependencies": {
+        "clsx": "^1.2.1",
+        "tailwind-merge": "^1.13.2",
+        "class-variance-authority": "^0.7.0"
     }
 }

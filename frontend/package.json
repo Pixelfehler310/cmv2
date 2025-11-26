@@ -2,12 +2,17 @@
     "name": "open-rpg-engine",
     "private": true,
     "scripts": {
-        "dev": "pnpm -r dev",
+        "dev": "pnpm -r --parallel dev",
         "build": "pnpm -r build",
-        "lint": "pnpm -r lint"
+        "lint": "pnpm -r lint",
+        "test": "pnpm -r test"
     },
     "devDependencies": {
         "typescript": "^5.0.0",
         "vite": "^4.0.0"
+    },
+    "engines": {
+        "node": ">=18.0.0",
+        "pnpm": ">=8.0.0"
     }
 }
