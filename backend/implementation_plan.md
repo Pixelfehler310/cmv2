@@ -28,6 +28,10 @@ Focus: Administration, Data Persistence, and serving static content (SRD).
 - [ ] Create API Endpoints: Campaign CRUD
 - [ ] Create and run Tests for Milestone 1.3
 
+// TODO: Test Monsters and Characters with Actions
+// TODO: Test Monsters and Characters with Inventory
+// TODO: Test Monsters and Characters implicit Actions (from Items, Spells, Effects)
+
 ## Phase 2: The "Calculator" (Automation)
 Focus: Automating calculations, dice rolls, and basic rules.
 
@@ -47,6 +51,16 @@ Focus: Automating calculations, dice rolls, and basic rules.
 - [ ] Implement Command Pattern for Actions (e.g., `POST /action/execute`)
 - [ ] Implement Combat Logic (Hit/Miss, Damage Calculation)
 - [ ] Create and run Tests for Milestone 2.3
+
+// Phase 2B: State Machine for the Game itself and the frontend.
+// TODO: Implement State Machine for the Game itself and the frontend.
+// Requirements: 
+// - Action System
+// - Inventory System
+// - Turn System
+// - Action / Bonus Action / Reaction System / End Turn
+// - Instance Management of Characters, Monsters, Items, Spells
+
 
 ## Phase 3: The Platform (Modding & Advanced)
 Focus: Modding support, dynamic effects, and community ecosystem.
