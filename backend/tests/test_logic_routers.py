@@ -67,8 +67,8 @@ async def test_create_character(client):
     
     character_data = {
         "name": "Legolas",
-        "race": "Elf",
-        "class_name": "Ranger",
+        "species_id": "species-1",
+        "class_id": "class-1",
         "max_hp": 30,
         "current_hp": 30,
         "hit_dice": "3d10"
@@ -87,7 +87,7 @@ async def test_get_character(client):
     mock_session = AsyncMock()
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = Character(
-        id="char1", name="Gimli", race="Dwarf", class_name="Fighter", 
+        id="char1", name="Gimli", species_id="species-1", class_id="class-1", 
         max_hp=40, current_hp=40, hit_dice="4d10", 
         strength=16, dexterity=12, constitution=16, intelligence=10, wisdom=12, charisma=10,
         inventory=[], spells=[], spell_slots={}, effects=[], actions=[],

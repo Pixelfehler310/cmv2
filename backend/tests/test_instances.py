@@ -80,8 +80,8 @@ class TestInventoryManager:
         # Create a character (using Schema, not DB model for unit test)
         character = CharacterBase(
             name="Hero",
-            race="Human",
-            class_name="Fighter",
+            species_id="s1",
+            class_id="c1",
             max_hp=10,
             current_hp=10,
             hit_dice="1d10"

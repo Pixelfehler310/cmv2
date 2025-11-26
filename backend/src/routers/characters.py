@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 from ..database import get_db
 from ..models.character import Character
 from ..schemas.character import CharacterCreate, CharacterResponse
@@ -18,12 +19,20 @@ async def create_character(character: CharacterCreate, db: AsyncSession = Depend
 
 @router.get("/", response_model=List[CharacterResponse])
 async def get_characters(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Character).offset(skip).limit(limit))
+    result = await db.execute(
+        select(Character)
+        .options(selectinload(Character.species), selectinload(Character.char_class), selectinload(Character.background))
+        .offset(skip).limit(limit)
+    )
     return result.scalars().all()
 
 @router.get("/{character_id}", response_model=CharacterResponse)
 async def get_character(character_id: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Character).where(Character.id == character_id))
+    result = await db.execute(
+        select(Character)
+        .options(selectinload(Character.species), selectinload(Character.char_class), selectinload(Character.background))
+        .where(Character.id == character_id)
+    )
     character = result.scalar_one_or_none()
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")

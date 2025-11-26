@@ -15,20 +15,41 @@ def resolve_actions(entity):
     # Implicit Actions from Inventory (Weapons)
     if hasattr(entity, 'inventory') and entity.inventory:
         for item in entity.inventory:
-            if item.get("type") == "Weapon":
+            # Handle ItemInstance object or dict
+            item_type = None
+            item_name = None
+            damage = "1d4"
+            
+            if isinstance(item, dict):
+                item_type = item.get("type")
+                item_name = item.get("name")
+                damage = item.get("properties", {}).get("damage", "1d4")
+            else:
+                # ItemInstance object
+                if item.template:
+                    item_type = item.template.type
+                    item_name = item.template.name
+                    damage = item.template.properties.get("damage", "1d4")
+            
+            if item_type == "Weapon":
                 actions.append({
-                    "name": f"Attack with {item['name']}",
+                    "name": f"Attack with {item_name}",
                     "type": "Melee Weapon Attack",
-                    "damage": item.get("properties", {}).get("damage", "1d4") # Simplified
+                    "damage": damage
                 })
                 
     # Implicit Actions from Spells
     if hasattr(entity, 'spells') and entity.spells:
         for spell in entity.spells:
+            # Handle dict (spells are still dicts in CharacterBase for now?)
+            # CharacterBase has spells: List[Dict[str, Any]]
+            name = spell.get("name") if isinstance(spell, dict) else spell.name
+            level = spell.get("level", 0) if isinstance(spell, dict) else spell.level
+            
             actions.append({
-                "name": f"Cast {spell['name']}",
+                "name": f"Cast {name}",
                 "type": "Spell",
-                "level": spell.get("level", 0)
+                "level": level
             })
             
     return actions
@@ -67,8 +88,8 @@ def test_monster_with_explicit_actions():
 def test_character_with_explicit_actions():
     character_data = {
         "name": "Fighter",
-        "race": "Human",
-        "class_name": "Fighter",
+        "species_id": "s1",
+        "class_id": "c1",
         "max_hp": 10,
         "current_hp": 10,
         "hit_dice": "1d10",
@@ -85,6 +106,12 @@ def test_character_with_explicit_actions():
     assert resolved[0]["name"] == "Second Wind"
 
 def test_monster_with_inventory_implicit_actions():
+    # Monster inventory is List[ItemInstance] now too?
+    # MonsterBase has inventory: List[Dict] but MonsterInstance has List[ItemInstance]
+    # MonsterCreate inherits from MonsterBase.
+    # Let's check MonsterCreate schema.
+    # It seems MonsterCreate uses MonsterBase which has List[Dict].
+    # So this test might still work with dicts for Monsters.
     monster_data = {
         "name": "Orc",
         "size": "Medium",
@@ -116,15 +143,23 @@ def test_monster_with_inventory_implicit_actions():
     assert resolved[0]["name"] == "Attack with Greataxe"
 
 def test_character_with_inventory_and_spells_implicit_actions():
+    # CharacterCreate expects List[ItemInstance]
+    # We need to construct valid ItemInstance data
     character_data = {
         "name": "Wizard",
-        "race": "Elf",
-        "class_name": "Wizard",
+        "species_id": "s1",
+        "class_id": "c1",
         "max_hp": 6,
         "current_hp": 6,
         "hit_dice": "1d6",
         "inventory": [
-            {"name": "Dagger", "type": "Weapon", "properties": {"damage": "1d4"}}
+            {
+                "id": "inst1", 
+                "item_id": "dagger", 
+                "template": {"id": "dagger", "name": "Dagger", "type": "Weapon", "properties": {"damage": "1d4"}, "rarity": "Common", "weight": 1, "price": 2},
+                "quantity": 1,
+                "equipped": True
+            }
         ],
         "spells": [
             {"name": "Fireball", "level": 3}

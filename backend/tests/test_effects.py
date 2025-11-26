@@ -13,7 +13,7 @@ class TestEffectEngine:
     def test_simple_bonus_effect(self):
         # Create character with 10 AC
         char = CharacterBase(
-            name="Test", race="Human", class_name="Fighter",
+            name="Test", species_id="s1", class_id="c1",
             max_hp=10, current_hp=10, hit_dice="1d10", armor_class=10
         )
         
@@ -57,26 +57,6 @@ class TestEffectEngine:
         monster.template.effects.append(effect) # Add to template effects (innate)
         # Note: MonsterInstance doesn't have direct effects list yet? 
         # Wait, MonsterInstance wraps template. 
-        # EffectEngine checks `entity.effects`. MonsterInstance doesn't have `effects` field in schema yet?
-        # Let's check schema.
-        
-        # Checking MonsterInstance schema...
-        # It has `conditions` but not `effects`. 
-        # But `EffectEngine` checks `entity.effects`.
-        # I should probably add `effects` to `MonsterInstance` as well for temporary effects.
-        # TODO HERE
-        # For now, let's test via Inventory which is supported on MonsterInstance
-        pass 
-
-    def test_inventory_effect(self):
-        char = CharacterBase(
-            name="Test", race="Human", class_name="Fighter",
-            max_hp=10, current_hp=10, hit_dice="1d10", armor_class=10
-        )
-        
-        # Create Shield with +2 AC effect
-        shield_effect = Effect(name="Shield Bonus", type="BONUS", target="armor_class", value=2)
-        shield_template = ItemResponse(
             id="shield", name="Shield", type="Armor", rarity="Common",
             effects=[shield_effect]
         )

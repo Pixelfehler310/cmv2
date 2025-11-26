@@ -9,12 +9,13 @@ class CharacterBase(BaseModel):
     player_name: Optional[str] = None
     campaign_id: Optional[str] = None
     
-    race: str
-    class_name: str
+    species_id: str
+    class_id: str
+    background_id: Optional[str] = None
+    
     level: int = 1
     xp: int = 0
     alignment: Optional[str] = None
-    background: Optional[str] = None
     
     strength: int = 10
     dexterity: int = 10
@@ -43,3 +44,6 @@ class CharacterCreate(CharacterBase):
 class CharacterResponse(CharacterBase):
     model_config = ConfigDict(from_attributes=True)
     id: str
+    species: Optional[Any] = None # Typed as Any to avoid circular imports for now, or import properly
+    char_class: Optional[Any] = None
+    background: Optional[Any] = None
