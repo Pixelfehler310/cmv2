@@ -72,7 +72,7 @@ async def test_get_monsters(client):
     mock_session = AsyncMock()
     mock_result = MagicMock()
     mock_result.scalars.return_value.all.return_value = [
-        Monster(id="3", name="Test Monster", description="Desc", size="M", type="Beast", alignment="U", armor_class=10, hit_points=10, hit_dice="1d10", speed={}, strength=10, dexterity=10, constitution=10, intelligence=10, wisdom=10, charisma=10, languages="Common", challenge_rating=1.0, xp=100, effects=[], proficiencies=[], special_abilities=[], actions=[], legendary_actions=[], senses={})
+        Monster(id="3", name="Test Monster", description="Desc", size="M", type="Beast", alignment="U", armor_class=10, hit_points=10, hit_dice="1d10", speed={}, strength=10, dexterity=10, constitution=10, intelligence=10, wisdom=10, charisma=10, languages="Common", challenge_rating=1.0, xp=100, effects=[], proficiencies=[], special_abilities=[], actions=[], legendary_actions=[], senses={}, inventory=[])
     ]
     mock_session.execute.return_value = mock_result
     
@@ -83,5 +83,47 @@ async def test_get_monsters(client):
     data = response.json()
     assert len(data) == 1
     assert data[0]["name"] == "Test Monster"
+    
+    app.dependency_overrides = {}
+
+@pytest.mark.anyio
+async def test_get_item_404(client):
+    mock_session = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_session.execute.return_value = mock_result
+    
+    app.dependency_overrides[get_db] = lambda: mock_session
+    
+    response = await client.get("/items/nonexistent")
+    assert response.status_code == 404
+    
+    app.dependency_overrides = {}
+
+@pytest.mark.anyio
+async def test_get_spell_404(client):
+    mock_session = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_session.execute.return_value = mock_result
+    
+    app.dependency_overrides[get_db] = lambda: mock_session
+    
+    response = await client.get("/spells/nonexistent")
+    assert response.status_code == 404
+    
+    app.dependency_overrides = {}
+
+@pytest.mark.anyio
+async def test_get_monster_404(client):
+    mock_session = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_session.execute.return_value = mock_result
+    
+    app.dependency_overrides[get_db] = lambda: mock_session
+    
+    response = await client.get("/monsters/nonexistent")
+    assert response.status_code == 404
     
     app.dependency_overrides = {}

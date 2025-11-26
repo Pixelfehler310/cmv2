@@ -18,5 +18,5 @@ async def get_item(item_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Item).where(Item.id == item_id))
     item = result.scalar_one_or_none()
     if not item:
-        raise HTTPException(status_code=404, item="Item not found")
+        raise HTTPException(status_code=404, detail="Item not found")
     return item

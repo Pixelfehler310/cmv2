@@ -14,4 +14,4 @@ class SpellCreate(SpellBase):
     pass
 
 class SpellResponse(SpellBase):
-    pass
+    id: str

@@ -13,4 +13,4 @@ class ItemCreate(ItemBase):
     pass
 
 class ItemResponse(ItemBase):
-    pass
+    id: str

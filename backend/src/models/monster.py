@@ -37,4 +37,5 @@ class Monster(Base, UUIDMixin, TimestampMixin):
     special_abilities: Mapped[list] = mapped_column(JSON, default=list)
     actions: Mapped[list] = mapped_column(JSON, default=list)
     legendary_actions: Mapped[list] = mapped_column(JSON, default=list)
+    inventory: Mapped[list] = mapped_column(JSON, default=list)
     effects: Mapped[list] = mapped_column(JSON, default=list)

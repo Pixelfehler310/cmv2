@@ -22,15 +22,19 @@ Focus: Administration, Data Persistence, and serving static content (SRD).
 - [x] Create API Endpoints: List/Get Monsters
 
 ### Milestone 1.3: Logic Service ("The Game Master") - State Management
-- [ ] Implement `CharacterModel` (Pydantic & DB)
-- [ ] Implement `CampaignModel` (Pydantic & DB)
-- [ ] Create API Endpoints: Character CRUD (Create, Read, Update, Delete)
-- [ ] Create API Endpoints: Campaign CRUD
-- [ ] Create and run Tests for Milestone 1.3
+- [x] Implement `CharacterModel` (Pydantic & DB)
+- [x] Implement `CampaignModel` (Pydantic & DB)
+- [x] Create API Endpoints: Character CRUD (Create, Read, Update, Delete)
+- [x] Create API Endpoints: Campaign CRUD
+- [x] Create and run Tests for Milestone 1.3
 
-// TODO: Test Monsters and Characters with Actions
-// TODO: Test Monsters and Characters with Inventory
-// TODO: Test Monsters and Characters implicit Actions (from Items, Spells, Effects)
+### Milestone 1.4: Data Service ("The Librarian") - Advanced Testing
+- [x] Create and run Tests for `MonsterModel` with associated `Actions`
+- [x] Create and run Tests for `CharacterModel` with associated `Actions`
+- [x] Create and run Tests for `MonsterModel` with `Inventory`
+- [x] Create and run Tests for `CharacterModel` with `Inventory`
+- [x] Create and run Tests for `MonsterModel` implicit `Actions` (from Items, Spells, Effects)
+- [x] Create and run Tests for `CharacterModel` implicit `Actions` (from Items, Spells, Effects)
 
 ## Phase 2: The "Calculator" (Automation)
 Focus: Automating calculations, dice rolls, and basic rules.
@@ -52,14 +56,29 @@ Focus: Automating calculations, dice rolls, and basic rules.
 - [ ] Implement Combat Logic (Hit/Miss, Damage Calculation)
 - [ ] Create and run Tests for Milestone 2.3
 
-// Phase 2B: State Machine for the Game itself and the frontend.
-// TODO: Implement State Machine for the Game itself and the frontend.
-// Requirements: 
-// - Action System
-// - Inventory System
-// - Turn System
-// - Action / Bonus Action / Reaction System / End Turn
-// - Instance Management of Characters, Monsters, Items, Spells
+### Milestone 2.4: State Machine for the Game itself and the frontend.
+- [ ] Implement State Machine for the Game itself and the frontend (webhook based) // TODO plan in detail
+- [ ] Requirements: 
+- [ ] Action System (Attack, Cast Spell, Use Item, Use Ability, Use Feature)
+- [ ] Inventory System (Add and Remove and Use items, Passive Effects)
+- [ ] Turn System (End Turn, Pass Turn, Skip Turn)
+- [ ] Action / Bonus Action / Reaction System / Rest, ...
+- [ ] Instance Management:
+    - [ ] Implement `MonsterInstance` Model (linked to `Monster` template, with `current_hp`, `campaign_id`, etc.)
+    - [ ] Implement `ItemInstance` logic (within Inventory)
+    - [ ] Implement `SpellInstance` logic (Prepared/Known)
+- [ ] Create and run Tests for Milestone 2.4
+
+### Milestone 2.5: User, Wiki and Campaign Management (Add Homebrewed Content via Visual, form based Editors)
+- [ ] Implement User Management (Authentication, Authorization) ! Relations (Campaigns + Characters)
+- [ ] Implement Campaign Management (Create, Read, Update, Delete) ! Relations
+- [ ] Implement Character Management (Create, Read, Update, Delete) ! Relations
+- [ ] Implement Monster Management (Create, Read, Update, Delete) ! Relations
+- [ ] Implement Spell Management (Create, Read, Update, Delete) ! Relations
+- [ ] Implement Item Management (Create, Read, Update, Delete) ! Relations
+- [ ] Implement Combat / Encounter Designer (Create, Read, Update, Delete) ! Relations
+- [ ] Implement Wiki Management (Create, Read, Update, Delete) ! Relations
+- [ ] Create and run Tests for Milestone 2.5
 
 
 ## Phase 3: The Platform (Modding & Advanced)
@@ -69,6 +88,12 @@ Focus: Modding support, dynamic effects, and community ecosystem.
 - [ ] Implement Triggers and Conditions for Effects
 - [ ] Integrate `simpleeval` for safe formula evaluation
 - [ ] Create and run Tests for Milestone 3.1
+
+### Milestone 3.2: Advanced Features
+- [ ] Chat Window with Whisper functionality
+- [ ] Implement Dice Roller with more complex dice expressions (e.g., "2d6+3")
+- [ ] Campaign Visual Designer (Node Based)
+- [ ] Google (and co) - OAuth
 
 ### Milestone 3.2: Mod Loader
 - [ ] Implement Mod Loading System (File System Watcher/Scanner)

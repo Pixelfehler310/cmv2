@@ -16,7 +16,6 @@ class GameEntity(BaseModel):
     """
     Base class for all game entities (Items, Spells, Feats).
     """
-    id: str
     name: str
-    description: str
+    description: Optional[str] = None
     effects: List[EffectConfig] = Field(default_factory=list)

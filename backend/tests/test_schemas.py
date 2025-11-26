@@ -61,3 +61,27 @@ def test_monster_schema_validation():
     monster = MonsterCreate(**monster_data)
     assert monster.name == "Goblin"
     assert monster.challenge_rating == 0.25
+
+def test_item_schema_invalid():
+    from pydantic import ValidationError
+    import pytest
+    
+    # Missing required field 'name'
+    with pytest.raises(ValidationError):
+        ItemCreate(type="Weapon", rarity="Common")
+
+def test_spell_schema_invalid():
+    from pydantic import ValidationError
+    import pytest
+    
+    # Invalid level (should be int) - Pydantic might coerce string "3" to int 3, so use something definitely invalid
+    with pytest.raises(ValidationError):
+        SpellCreate(name="Fail", description="Desc", level="not_a_number", school="Evo", casting_time="1A", range="30ft", duration="Inst")
+
+def test_monster_schema_invalid():
+    from pydantic import ValidationError
+    import pytest
+    
+    # Missing required field 'size'
+    with pytest.raises(ValidationError):
+        MonsterCreate(name="Fail", description="Desc", type="Beast", alignment="U", armor_class=10, hit_points=10, hit_dice="1d10", speed={}, strength=10, dexterity=10, constitution=10, intelligence=10, wisdom=10, charisma=10, languages="Common", challenge_rating=1.0, xp=100)

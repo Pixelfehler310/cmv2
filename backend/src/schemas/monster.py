@@ -28,9 +28,11 @@ class MonsterBase(GameEntity):
     special_abilities: List[Dict[str, Any]] = Field(default_factory=list)
     actions: List[Dict[str, Any]] = Field(default_factory=list)
     legendary_actions: List[Dict[str, Any]] = Field(default_factory=list)
+    inventory: List[Dict[str, Any]] = Field(default_factory=list)
+    effects: List[Dict[str, Any]] = Field(default_factory=list)
 
 class MonsterCreate(MonsterBase):
     pass
 
 class MonsterResponse(MonsterBase):
-    pass
+    id: str
