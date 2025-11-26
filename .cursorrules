@@ -1,0 +1,36 @@
+# Open RPG Engine - AI Context & Rules
+
+## Project Philosophy
+
+You are working on the **Open RPG Engine**, a modular, SRD 5.1-based Virtual Tabletop (VTT).
+**Core Philosophy:** "Open Ecosystem" - Rules are data, not code.
+
+## Architecture Principles (STRICT ADHERENCE REQUIRED)
+
+1.  **Single Source of Truth (Backend):** The Frontend NEVER calculates game values (HP, AC, Rolls). It sends **Commands** (Intent) and renders the **View Model** (State) received from the Backend.
+2.  **Logic as Data:** Game mechanics (Feats, Spells) are JSON objects with triggers/effects, NOT Python classes.
+3.  **Strict Contracts:** Communication is strictly typed. Pydantic Models (Backend) <-> TypeScript Interfaces (Frontend).
+
+## Tech Stack
+
+- **Backend:** Python 3.11+, FastAPI, Pydantic, PostgreSQL (Async/Tortoise ORM).
+- **Frontend:** React, pnpm workspaces, Vite, Tailwind CSS, shadcn/ui.
+- **Architecture:** Monorepo.
+
+## Coding Rules
+
+- **Backend:**
+  - Use Pydantic for ALL data structures.
+  - Include an `effects: List[Effect]` field in models for future logic processing.
+  - Follow CQRS: Separate Command (Write) and Query (Read) logic.
+- **Frontend:**
+  - Use Functional Components and Hooks.
+  - No business logic in components. Components only render data.
+  - Use `shadcn/ui` for components.
+
+## File Structure
+
+- `backend/`: FastAPI service.
+- `frontend/`: React Monorepo.
+  - `apps/host`: App Shell.
+  - `packages/types`: Shared TypeScript interfaces.

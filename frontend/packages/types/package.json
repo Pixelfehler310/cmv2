@@ -1,0 +1,13 @@
+{
+    "name": "@rpg/types",
+    "version": "0.0.1",
+    "private": true,
+    "main": "./index.ts",
+    "types": "./index.ts",
+    "scripts": {
+        "generate": "json2ts -i 'schemas/*.json' -o index.ts --cwd schemas"
+    },
+    "devDependencies": {
+        "json-schema-to-typescript": "^13.0.0"
+    }
+}
