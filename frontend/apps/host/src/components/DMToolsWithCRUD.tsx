@@ -1,5 +1,5 @@
 import React from 'react';
-import { DMTools } from '../../dm-tools/src/DMTools';
+import { DMTools } from '@rpg/dm-tools';
 import { ItemBrowser } from './ItemBrowser';
 import { SpellBrowser } from './SpellBrowser';
 import { CharacterCreationForm } from './CharacterCreationForm';

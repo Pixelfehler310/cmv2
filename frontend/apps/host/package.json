@@ -11,14 +11,22 @@
         "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
     },
     "dependencies": {
+        "@radix-ui/react-avatar": "^1.0.4",
+        "@radix-ui/react-dropdown-menu": "^2.0.6",
+        "@radix-ui/react-tooltip": "^1.0.7",
+        "@rpg/dm-tools": "workspace:*",
+        "@rpg/player-sheet": "workspace:*",
         "@rpg/types": "workspace:*",
         "@rpg/ui": "workspace:*",
         "clsx": "^1.2.1",
+        "cookie": "^1.1.1",
         "flexlayout-react": "^0.7.15",
         "lucide-react": "^0.263.1",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
+        "react-router": "7.9.6",
         "react-router-dom": "^7.9.6",
+        "set-cookie-parser": "^2.7.2",
         "tailwind-merge": "^1.13.2",
         "zustand": "^4.3.8"
     },

@@ -10,6 +10,7 @@
         "test": "echo \"No tests for types package\""
     },
     "devDependencies": {
-        "json-schema-to-typescript": "^13.0.0"
+        "json-schema-to-typescript": "^13.0.0",
+        "typescript": "^5.0.0"
     }
 }

@@ -3,7 +3,7 @@ import { Layout, Model, TabNode, IJsonModel } from "flexlayout-react";
 import "flexlayout-react/style/light.css";
 import { defaultLayout } from "./defaultLayout";
 import { loadLayout, saveLayout } from "../lib/layout/LayoutPersistence";
-import { PlayerSheet } from "../../player-sheet/src/PlayerSheet";
+import { PlayerSheet } from "@rpg/player-sheet";
 import { CharacterSelector } from "../components/CharacterSelector";
 import { useCharacter, useMonsters, useCampaigns } from "../lib/api";
 import { dispatchAction } from "../lib/actions";

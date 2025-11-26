@@ -4,8 +4,9 @@
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true
   },
   "include": ["index.ts"]
 }
-

@@ -1,18 +1,13 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      '@rpg/types': path.resolve(__dirname, '../../packages/types'),
-      '@rpg/ui': path.resolve(__dirname, '../../packages/ui'),
-    },
+    alias: {},
   },
   server: {
     port: 5173,
     host: true,
   },
 });
-

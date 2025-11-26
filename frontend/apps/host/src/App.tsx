@@ -1,9 +1,12 @@
-import React, { useEffect } from "react";
-import { BrowserRouter } from "react-router-dom";
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { wsManager } from "./lib/websocket/WebSocketManager";
-import { Header } from "./components/Header";
-import { Workbench } from "./layout/Workbench";
+import { WebSocketProvider } from "./contexts/WebSocketContext";
+import { EventBusProvider } from "./contexts/EventBusContext";
+import { ActionDispatchProvider } from "./contexts/ActionDispatchContext";
+import { ViewProvider } from "./contexts/ViewContext";
+import { AppNavbar } from "./components/AppNavbar";
+import { ViewContainer } from "./components/ViewContainer";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useWebSocketEvents } from "./hooks/useWebSocketEvents";
 
@@ -11,40 +14,59 @@ function AppContent() {
   const { token, isAuthenticated } = useAuth();
   useWebSocketEvents();
 
-  useEffect(() => {
-    // Connect WebSocket when authenticated
-    if (isAuthenticated && token) {
-      wsManager.connect(token).catch((error) => {
-        console.error('Failed to connect WebSocket:', error);
-      });
-    }
-
-    return () => {
-      // Disconnect on unmount
-      wsManager.disconnect();
-    };
-  }, [isAuthenticated, token]);
+  if (!isAuthenticated) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h1 className="text-2xl font-bold">Open RPG Engine</h1>
+          <p className="text-muted-foreground">Please log in to continue</p>
+          {/* TODO: Add login form */}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-screen flex flex-col">
-      <Header />
+      <AppNavbar />
       <main className="flex-1 relative overflow-hidden">
         <ErrorBoundary>
-          <Workbench />
+          <ViewContainer />
         </ErrorBoundary>
       </main>
     </div>
   );
 }
 
+function AppWithProviders() {
+  const { token } = useAuth();
+
+  return (
+    <EventBusProvider>
+      <WebSocketProvider token={token}>
+        <ActionDispatchProvider>
+          <ViewProvider>
+            <Routes>
+              <Route path="/" element={<AppContent />} />
+              <Route path="/campaigns" element={<AppContent />} />
+              <Route path="/campaigns/:id" element={<AppContent />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </ViewProvider>
+        </ActionDispatchProvider>
+      </WebSocketProvider>
+    </EventBusProvider>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <ErrorBoundary>
-          <AppContent />
-        </ErrorBoundary>
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <AppWithProviders />
+        </AuthProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

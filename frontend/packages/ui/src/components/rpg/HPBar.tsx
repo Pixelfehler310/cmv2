@@ -1,7 +1,6 @@
-import * as React from "react";
 import { cn } from "../../lib/utils";
 
-export interface HPBarProps {
+interface HPBarProps {
   current: number;
   max: number;
   temp?: number;
@@ -9,16 +8,9 @@ export interface HPBarProps {
   showNumbers?: boolean;
 }
 
-export function HPBar({ 
-  current, 
-  max, 
-  temp = 0, 
-  className,
-  showNumbers = true 
-}: HPBarProps) {
+export function HPBar({ current, max, temp = 0, className, showNumbers = true }: HPBarProps) {
   const percentage = Math.max(0, Math.min(100, (current / max) * 100));
   const tempPercentage = temp > 0 ? (temp / max) * 100 : 0;
-  const totalPercentage = Math.min(100, percentage + tempPercentage);
 
   const getColorClass = () => {
     if (percentage > 75) return "bg-green-500";
@@ -35,24 +27,19 @@ export function HPBar({
             {current} / {max}
             {temp > 0 && <span className="text-blue-500"> (+{temp} temp)</span>}
           </span>
-          <span className="text-muted-foreground">
-            {Math.round(percentage)}%
-          </span>
+          <span className="text-muted-foreground">{Math.round(percentage)}%</span>
         </div>
       )}
       <div className="w-full h-4 bg-muted rounded-full overflow-hidden relative">
         {/* Main HP bar */}
-        <div
-          className={cn("h-full transition-all duration-300", getColorClass())}
-          style={{ width: `${percentage}%` }}
-        />
+        <div className={cn("h-full transition-all duration-300", getColorClass())} style={{ width: `${percentage}%` }} />
         {/* Temporary HP bar */}
         {temp > 0 && (
           <div
             className="absolute top-0 h-full bg-blue-400 opacity-70 transition-all duration-300"
-            style={{ 
+            style={{
               left: `${percentage}%`,
-              width: `${tempPercentage}%` 
+              width: `${tempPercentage}%`,
             }}
           />
         )}
@@ -60,4 +47,3 @@ export function HPBar({
     </div>
   );
 }
-

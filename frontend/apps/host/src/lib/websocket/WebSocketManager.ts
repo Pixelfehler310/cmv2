@@ -44,7 +44,8 @@ class WebSocketManager {
         this.ws.onopen = () => {
           this.isConnecting = false;
           this.reconnectAttempts = 0;
-          console.log('WebSocket connected');
+          console.log("WebSocket connected");
+          this.handleMessage({ type: "open", payload: null });
           resolve();
         };
 
@@ -53,19 +54,21 @@ class WebSocketManager {
             const message: WebSocketMessage = JSON.parse(event.data);
             this.handleMessage(message);
           } catch (error) {
-            console.error('Failed to parse WebSocket message:', error);
+            console.error("Failed to parse WebSocket message:", error);
           }
         };
 
         this.ws.onerror = (error) => {
           this.isConnecting = false;
-          console.error('WebSocket error:', error);
+          console.error("WebSocket error:", error);
+          this.handleMessage({ type: "error", payload: error });
           reject(error);
         };
 
         this.ws.onclose = () => {
           this.isConnecting = false;
-          console.log('WebSocket disconnected');
+          console.log("WebSocket disconnected");
+          this.handleMessage({ type: "close", payload: null });
           this.attemptReconnect(token);
         };
       } catch (error) {
@@ -77,7 +80,7 @@ class WebSocketManager {
 
   private attemptReconnect(token?: string) {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached');
+      console.error("Max reconnection attempts reached");
       return;
     }
 
@@ -99,7 +102,7 @@ class WebSocketManager {
     }
 
     // Also call wildcard handlers
-    const wildcardHandlers = this.eventHandlers.get('*');
+    const wildcardHandlers = this.eventHandlers.get("*");
     if (wildcardHandlers) {
       wildcardHandlers.forEach((handler) => handler(message));
     }
@@ -109,7 +112,7 @@ class WebSocketManager {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type, payload }));
     } else {
-      console.warn('WebSocket is not connected. Message not sent:', { type, payload });
+      console.warn("WebSocket is not connected. Message not sent:", { type, payload });
     }
   }
 
@@ -156,6 +159,5 @@ class WebSocketManager {
 }
 
 // Singleton instance
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
+const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8000/ws";
 export const wsManager = new WebSocketManager(WS_URL);
-

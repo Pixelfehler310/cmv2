@@ -1,50 +1,26 @@
 import { useEffect } from 'react';
-import { wsManager } from '../lib/websocket';
-import { eventBus } from '../lib/eventBus';
-import { useGameStore } from '../stores/gameStore';
-import type { Character, Monster } from '@rpg/types';
+import { useWebSocket } from '../contexts/WebSocketContext';
+import { useEventBus } from '../contexts/EventBusContext';
 
 export function useWebSocketEvents() {
-  const {
-    updateCharacter,
-    updateMonster,
-    setInitiativeOrder,
-    setCurrentTurn,
-  } = useGameStore();
+  const { subscribe } = useWebSocket();
+  const { emit } = useEventBus();
 
   useEffect(() => {
-    // Subscribe to WebSocket events
-    const unsubscribeActionResult = wsManager.on('ACTION_RESULT', (message) => {
-      const { type, payload } = message.payload;
-      
-      switch (type) {
-        case 'CHARACTER_UPDATE':
-          updateCharacter(payload.characterId, payload.updates);
-          break;
-        case 'MONSTER_UPDATE':
-          updateMonster(payload.monsterId, payload.updates);
-          break;
-        case 'INITIATIVE_UPDATE':
-          setInitiativeOrder(payload.order);
-          break;
-        case 'TURN_UPDATE':
-          setCurrentTurn(payload.turn);
-          break;
-        default:
-          // Emit to event bus for other handlers
-          eventBus.emit(`ws:${type}`, payload);
-      }
+    // Subscribe to WebSocket events and forward to event bus
+    const unsubscribeActionResult = subscribe('ACTION_RESULT', (payload) => {
+      emit('action:result', payload);
     });
 
-    const unsubscribeStateUpdate = wsManager.on('STATE_UPDATE', (message) => {
+    const unsubscribeStateUpdate = subscribe('STATE_UPDATE', (payload) => {
       // Handle full state updates from backend
-      eventBus.emit('state:update', message.payload);
+      emit('state:update', payload);
     });
 
     return () => {
       unsubscribeActionResult();
       unsubscribeStateUpdate();
     };
-  }, [updateCharacter, updateMonster, setInitiativeOrder, setCurrentTurn]);
+  }, [subscribe, emit]);
 }
 
