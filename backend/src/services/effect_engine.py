@@ -52,6 +52,8 @@ class EffectEngine:
                 target_obj = getattr(target_obj, part)
             elif isinstance(target_obj, dict) and part in target_obj:
                 target_obj = target_obj[part]
+            elif hasattr(target_obj, 'template') and target_obj.template and hasattr(target_obj.template, part):
+                target_obj = getattr(target_obj.template, part)
             else:
                 # Target path invalid, skip
                 return

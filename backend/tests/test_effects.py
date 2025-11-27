@@ -29,7 +29,7 @@ class TestEffectEngine:
 
     def test_set_effect(self):
         char = CharacterBase(
-            name="Test", race="Human", class_name="Fighter",
+            name="Test", species_id="s1", class_id="c1",
             max_hp=10, current_hp=10, hit_dice="1d10", strength=10
         )
         
@@ -55,8 +55,25 @@ class TestEffectEngine:
         # Add +10 speed effect
         effect = Effect(name="Haste", type="BONUS", target="speed.walk", value=10)
         monster.template.effects.append(effect) # Add to template effects (innate)
-        # Note: MonsterInstance doesn't have direct effects list yet? 
-        # Wait, MonsterInstance wraps template. 
+        
+        view_model = EffectEngine.apply_effects(monster)
+        
+        # Check nested attribute
+        # Note: MonsterInstance speed is derived from template, but EffectEngine applies to the view model copy
+        # We need to ensure EffectEngine handles nested dicts correctly.
+        # MonsterResponse.speed is a Dict[str, int].
+        
+        assert view_model.template.speed["walk"] == 40
+
+    def test_inventory_effect(self):
+        char = CharacterBase(
+            name="Test", species_id="s1", class_id="c1",
+            max_hp=10, current_hp=10, hit_dice="1d10", armor_class=10
+        )
+        
+        # Create Shield with +2 AC effect
+        shield_effect = Effect(name="Shield Bonus", type="BONUS", target="armor_class", value=2)
+        shield_template = ItemResponse(
             id="shield", name="Shield", type="Armor", rarity="Common",
             effects=[shield_effect]
         )

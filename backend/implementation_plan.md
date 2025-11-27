@@ -59,22 +59,22 @@ Focus: Automating calculations, managing specific instances of data, and the sta
 - [x] **Tests:** Verify that equipping a shield increases AC, etc.
 
 ### Milestone 2.4: Character & Entity Model Refinement
-- [ ] **Refactor `CharacterModel`:**
-    - [ ] Extract `Species` (Race) into its own model (Name, Traits, Speed, Size, Ability Bonuses).
-    - [ ] Extract `Class` into its own model (Name, Hit Die, Proficiencies, Features).
-    - [ ] Extract `Background` into its own model (Name, Skills, Tools, Equipment).
-    - [ ] Update `CharacterModel` to reference these via Foreign Keys.
-- [ ] **Implement Feats & Features:**
-    - [ ] Create `FeatModel` (Name, Description, Effects).
-    - [ ] Create `FeatureModel` (for Class/Species features).
-- [ ] **Implement Factions:**
-    - [ ] Create `FactionModel` (Name, Description, Reputation tracking).
+- [x] **Refactor `CharacterModel`:**
+    - [x] Extract `Species` (Race) into its own model (Name, Traits, Speed, Size, Ability Bonuses).
+    - [x] Extract `Class` into its own model (Name, Hit Die, Proficiencies, Features).
+    - [x] Extract `Background` into its own model (Name, Skills, Tools, Equipment).
+    - [x] Update `CharacterModel` to reference these via Foreign Keys.
+- [x] **Implement Feats & Features:**
+    - [x] Create `FeatModel` (Name, Description, Effects).
+    - [x] Create `FeatureModel` (for Class/Species features).
+- [x] **Implement Factions:**
+    - [x] Create `FactionModel` (Name, Description, Reputation tracking).
 - [ ] **Custom Actions:**
     - [ ] Implement support for `Custom Actions` on `CharacterModel`.
-- [ ] **Update Tests:**
-    - [ ] Update `test_logic_routers.py` to handle new Character creation flow (seed Species/Class first).
-    - [ ] Update `test_schemas.py` to validate new nested structures or ID references.
-    - [ ] Add tests for `Species`, `Class`, and `Background` CRUD and integrity.
+- [x] **Update Tests:**
+    - [x] Update `test_logic_routers.py` to handle new Character creation flow (seed Species/Class first).
+    - [x] Update `test_schemas.py` to validate new nested structures or ID references.
+    - [x] Add tests for `Species`, `Class`, and `Background` CRUD and integrity.
 
 ### Milestone 2.5: Data Ingestion (SRD & D&D 5e API)
 - [ ] Convert `libsrd5` data into JSON.
