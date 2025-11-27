@@ -67,9 +67,35 @@ export interface IActionDispatcher {
 2.  **Map MFE:** Listens for `HOVER_ENTITY`.
 3.  **Map MFE:** Highlights the token for 'goblin-1'.
 
+**Key Rule: Share IDs, Not Data.**
+MFEs should not pass full objects (like a Character) via events. They should pass IDs. The receiving MFE uses the ID to look up the data from the **Shared Cache** (React Query), ensuring everyone sees the same version of the truth.
+
 ---
 
-## 3. Implementation Details
+## 3. Action Types: Local vs. Backend
+
+It is crucial to distinguish between actions that change the **Game State** and actions that change the **UI State**.
+
+### A. Backend Actions (The "Truth")
+*Changes that everyone needs to know about.*
+- **Examples:** `ATTACK`, `MOVE_TOKEN`, `SPEND_SLOT`, `EQUIP_ITEM`.
+- **Flow:** MFE -> `bridge.actions.dispatch()` -> WebSocket -> Backend -> DB.
+- **Result:** Backend broadcasts `STATE_UPDATE`, all clients update.
+
+### B. Local/Internal Actions (The "View")
+*Changes that only affect the current user's interface.*
+- **Examples:** `OPEN_WINDOW`, `SELECT_TAB`, `TOGGLE_LAYER_VISIBILITY`.
+- **Flow:** Handled internally by the MFE's state (React `useState` / `useReducer`) or the Layout Engine.
+- **Result:** Immediate UI update. No network traffic.
+
+### C. Hybrid Actions (Persisted Preferences)
+*UI changes that should be remembered across sessions.*
+- **Examples:** `SAVE_LAYOUT`, `SET_THEME`.
+- **Flow:** MFE -> `bridge.actions.dispatch('UPDATE_PREFERENCES', ...)` -> Backend (User DB). (Maybe also save to local storage)
+
+---
+
+## 4. Implementation Details
 
 ### The Host Implementation (`apps/host`)
 
