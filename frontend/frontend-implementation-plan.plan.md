@@ -1,5 +1,3 @@
-<!-- a504a064-0cac-4052-bc2f-317ddd5687e9 efa40393-c08a-46e0-a22c-2aa227c49cb3 -->
-
 # Frontend Implementation Plan
 
 This document outlines the step-by-step plan to build the Open RPG Engine frontend, following the Microfrontends (MFE) architecture with pnpm workspaces.
@@ -19,7 +17,7 @@ Focus: Basic UI structure, data display, and CRUD operations for characters, cam
 - [ ] Create development scripts for parallel MFE development
 - [ ] Setup Vitest and React Testing Library for testing
 
-### Milestone 1.2: Shared Contracts & API Client
+### Milestone 1.2: Shared Contracts & API Client (Should be imported via generator)
 
 - [ ] Define TypeScript interfaces in `@rpg/types` matching backend Pydantic models:
 - [ ] `Item`, `Spell`, `Monster` (from Milestone 1.2)
