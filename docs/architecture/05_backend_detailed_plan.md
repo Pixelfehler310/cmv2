@@ -1,6 +1,7 @@
 # Backend Detailed Implementation Plan
 
 ## 1. Directory Structure (Refactored)
+
 We will restructure `backend/src` to enforce strict modularity. We introduce an **Identity** module for user management, separate from the **Game** logic.
 
 ```
@@ -26,52 +27,56 @@ backend/src/
 ```
 
 ## 2. Module: Data ("The Librarian")
-*   **Purpose:** A standalone library to access static game content.
-*   **Usage:** Can be imported by the Wiki generator or the Game Engine.
-*   **Key Components:**
-    *   `models.py`: `ItemDefinition`, `MonsterDefinition`.
-    *   `loader.py`: Loads JSONs from disk.
-    *   `interface.py`: `DataClient` class to query data.
+
+- **Purpose:** A standalone library to access static game content.
+- **Usage:** Can be imported by the Wiki generator or the Game Engine.
+- **Key Components:**
+  - `models.py`: `ItemDefinition`, `MonsterDefinition`.
+  - `loader.py`: Loads JSONs from disk.
+  - `interface.py`: `DataClient` class to query data.
 
 ## 3. Module: Engine ("The Core")
-*   **Purpose:** A pure Python library for D&D 5e rules. **No Database, No API.**
-*   **Usage:** Can be imported by the Service, a CLI tool, or a Simulator.
-*   **Key Components:**
-    *   `models.py`: `CharacterSheet` (Pydantic). This is the "In-Memory" state used for calculation.
-    *   `calculator.py`: `calculate_ac(sheet, items)`, `calculate_to_hit(...)`.
-    *   `effects.py`: Applies `PassiveEffect` to `CharacterSheet`.
+
+- **Purpose:** A pure Python library for D&D 5e rules. **No Database, No API.**
+- **Usage:** Can be imported by the Service, a CLI tool, or a Simulator.
+- **Key Components:**
+  - `models.py`: `CharacterSheet` (Pydantic). This is the "In-Memory" state used for calculation.
+  - `calculator.py`: `calculate_ac(sheet, items)`, `calculate_to_hit(...)`.
+  - `effects.py`: Applies `PassiveEffect` to `CharacterSheet`.
 
 ## 4. Module: Identity ("The Gatekeeper")
-*   **Purpose:** Manages Users, Authentication, and Social features.
-*   **Responsibility:**
-    *   User Registration/Login (JWT).
-    *   OAuth Integration (Google) - *Future*.
-    *   Friend System / User Search.
-    *   User Settings.
-*   **Separation:** Has its own DB tables (`users`, `friendships`).
+
+- **Purpose:** Manages Users, Authentication, and Social features.
+- **Responsibility:**
+  - User Registration/Login (JWT).
+  - OAuth Integration (Google) - _Future_.
+  - Friend System / User Search.
+  - User Settings.
+- **Separation:** Has its own DB tables (`users`, `friendships`).
 
 ## 5. App: Game ("The Game Master")
-*   **Purpose:** Manages persistent campaign state and exposes the game via HTTP/WS.
-*   **Responsibility:**
-    1.  Load State from DB (`game.db`).
-    2.  Load Definitions from Data Module (`src.data`).
-    3.  Convert to Engine Models (`src.engine.models`).
-    4.  Run Calculation (`src.engine.calculator`).
-    5.  Return View Model to Frontend.
+
+- **Purpose:** Manages persistent campaign state and exposes the game via HTTP/WS.
+- **Responsibility:**
+  1.  Load State from DB (`game.db`).
+  2.  Load Definitions from Data Module (`src.data`).
+  3.  Convert to Engine Models (`src.engine.models`).
+  4.  Run Calculation (`src.engine.calculator`).
+  5.  Return View Model to Frontend.
 
 ## 6. Implementation Steps (Phase 1)
 
 1.  **Refactor Folder Structure:** Create `src/data`, `src/engine`, `src/identity`, `src/game`.
 2.  **Implement Data Module:**
-    *   Move Definition Models.
-    *   Implement JSON Loader.
+    - Move Definition Models.
+    - Implement JSON Loader.
 3.  **Implement Engine Module:**
-    *   Create Pure Pydantic State Models.
-    *   Implement basic AC/HP calculation logic.
+    - Create Pure Pydantic State Models.
+    - Implement basic AC/HP calculation logic.
 4.  **Implement Identity Module:**
-    *   Setup User DB Model.
-    *   Implement Basic Auth (Login/Register).
+    - Setup User DB Model.
+    - Implement Basic Auth (Login/Register).
 5.  **Implement Game Module:**
-    *   Setup Campaign/Character DB Models.
-    *   Create API Routers.
+    - Setup Campaign/Character DB Models.
+    - Create API Routers.
 6.  **Connect Frontend:** Update API calls.
