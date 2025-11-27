@@ -1,0 +1,979 @@
+{
+  "$defs": {
+    "BackgroundResponse": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "effects": {
+          "items": {
+            "$ref": "#/$defs/EffectConfig"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
+        "skill_proficiencies": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Skill Proficiencies",
+          "type": "array"
+        },
+        "tool_proficiencies": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Tool Proficiencies",
+          "type": "array"
+        },
+        "equipment": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Equipment",
+          "type": "array"
+        },
+        "feature": {
+          "additionalProperties": true,
+          "default": {},
+          "title": "Feature",
+          "type": "object"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "id"
+      ],
+      "title": "BackgroundResponse",
+      "type": "object"
+    },
+    "CampaignResponse": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "dm_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dm Id"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "characters": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/CharacterResponse"
+          },
+          "title": "Characters",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "id"
+      ],
+      "title": "CampaignResponse",
+      "type": "object"
+    },
+    "CharacterResponse": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "player_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Name"
+        },
+        "campaign_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Campaign Id"
+        },
+        "species_id": {
+          "title": "Species Id",
+          "type": "string"
+        },
+        "class_id": {
+          "title": "Class Id",
+          "type": "string"
+        },
+        "background_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Background Id"
+        },
+        "level": {
+          "default": 1,
+          "title": "Level",
+          "type": "integer"
+        },
+        "xp": {
+          "default": 0,
+          "title": "Xp",
+          "type": "integer"
+        },
+        "alignment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alignment"
+        },
+        "strength": {
+          "default": 10,
+          "title": "Strength",
+          "type": "integer"
+        },
+        "dexterity": {
+          "default": 10,
+          "title": "Dexterity",
+          "type": "integer"
+        },
+        "constitution": {
+          "default": 10,
+          "title": "Constitution",
+          "type": "integer"
+        },
+        "intelligence": {
+          "default": 10,
+          "title": "Intelligence",
+          "type": "integer"
+        },
+        "wisdom": {
+          "default": 10,
+          "title": "Wisdom",
+          "type": "integer"
+        },
+        "charisma": {
+          "default": 10,
+          "title": "Charisma",
+          "type": "integer"
+        },
+        "max_hp": {
+          "title": "Max Hp",
+          "type": "integer"
+        },
+        "current_hp": {
+          "title": "Current Hp",
+          "type": "integer"
+        },
+        "temp_hp": {
+          "default": 0,
+          "title": "Temp Hp",
+          "type": "integer"
+        },
+        "hit_dice": {
+          "title": "Hit Dice",
+          "type": "string"
+        },
+        "armor_class": {
+          "default": 10,
+          "title": "Armor Class",
+          "type": "integer"
+        },
+        "speed": {
+          "default": 30,
+          "title": "Speed",
+          "type": "integer"
+        },
+        "initiative": {
+          "default": 0,
+          "title": "Initiative",
+          "type": "integer"
+        },
+        "inventory": {
+          "items": {
+            "$ref": "#/$defs/ItemInstance"
+          },
+          "title": "Inventory",
+          "type": "array"
+        },
+        "spells": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Spells",
+          "type": "array"
+        },
+        "spell_slots": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Spell Slots",
+          "type": "object"
+        },
+        "actions": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "effects": {
+          "items": {
+            "$ref": "#/$defs/Effect"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "species": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Species"
+        },
+        "char_class": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Char Class"
+        },
+        "background": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Background"
+        }
+      },
+      "required": [
+        "name",
+        "species_id",
+        "class_id",
+        "max_hp",
+        "current_hp",
+        "hit_dice",
+        "id"
+      ],
+      "title": "CharacterResponse",
+      "type": "object"
+    },
+    "ClassResponse": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "effects": {
+          "items": {
+            "$ref": "#/$defs/EffectConfig"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
+        "hit_die": {
+          "title": "Hit Die",
+          "type": "string"
+        },
+        "proficiencies": {
+          "additionalProperties": true,
+          "default": {},
+          "title": "Proficiencies",
+          "type": "object"
+        },
+        "saving_throws": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Saving Throws",
+          "type": "array"
+        },
+        "progression": {
+          "default": [],
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Progression",
+          "type": "array"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "hit_die",
+        "id"
+      ],
+      "title": "ClassResponse",
+      "type": "object"
+    },
+    "Effect": {
+      "description": "Represents a modifier or rule change applied to a game entity.\nV1 Focus: Static Modifiers.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "type": {
+          "enum": [
+            "BONUS",
+            "SET"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "integer"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "target",
+        "value"
+      ],
+      "title": "Effect",
+      "type": "object"
+    },
+    "EffectConfig": {
+      "description": "Represents a dynamic effect in the game logic.\nExample: {\"trigger\": \"ON_EQUIP\", \"action\": \"ADD_AC\", \"value\": 1}",
+      "properties": {
+        "trigger": {
+          "title": "Trigger",
+          "type": "string"
+        },
+        "action": {
+          "title": "Action",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target"
+        }
+      },
+      "required": [
+        "trigger",
+        "action",
+        "value"
+      ],
+      "title": "EffectConfig",
+      "type": "object"
+    },
+    "ItemInstance": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "item_id": {
+          "title": "Item Id",
+          "type": "string"
+        },
+        "template": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ItemResponse"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "quantity": {
+          "default": 1,
+          "title": "Quantity",
+          "type": "integer"
+        },
+        "equipped": {
+          "default": false,
+          "title": "Equipped",
+          "type": "boolean"
+        },
+        "attuned": {
+          "default": false,
+          "title": "Attuned",
+          "type": "boolean"
+        },
+        "custom_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Custom Name"
+        },
+        "current_charges": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Charges"
+        }
+      },
+      "required": [
+        "id",
+        "item_id"
+      ],
+      "title": "ItemInstance",
+      "type": "object"
+    },
+    "ItemResponse": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "effects": {
+          "items": {
+            "$ref": "#/$defs/Effect"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "rarity": {
+          "title": "Rarity",
+          "type": "string"
+        },
+        "weight": {
+          "default": 0.0,
+          "title": "Weight",
+          "type": "number"
+        },
+        "price": {
+          "default": 0,
+          "title": "Price",
+          "type": "integer"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true,
+          "title": "Properties"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "rarity",
+        "id"
+      ],
+      "title": "ItemResponse",
+      "type": "object"
+    },
+    "MonsterResponse": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "effects": {
+          "items": {
+            "$ref": "#/$defs/Effect"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
+        "size": {
+          "title": "Size",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "alignment": {
+          "title": "Alignment",
+          "type": "string"
+        },
+        "armor_class": {
+          "title": "Armor Class",
+          "type": "integer"
+        },
+        "hit_points": {
+          "title": "Hit Points",
+          "type": "integer"
+        },
+        "hit_dice": {
+          "title": "Hit Dice",
+          "type": "string"
+        },
+        "speed": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Speed",
+          "type": "object"
+        },
+        "strength": {
+          "title": "Strength",
+          "type": "integer"
+        },
+        "dexterity": {
+          "title": "Dexterity",
+          "type": "integer"
+        },
+        "constitution": {
+          "title": "Constitution",
+          "type": "integer"
+        },
+        "intelligence": {
+          "title": "Intelligence",
+          "type": "integer"
+        },
+        "wisdom": {
+          "title": "Wisdom",
+          "type": "integer"
+        },
+        "charisma": {
+          "title": "Charisma",
+          "type": "integer"
+        },
+        "proficiencies": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Proficiencies",
+          "type": "array"
+        },
+        "senses": {
+          "additionalProperties": true,
+          "title": "Senses",
+          "type": "object"
+        },
+        "languages": {
+          "title": "Languages",
+          "type": "string"
+        },
+        "challenge_rating": {
+          "title": "Challenge Rating",
+          "type": "number"
+        },
+        "xp": {
+          "title": "Xp",
+          "type": "integer"
+        },
+        "special_abilities": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Special Abilities",
+          "type": "array"
+        },
+        "actions": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "legendary_actions": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Legendary Actions",
+          "type": "array"
+        },
+        "inventory": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Inventory",
+          "type": "array"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "size",
+        "type",
+        "alignment",
+        "armor_class",
+        "hit_points",
+        "hit_dice",
+        "speed",
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "wisdom",
+        "charisma",
+        "languages",
+        "challenge_rating",
+        "xp",
+        "id"
+      ],
+      "title": "MonsterResponse",
+      "type": "object"
+    },
+    "SpeciesResponse": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "effects": {
+          "items": {
+            "$ref": "#/$defs/EffectConfig"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
+        "speed": {
+          "default": 30,
+          "title": "Speed",
+          "type": "integer"
+        },
+        "size": {
+          "default": "Medium",
+          "title": "Size",
+          "type": "string"
+        },
+        "ability_bonuses": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "default": {},
+          "title": "Ability Bonuses",
+          "type": "object"
+        },
+        "traits": {
+          "default": [],
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Traits",
+          "type": "array"
+        },
+        "languages": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Languages",
+          "type": "array"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "id"
+      ],
+      "title": "SpeciesResponse",
+      "type": "object"
+    },
+    "SpellResponse": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "effects": {
+          "items": {
+            "$ref": "#/$defs/EffectConfig"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
+        "level": {
+          "title": "Level",
+          "type": "integer"
+        },
+        "school": {
+          "title": "School",
+          "type": "string"
+        },
+        "casting_time": {
+          "title": "Casting Time",
+          "type": "string"
+        },
+        "range": {
+          "title": "Range",
+          "type": "string"
+        },
+        "components": {
+          "additionalProperties": true,
+          "title": "Components",
+          "type": "object"
+        },
+        "duration": {
+          "title": "Duration",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "level",
+        "school",
+        "casting_time",
+        "range",
+        "duration",
+        "id"
+      ],
+      "title": "SpellResponse",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "items": {
+      "items": {
+        "$ref": "#/$defs/ItemResponse"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "spells": {
+      "items": {
+        "$ref": "#/$defs/SpellResponse"
+      },
+      "title": "Spells",
+      "type": "array"
+    },
+    "monsters": {
+      "items": {
+        "$ref": "#/$defs/MonsterResponse"
+      },
+      "title": "Monsters",
+      "type": "array"
+    },
+    "campaigns": {
+      "items": {
+        "$ref": "#/$defs/CampaignResponse"
+      },
+      "title": "Campaigns",
+      "type": "array"
+    },
+    "characters": {
+      "items": {
+        "$ref": "#/$defs/CharacterResponse"
+      },
+      "title": "Characters",
+      "type": "array"
+    },
+    "species": {
+      "items": {
+        "$ref": "#/$defs/SpeciesResponse"
+      },
+      "title": "Species",
+      "type": "array"
+    },
+    "classes": {
+      "items": {
+        "$ref": "#/$defs/ClassResponse"
+      },
+      "title": "Classes",
+      "type": "array"
+    },
+    "backgrounds": {
+      "items": {
+        "$ref": "#/$defs/BackgroundResponse"
+      },
+      "title": "Backgrounds",
+      "type": "array"
+    }
+  },
+  "required": [
+    "items",
+    "spells",
+    "monsters",
+    "campaigns",
+    "characters",
+    "species",
+    "classes",
+    "backgrounds"
+  ],
+  "title": "ExportModel",
+  "type": "object"
+}
