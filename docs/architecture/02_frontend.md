@@ -12,7 +12,7 @@
 
 - **Mechanism:** CSS Custom Properties (Variables) in `:root`.
 - **Scope:** Colors, Fonts, Spacing.
-- **Modding:** Users replace a CSS file to change the entire Look & Feel (e.g., "Sci-Fi Neon").
+- **Modding:** Users replace a CSS file to change the entire Look & Feel (e.g., "Sci-Fi Neon"). (with tailwinds @apply should make this easily possible)
 
 ## 3. Microfrontends (MFEs) Strategy
 
