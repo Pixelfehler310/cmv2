@@ -2,9 +2,9 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from ..database import get_db
-from ..models.spell import Spell
-from ..schemas.spell import SpellResponse
+from src.common.database import get_db
+from src.data.lib.spell import Spell
+from src.schemas.spell import SpellResponse
 
 router = APIRouter(prefix="/spells", tags=["Spells"])
 

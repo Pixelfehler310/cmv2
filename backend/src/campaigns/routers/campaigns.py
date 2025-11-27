@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from ..database import get_db
-from ..models.campaign import Campaign
-from ..schemas.campaign import CampaignCreate, CampaignResponse
+from src.common.database import get_db
+from src.campaigns.lib.campaign import Campaign
+from src.schemas.campaign import CampaignCreate, CampaignResponse
 
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 

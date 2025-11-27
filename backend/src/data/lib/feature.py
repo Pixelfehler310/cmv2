@@ -1,7 +1,7 @@
 from sqlalchemy import String, Integer, JSON, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from ..database import Base
-from .mixins import UUIDMixin, TimestampMixin
+from src.common.database import Base
+from src.common.mixins import UUIDMixin, TimestampMixin
 
 class Feature(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "features"

@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from ..database import get_db
-from ..models.character import Character
-from ..schemas.character import CharacterCreate, CharacterResponse
+from src.common.database import get_db
+from src.campaigns.lib.character import Character
+from src.schemas.character import CharacterCreate, CharacterResponse
 
 router = APIRouter(prefix="/characters", tags=["Characters"])
 

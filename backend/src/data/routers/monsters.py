@@ -2,9 +2,9 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from ..database import get_db
-from ..models.monster import Monster
-from ..schemas.monster import MonsterResponse
+from src.common.database import get_db
+from src.data.lib.monster import Monster
+from src.schemas.monster import MonsterResponse
 
 router = APIRouter(prefix="/monsters", tags=["Monsters"])
 

@@ -1,10 +1,10 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from src.main import app
-from src.database import get_db
-from src.models.species import Species
-from src.models.class_model import ClassModel
-from src.models.background import Background
+from src.common.database import get_db
+from src.data.lib.species import Species
+from src.data.lib.class_model import ClassModel
+from src.data.lib.background import Background
 
 @pytest.mark.anyio
 async def test_create_species(client):

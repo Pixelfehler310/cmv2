@@ -2,11 +2,11 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from ..database import get_db
-from ..models.species import Species
-from ..models.class_model import ClassModel
-from ..models.background import Background
-from ..schemas.definitions import (
+from src.common.database import get_db
+from src.data.lib.species import Species
+from src.data.lib.class_model import ClassModel
+from src.data.lib.background import Background
+from src.schemas.definitions import (
     SpeciesBase, SpeciesResponse,
     ClassBase, ClassResponse,
     BackgroundBase, BackgroundResponse

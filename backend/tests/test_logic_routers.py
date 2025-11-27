@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from src.main import app
-from src.database import get_db
-from src.models.campaign import Campaign
-from src.models.character import Character
+from src.common.database import get_db
+from src.campaigns.lib.campaign import Campaign
+from src.campaigns.lib.character import Character
 
 @pytest.mark.anyio
 async def test_create_campaign(client):

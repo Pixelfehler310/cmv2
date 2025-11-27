@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import items, spells, monsters, campaigns, characters, definitions
+from .data.routers import items, spells, monsters, definitions
+from .campaigns.routers import campaigns, characters
+# from .engine.routers import ... # Engine router not yet created/moved
+# from .identity.routers import ... # Identity router not yet created/moved
 
 app = FastAPI(
     title="Open RPG Engine API",
@@ -25,9 +28,9 @@ app.add_middleware(
 app.include_router(items.router)
 app.include_router(spells.router)
 app.include_router(monsters.router)
+app.include_router(definitions.router)
 app.include_router(campaigns.router)
 app.include_router(characters.router)
-app.include_router(definitions.router)
 
 @app.get("/")
 async def root():

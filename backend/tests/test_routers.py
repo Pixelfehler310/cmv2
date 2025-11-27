@@ -1,10 +1,10 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from src.main import app
-from src.database import get_db
-from src.models.item import Item
-from src.models.spell import Spell
-from src.models.monster import Monster
+from src.common.database import get_db
+from src.data.lib.item import Item
+from src.data.lib.spell import Spell
+from src.data.lib.monster import Monster
 
 # Mock DB Dependency
 async def override_get_db():

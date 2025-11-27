@@ -1,6 +1,6 @@
 import pytest
-from src.services.dice import DiceService
-from src.services.rules import RulesEngine
+from src.engine.lib.dice import DiceService
+from src.engine.lib.rules import RulesEngine
 
 class TestDiceService:
     def test_simple_roll(self):

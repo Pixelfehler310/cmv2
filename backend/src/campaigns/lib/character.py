@@ -1,10 +1,10 @@
 from sqlalchemy import String, Integer, JSON, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from ..database import Base
-from .mixins import UUIDMixin, TimestampMixin
-from .species import Species
-from .class_model import ClassModel
-from .background import Background
+from src.common.database import Base
+from src.common.mixins import UUIDMixin, TimestampMixin
+from src.data.lib.species import Species
+from src.data.lib.class_model import ClassModel
+from src.data.lib.background import Background
 
 class Character(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "characters"

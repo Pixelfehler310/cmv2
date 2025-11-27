@@ -1,7 +1,7 @@
 from sqlalchemy import String, Integer, JSON, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
-from ..database import Base
-from .mixins import UUIDMixin, TimestampMixin
+from src.common.database import Base
+from src.common.mixins import UUIDMixin, TimestampMixin
 
 class Item(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "items"

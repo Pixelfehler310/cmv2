@@ -3,13 +3,13 @@ import os
 from typing import List, Type, TypeVar
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from ..models.item import Item
-from ..models.spell import Spell
-from ..models.monster import Monster
-from ..schemas.item import ItemCreate
-from ..schemas.spell import SpellCreate
-from ..schemas.monster import MonsterCreate
-from ..database import Base
+from src.data.lib.item import Item
+from src.data.lib.spell import Spell
+from src.data.lib.monster import Monster
+from src.schemas.item import ItemCreate
+from src.schemas.spell import SpellCreate
+from src.schemas.monster import MonsterCreate
+from src.common.database import Base
 
 T = TypeVar("T", bound=Base)
 

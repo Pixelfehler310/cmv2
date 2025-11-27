@@ -1,4 +1,4 @@
-from src.config import settings
+from src.common.config import settings
 
 def test_config_defaults():
     assert settings.PROJECT_NAME == "Open RPG Engine"
