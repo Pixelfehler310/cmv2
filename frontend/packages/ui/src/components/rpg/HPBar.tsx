@@ -47,3 +47,5 @@ export function HPBar({ current, max, temp = 0, className, showNumbers = true }:
     </div>
   );
 }
+
+

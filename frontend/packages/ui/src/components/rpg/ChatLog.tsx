@@ -73,3 +73,5 @@ export function ChatLog({ messages, className, maxMessages = 100 }: ChatLogProps
   );
 }
 
+
+

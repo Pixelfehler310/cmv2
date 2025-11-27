@@ -196,3 +196,5 @@ function FeaturesTab({ character }: { character: Character }) {
   );
 }
 
+
+

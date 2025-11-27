@@ -130,3 +130,5 @@ Backend → WebSocket → App Shell → Event Bus → View → Window Update
 - **Layout Templates:** Views could offer preset layouts (e.g., "Combat Layout")
 - **Multi-View:** Future possibility of split-screen Player/DM view (advanced)
 
+
+
