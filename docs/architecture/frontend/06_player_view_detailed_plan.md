@@ -36,61 +36,92 @@ The UI should never get in the way of the roleplay. It should feel like an exten
 
 ## 2. Design & Layout
 
-**Layout Engine:** `flexlayout-react` (Tabs, Splitters, Draggable Windows).
+**Layout Strategy:** "Flexible 3-Column Docking".
+We use `flexlayout-react` to create a robust 3-column structure.
+*   **Left Panel (20%):** Persistent tools (Notes, Party).
+*   **Center Panel (60%):** The Stage (Map) and The Controls (Command Deck).
+*   **Right Panel (20%):** Communication (Chat, Logs).
 
-### Default Layout (ASCII)
+**Flexibility:** All containers support Tabs and Splitting. A user can drag their Notes to the Right panel or split the Chat panel to show Combat Log and Messages simultaneously.
+
+### Visual Layout (ASCII)
 
 ```
-┌─────────────────────────┬───────────────────────────────────────────────┐
-│ [Character Summary]     │  [ Map Window (Cartographer) ]                │
-│ HP: 45/45  AC: 18       │                                               │
-│ [Skills] [Saves]        │                                               │
-│                         │                                               │
-│ ┌─────────────────────┐ │                                               │
-│ │ Inventory / Spells  │ │                                               │
-│ │ [Tab] [Tab]         │ │                                               │
-│ │                     │ │                                               │
-│ └─────────────────────┘ │                                               │
-├─────────────────────────┼───────────────────────────────────────────────┤
-│ [ Chat & Log ]          │  [ Actions / Combat ]                         │
-│ > GM: You see a door.   │  [Attack] [Dash] [Hide]                       │
-│ > Aragorn: I open it.   │                                               │
-│                         │  (Contextual: Shows available actions)        │
-└─────────────────────────┴───────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│ [Logo]  [ Global Search / Wiki ]                  [Status] [User] [Menu] │ <-- AppNavbar
+├──────────────┬────────────────────────────────────────────┬──────────────┤
+│ [ Left Panel ] [             Center Panel                 ] [ Right Panel] │
+│ (Width: 20%) │ (Width: 60%)                               │ (Width: 20%) │
+│              │                                            │              │
+│ ┌──────────┐ │ ┌────────────────────────────────────────┐ │ ┌──────────┐ │
+│ │ Notes    │ │ │                                        │ │ │ Chat     │ │
+│ │ Party    │ │ │           Map Window                   │ │ │ Log      │ │
+│ │          │ │ │         (Cartographer)                 │ │ │ Combat   │ │
+│ │          │ │ │                                        │ │ │          │ │
+│ │          │ │ │                                        │ │ │          │ │
+│ │          │ │ └────────────────────────────────────────┘ │ │          │ │
+│ │          │ │ ┌────────────────────────────────────────┐ │ │          │ │
+│ │          │ │ │           COMMAND DECK                 │ │ │          │ │
+│ │          │ │ │ [Face] [Action Grid] [End Turn]        │ │ │          │ │
+│ │          │ │ └────────────────────────────────────────┘ │ │          │ │
+│ └──────────┘ └────────────────────────────────────────────┘ └──────────┘ │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 3. Windows & Components Detail
 
-### A. Character Sheet Window
-*   **Purpose:** The "Paper" sheet digitized.
-*   **Tabs:**
-    *   **Main:** Stats, Skills, Saves.
-    *   **Bio:** Traits, Ideals, Bonds, Flaws, Backstory.
-*   **Interactions:** Click Skill -> Roll. Click Stat -> Roll Check.
+### A. Center Panel
+1.  **Map Window (Top):**
+    *   Full interactive map.
+2.  **Command Deck (Bottom - Sticky):**
+    *   **Dimensions:** Takes full width of the Center Panel (60% of screen).
+    *   **Components:** Portrait, HP, Action Grid, End Turn.
 
-### B. Actions Window (The "Deck")
-*   **Purpose:** The command center.
-*   **Logic:** Filters based on state (Combat vs. Exploration).
-*   **Sections:**
-    *   **Standard:** Attack, Dash, Disengage, Dodge.
-    *   **Bonus:** Off-hand attack, Bardic Inspiration.
-    *   **Spells:** Quick cast buttons for prepared spells.
-    *   **Inventory:** Use Potion, Throw Item.
+### B. Left Panel (The "Journal")
+*   **Default Tabs:**
+    *   **Notes:** Rich text editor for campaign notes.
+    *   **Party:** List of allies with HP/Status.
+    *   **Quests:** Active quest log.
 
-### C. Inventory Window
+### C. Right Panel (The "Comms")
+*   **Default Tabs:**
+    *   **Chat:** Messages and Whispers.
+    *   **Combat Log:** Roll results and damage history.
+    *   **Combat View:** (See below).
+
+### D. Combat View
+*   **Purpose:** Tactical overview during fights.
+*   **Location:** Often placed in Right Panel or split Center.
+*   **Features:**
+    *   **Initiative List:** Vertical list of all combatants (Monsters, Friends) ordered by initiative.
+    *   **Status:** Shows current HP (approximate for monsters), Active Conditions.
+    *   **Targeting:** Clicking a name here targets them on the map.
+
+
+
+
+### Other windows to be docked: 
+#### Character Sheet Window
+*   **Purpose:** Character management.
+*   **Components:**
+    *   **Portrait:** Click to open Character Sheet.
+    *   **HP:** Current hit points.
+    *   **AC:** Armor Class.
+    *   **Speed:** Movement speed.
+    *   **Actions:** List of available actions.
+#### Spellbook Window
+*   **Purpose:** Magic management.
+*   **Components:**
+    *   **Slots:** Visual pips for available slots (Level 1: ●●○).
+    *   **Prepared:** Toggle switches for preparing spells (Long Rest logic).
+#### Inventory Window
 *   **Purpose:** Gear management.
 *   **Components:**
     *   **Equipment Slots:** Head, Body, Hands, etc. (Drag & Drop).
     *   **Backpack:** Grid or List view of items.
     *   **Currency:** Gold/Silver/Copper tracker.
-
-### D. Spellbook Window
-*   **Purpose:** Magic management.
-*   **Components:**
-    *   **Slots:** Visual pips for available slots (Level 1: ●●○).
-    *   **Prepared:** Toggle switches for preparing spells (Long Rest logic).
 
 ---
 
