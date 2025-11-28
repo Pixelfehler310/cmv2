@@ -36,11 +36,12 @@ The UI should never get in the way of the roleplay. It should feel like an exten
 
 ## 2. Design & Layout
 
-**Layout Strategy:** "Flexible 3-Column Docking".
-We use `flexlayout-react` to create a robust 3-column structure.
-*   **Left Panel (20%):** Persistent tools (Notes, Party).
-*   **Center Panel (60%):** The Stage (Map) and The Controls (Command Deck).
-*   **Right Panel (20%):** Communication (Chat, Logs).
+**Layout Strategy:** "Flexible 3-Column Docking with Background Map".
+We use `flexlayout-react` to create a robust 3-column structure, but the **Map acts as the immersive background**.
+*   **Left Panel (20%):** Persistent tools (Notes, Party). Collapsible and supports transparency (Glassmorphism).
+*   **Center Panel (60%):** The Command Deck.
+*   **Right Panel (20%):** Communication (Chat, Logs). Collapsible and supports transparency.
+*   **Map Layer:** Technically sits behind the panels or fills the center. If side panels are closed or transparent, the Map is visible across 100% of the width.
 
 **Flexibility:** All containers support Tabs and Splitting. A user can drag their Notes to the Right panel or split the Chat panel to show Combat Log and Messages simultaneously.
 
@@ -49,22 +50,23 @@ We use `flexlayout-react` to create a robust 3-column structure.
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ [Logo]  [ Global Search / Wiki ]                  [Status] [User] [Menu] │ <-- AppNavbar
-├──────────────┬────────────────────────────────────────────┬──────────────┤
-│ [ Left Panel ] [             Center Panel                 ] [ Right Panel] │
-│ (Width: 20%) │ (Width: 60%)                               │ (Width: 20%) │
-│              │                                            │              │
-│ ┌──────────┐ │ ┌────────────────────────────────────────┐ │ ┌──────────┐ │
-│ │ Notes    │ │ │                                        │ │ │ Chat     │ │
-│ │ Party    │ │ │           Map Window                   │ │ │ Log      │ │
-│ │          │ │ │         (Cartographer)                 │ │ │ Combat   │ │
-│ │          │ │ │                                        │ │ │          │ │
-│ │          │ │ │                                        │ │ │          │ │
-│ │          │ │ └────────────────────────────────────────┘ │ │          │ │
-│ │          │ │ ┌────────────────────────────────────────┐ │ │          │ │
-│ │          │ │ │           COMMAND DECK                 │ │ │          │ │
-│ │          │ │ │ [Face] [Action Grid] [End Turn]        │ │ │          │ │
-│ │          │ │ └────────────────────────────────────────┘ │ │          │ │
-│ └──────────┘ └────────────────────────────────────────────┘ └──────────┘ │
+├──────────────────────────────────────────────────────────────────────────┤
+│ ┌──────────┐                                                ┌──────────┐ │
+│ │ Left     │                                                │ Right    │ │
+│ │ Panel    │                                                │ Panel    │ │
+│ │ (20%)    │                                                │ (20%)    │ │
+│ │          │      ( Map Layer - Background 100% )           │          │ │
+│ │          │                                                │          │ │
+│ │ Notes    │                                                │ Chat     │ │
+│ │ Party    │                                                │ Log      │ │
+│ │          │                                                │ Combat   │ │
+│ │          │                                                │          │ │
+│ │          │                                                │          │ │
+│ │          │   ┌────────────────────────────────────────┐   │          │ │
+│ │          │   │           COMMAND DECK                 │   │          │ │
+│ │          │   │ [Face] [Action Grid] [End Turn]        │   │          │ │
+│ │          │   │ (Sticky Bottom Center - 60%)           │   │          │ │
+│ └──────────┘   └────────────────────────────────────────┘   └──────────┘ │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -73,8 +75,9 @@ We use `flexlayout-react` to create a robust 3-column structure.
 ## 3. Windows & Components Detail
 
 ### A. Center Panel
-1.  **Map Window (Top):**
+1.  **Map Window (Background/Top):**
     *   Full interactive map.
+    *   **Behavior:** Can extend to 100% width if side panels are collapsed. Visible through transparent panels.
 2.  **Command Deck (Bottom - Sticky):**
     *   **Dimensions:** Takes full width of the Center Panel (60% of screen).
     *   **Components:** Portrait, HP, Action Grid, End Turn.
