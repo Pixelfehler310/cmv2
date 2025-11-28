@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from src.main import app
-from src.common.database import get_db
+from src.database import get_db
 from src.data.lib.species import Species
 from src.data.lib.class_model import ClassModel
 from src.data.lib.background import Background

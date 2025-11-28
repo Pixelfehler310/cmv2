@@ -3,7 +3,7 @@
 ## 1. Design Philosophy
 
 - **Metaphor:** IDE meets Baldur's Gate 3.
-- **Tech Stack:** React, Vite, Tailwind CSS, shadcn/ui.
+- **Tech Stack:** React, Vite, Tailwind CSS, shadcn/ui., pnpm Monorepo for the MFEs
 - **Layout Engine:** `flexlayout-react`.
   - **Structure:** The App Shell is a wrapper.
   - **Ownership:** Each View MFE (Player View, DM View) manages its **own** `FlexLayout` instance. This allows completely different window configurations (e.g., DM has many monitoring windows, Player has a focused sheet).
@@ -16,7 +16,7 @@
 
 ## 3. Microfrontends (MFEs) Strategy
 
-### Phase 1: Build-Time Integration (Monorepo)
+### Phase 1: Build-Time Integration (Monorepo) (pnpm)
 
 - **Approach:** MFEs are separate packages in the Monorepo, imported by the Host at build time.
 - **Goal:** Reduce complexity while maintaining logical separation.

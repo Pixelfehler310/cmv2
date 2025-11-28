@@ -2,7 +2,7 @@ import uuid
 from typing import Optional
 from src.schemas.monster import MonsterResponse
 from src.schemas.monster_instance import MonsterInstance
-from src.services.dice import DiceService
+from src.engine.lib.dice import DiceService
 
 class InstanceFactory:
     @staticmethod

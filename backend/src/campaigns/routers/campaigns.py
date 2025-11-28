@@ -3,11 +3,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from src.common.database import get_db
+from src.database import get_db
 from src.campaigns.lib.campaign import Campaign
 from src.schemas.campaign import CampaignCreate, CampaignResponse
 
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
+
 
 @router.post("/", response_model=CampaignResponse)
 async def create_campaign(campaign: CampaignCreate, db: AsyncSession = Depends(get_db)):
@@ -17,12 +18,14 @@ async def create_campaign(campaign: CampaignCreate, db: AsyncSession = Depends(g
     await db.refresh(db_campaign)
     return db_campaign
 
+
 @router.get("/", response_model=List[CampaignResponse])
 async def get_campaigns(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     # Use selectinload to fetch characters if needed, or just lazy load (but async requires eager loading for relationships usually)
     # For list, maybe we don't need characters? But Schema has it.
     result = await db.execute(select(Campaign).options(selectinload(Campaign.characters)).offset(skip).limit(limit))
     return result.scalars().all()
+
 
 @router.get("/{campaign_id}", response_model=CampaignResponse)
 async def get_campaign(campaign_id: str, db: AsyncSession = Depends(get_db)):
@@ -31,6 +34,7 @@ async def get_campaign(campaign_id: str, db: AsyncSession = Depends(get_db)):
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
     return campaign
+
 
 @router.delete("/{campaign_id}")
 async def delete_campaign(campaign_id: str, db: AsyncSession = Depends(get_db)):

@@ -1,7 +1,8 @@
 from sqlalchemy import String, Integer, JSON, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.common.database import Base
+from src.database import Base
 from src.common.mixins import UUIDMixin, TimestampMixin
+
 
 class Feat(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "feats"
@@ -9,5 +10,5 @@ class Feat(Base, UUIDMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String, index=True)
     description: Mapped[str] = mapped_column(String)
     prerequisites: Mapped[str] = mapped_column(String, nullable=True)
-    
+
     effects: Mapped[list] = mapped_column(JSON, default=list)

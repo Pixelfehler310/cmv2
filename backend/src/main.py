@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .data.routers import items, spells, monsters, definitions
 from .campaigns.routers import campaigns, characters
-# from .engine.routers import ... # Engine router not yet created/moved
-# from .identity.routers import ... # Identity router not yet created/moved
+from .identity import router as identity_router
+from .database import engine, Base
 
 app = FastAPI(
     title="Open RPG Engine API",
@@ -17,6 +17,14 @@ origins = [
     "http://localhost:5173",  # Vite Default
 ]
 
+from starlette.middleware.sessions import SessionMiddleware
+from src.config import settings
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SECRET_KEY
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -25,12 +33,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.on_event("startup")
+async def init_tables():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
 app.include_router(items.router)
 app.include_router(spells.router)
 app.include_router(monsters.router)
 app.include_router(definitions.router)
 app.include_router(campaigns.router)
 app.include_router(characters.router)
+app.include_router(identity_router.router)
+
 
 @app.get("/")
 async def root():

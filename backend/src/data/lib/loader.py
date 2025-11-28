@@ -9,9 +9,10 @@ from src.data.lib.monster import Monster
 from src.schemas.item import ItemCreate
 from src.schemas.spell import SpellCreate
 from src.schemas.monster import MonsterCreate
-from src.common.database import Base
+from src.database import Base
 
 T = TypeVar("T", bound=Base)
+
 
 class DataLoader:
     def __init__(self, data_dir: str):
@@ -31,7 +32,7 @@ class DataLoader:
             stmt = select(Item).where(Item.name == item_data["name"])
             result = await session.execute(stmt)
             existing = result.scalar_one_or_none()
-            
+
             if not existing:
                 item = Item(**item_data)
                 session.add(item)
@@ -43,7 +44,7 @@ class DataLoader:
             stmt = select(Spell).where(Spell.name == spell_data["name"])
             result = await session.execute(stmt)
             existing = result.scalar_one_or_none()
-            
+
             if not existing:
                 spell = Spell(**spell_data)
                 session.add(spell)
@@ -55,7 +56,7 @@ class DataLoader:
             stmt = select(Monster).where(Monster.name == monster_data["name"])
             result = await session.execute(stmt)
             existing = result.scalar_one_or_none()
-            
+
             if not existing:
                 monster = Monster(**monster_data)
                 session.add(monster)

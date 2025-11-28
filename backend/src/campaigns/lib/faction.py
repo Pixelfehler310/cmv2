@@ -1,7 +1,8 @@
 from sqlalchemy import String, Integer, JSON, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.common.database import Base
+from src.database import Base
 from src.common.mixins import UUIDMixin, TimestampMixin
+
 
 class Faction(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "factions"

@@ -1,5 +1,5 @@
 {
-    "name": "open-rpg-engine",
+    "name": "open-rpg-engine-frontend",
     "private": true,
     "scripts": {
         "dev": "pnpm -r --parallel dev",
@@ -9,7 +9,7 @@
     },
     "devDependencies": {
         "typescript": "^5.0.0",
-        "vite": "^4.0.0"
+        "vite": "^5.0.0"
     },
     "engines": {
         "node": ">=18.0.0",

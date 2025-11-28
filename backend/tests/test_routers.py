@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from src.main import app
-from src.common.database import get_db
+from src.database import get_db
 from src.data.lib.item import Item
 from src.data.lib.spell import Spell
 from src.data.lib.monster import Monster
