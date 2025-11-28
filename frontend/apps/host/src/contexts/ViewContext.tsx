@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import type { Campaign } from '@rpg/types';
+import type { CampaignResponse as Campaign } from '@rpg/types';
 
 type ViewType = 'player' | 'dm' | null;
 

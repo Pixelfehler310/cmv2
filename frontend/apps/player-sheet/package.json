@@ -3,6 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -25,6 +27,3 @@
     "@testing-library/react": "^14.0.0"
   }
 }
-
-
-

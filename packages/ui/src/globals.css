@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Layer 1: Primitive Tokens (The Palette) */
+    --palette-obsidian: 240 10% 4%;
+    --palette-gold: 45 100% 50%;
+    --palette-crimson: 0 100% 40%;
+    --palette-parchment: 35 30% 90%;
+    --palette-steel: 210 20% 70%;
+
+    /* Layer 2: Semantic Tokens (The Usage) */
+    --bg-app: hsl(var(--palette-obsidian));
+    --bg-panel: hsl(var(--palette-obsidian) / 0.8);
+    --text-primary: hsl(var(--palette-parchment));
+    --text-muted: hsl(var(--palette-steel));
+    --accent-main: hsl(var(--palette-gold));
+    --border-subtle: hsl(var(--palette-gold) / 0.2);
+    
+    /* Layer 3: Component Tokens */
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    /* Dark mode overrides if needed, though our default is dark fantasy */
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

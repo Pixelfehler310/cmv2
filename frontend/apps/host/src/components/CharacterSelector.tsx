@@ -1,7 +1,7 @@
 import React from 'react';
 import { useCharacters } from '../lib/api';
 import { Select } from './Select';
-import type { Character } from '@rpg/types';
+import type { CharacterResponse as Character } from '@rpg/types';
 
 export interface CharacterSelectorProps {
   selectedCharacterId: string | null;
@@ -34,7 +34,7 @@ export function CharacterSelector({ selectedCharacterId, onCharacterSelect }: Ch
         <option value="">-- Select Character --</option>
         {characters.map((char) => (
           <option key={char.id} value={char.id}>
-            {char.name} (Level {char.level} {char.class_name})
+            {char.name} (Level {char.level} {(char as any).class_name})
           </option>
         ))}
       </select>

@@ -7,7 +7,10 @@
     "paths": {
       "@rpg/types": ["../../packages/types"],
       "@rpg/ui": ["../../packages/ui"]
-    }
+    },
+    "types": ["vite/client"],
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "include": ["src", "vite.config.ts"],
   "references": [

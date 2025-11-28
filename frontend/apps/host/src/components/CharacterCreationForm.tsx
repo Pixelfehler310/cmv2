@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { charactersApi } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, Input, Button } from '@rpg/ui';
-import type { CharacterCreate } from '@rpg/types';
+
+export type CharacterCreate = any;
 
 export interface CharacterCreationFormProps {
   onSuccess?: (characterId: string) => void;
@@ -51,7 +52,7 @@ export function CharacterCreationForm({ onSuccess, onCancel }: CharacterCreation
   };
 
   const handleChange = (field: keyof CharacterCreate, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -128,8 +129,8 @@ export function CharacterCreationForm({ onSuccess, onCancel }: CharacterCreation
                   <label className="text-sm font-medium mb-1 block">{label}</label>
                   <Input
                     type="number"
-                    value={formData[key as keyof CharacterCreate] || 10}
-                    onChange={(e) => handleChange(key as keyof CharacterCreate, parseInt(e.target.value) || 10)}
+                    value={formData[key as string] || 10}
+                    onChange={(e) => handleChange(key as string, parseInt(e.target.value) || 10)}
                     min={1}
                     max={30}
                   />

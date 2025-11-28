@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Layout, Model, TabNode, IJsonModel } from "flexlayout-react";
+import { useState } from "react";
+import { Layout, Model, TabNode } from "flexlayout-react";
 import "flexlayout-react/style/light.css";
 import { defaultLayout } from "./defaultLayout";
 import { loadLayout, saveLayout } from "../lib/layout/LayoutPersistence";
@@ -42,8 +42,11 @@ function PlayerSheetWrapper() {
 }
 
 function DMToolsWrapper() {
-  const { data: monsters = [] } = useMonsters();
-  const { data: campaigns = [] } = useCampaigns();
+  const { data: monstersData } = useMonsters();
+  const { data: campaignsData } = useCampaigns();
+
+  const monsters = monstersData || [];
+  const campaigns = campaignsData || [];
 
   const handleSpawnMonster = (monsterId: string) => {
     dispatchAction('SPAWN_MONSTER', { monsterId });

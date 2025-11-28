@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@rpg/ui';
 import { Card, CardContent, CardHeader, CardTitle, Button, Input } from '@rpg/ui';
-import type { Monster, Campaign, Character } from '@rpg/types';
+import type { MonsterResponse as Monster, CampaignResponse as Campaign } from '@rpg/types';
 
 export interface DMToolsProps {
   monsters?: Monster[];
@@ -280,14 +280,14 @@ function CampaignManagementPanel({
                 )}
               </div>
               <div>
-                <h4 className="font-semibold mb-2">Characters ({selectedCampaign.characters.length})</h4>
-                {selectedCampaign.characters.length === 0 ? (
+                <h4 className="font-semibold mb-2">Characters ({(selectedCampaign.characters || []).length})</h4>
+                {(!selectedCampaign.characters || selectedCampaign.characters.length === 0) ? (
                   <p className="text-sm text-muted-foreground">No characters in this campaign</p>
                 ) : (
                   <ul className="space-y-1">
                     {selectedCampaign.characters.map((character) => (
                       <li key={character.id} className="text-sm">
-                        {character.name} - Level {character.level} {character.class_name}
+                        {character.name} - Level {character.level} {(character as any).class_name}
                       </li>
                     ))}
                   </ul>

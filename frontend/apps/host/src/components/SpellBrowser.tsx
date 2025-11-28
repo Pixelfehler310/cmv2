@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useSpells, useSpell } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, Input } from '@rpg/ui';
-import type { Spell } from '@rpg/types';
+import type { SpellResponse as Spell } from '@rpg/types';
 
 export function SpellBrowser() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpellId, setSelectedSpellId] = useState<string | null>(null);
   const [levelFilter, setLevelFilter] = useState<string>('all');
-  const { data: spells = [], loading } = useSpells();
+  const { data: spellsData, loading } = useSpells();
   const { data: selectedSpell } = useSpell(selectedSpellId);
+
+  const spells = spellsData || [];
 
   const filteredSpells = spells.filter((spell) => {
     const matchesSearch = spell.name.toLowerCase().includes(searchTerm.toLowerCase());

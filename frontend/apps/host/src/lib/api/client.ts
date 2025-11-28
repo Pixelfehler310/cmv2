@@ -1,18 +1,14 @@
 import type {
-  Item,
   ItemResponse,
-  Spell,
   SpellResponse,
-  Monster,
   MonsterResponse,
-  Character,
   CharacterResponse,
-  CharacterCreate,
-  Campaign,
   CampaignResponse,
-  CampaignCreate,
-  PaginationParams,
 } from '@rpg/types';
+
+export type PaginationParams = { skip?: number; limit?: number };
+export type CharacterCreate = any;
+export type CampaignCreate = any;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import * as PIXI from 'pixi.js';
 import { Button } from '@rpg/ui';
 
@@ -7,7 +7,7 @@ export interface CartographerProps {
   onTokenMove?: (tokenId: string, x: number, y: number) => void;
 }
 
-export function Cartographer({ gridSize = 50, onTokenMove }: CartographerProps) {
+export function Cartographer({ gridSize = 50, onTokenMove: _onTokenMove }: CartographerProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<PIXI.Application | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -23,9 +23,10 @@ export function Cartographer({ gridSize = 50, onTokenMove }: CartographerProps) 
         antialias: true,
       });
       
-      await app.init();
+      // app.init() is v8, we are on v7
+      // await app.init();
 
-      canvasRef.current!.appendChild(app.canvas);
+      canvasRef.current!.appendChild(app.view as unknown as Node);
       appRef.current = app;
 
       // Create grid

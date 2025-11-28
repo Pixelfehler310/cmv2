@@ -5,7 +5,7 @@ import { SpellBrowser } from './SpellBrowser';
 import { CharacterCreationForm } from './CharacterCreationForm';
 import { CampaignCreationForm } from './CampaignCreationForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@rpg/ui';
-import type { Monster, Campaign } from '@rpg/types';
+import type { MonsterResponse as Monster, CampaignResponse as Campaign } from '@rpg/types';
 
 export interface DMToolsWithCRUDProps {
   monsters?: Monster[];

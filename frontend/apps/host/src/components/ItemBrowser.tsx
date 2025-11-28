@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useItems, useItem } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, Input, Button } from '@rpg/ui';
-import type { Item } from '@rpg/types';
+import type { ItemResponse as Item } from '@rpg/types';
 
 export function ItemBrowser() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const { data: items = [], loading } = useItems();
+  const { data: itemsData, loading } = useItems();
   const { data: selectedItem } = useItem(selectedItemId);
+
+  const items = itemsData || [];
 
   const filteredItems = items.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -77,7 +79,7 @@ export function ItemBrowser() {
                   <span className="font-semibold">Price:</span> {selectedItem.price} cp
                 </div>
               </div>
-              {Object.keys(selectedItem.properties).length > 0 && (
+              {selectedItem.properties && Object.keys(selectedItem.properties).length > 0 && (
                 <div>
                   <h4 className="font-semibold mb-2">Properties</h4>
                   <div className="text-sm space-y-1">

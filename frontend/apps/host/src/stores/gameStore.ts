@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Character, Campaign, Monster } from '@rpg/types';
+import type { CharacterResponse as Character, CampaignResponse as Campaign, MonsterResponse as Monster } from '@rpg/types';
 
 interface CombatState {
   isActive: boolean;

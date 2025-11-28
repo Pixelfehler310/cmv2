@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { campaignsApi } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, Input, Button } from '@rpg/ui';
-import type { CampaignCreate } from '@rpg/types';
+
+export type CampaignCreate = any;
 
 export interface CampaignCreationFormProps {
   onSuccess?: (campaignId: string) => void;
@@ -38,7 +39,7 @@ export function CampaignCreationForm({ onSuccess, onCancel }: CampaignCreationFo
   };
 
   const handleChange = (field: keyof CampaignCreate, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
   return (

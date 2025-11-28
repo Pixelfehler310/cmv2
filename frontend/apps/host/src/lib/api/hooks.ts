@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api, ApiError } from './client';
-import type { PaginationParams } from '@rpg/types';
+import { api, ApiError, PaginationParams } from './client';
 
 export interface UseApiResult<T> {
   data: T | null;

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@rpg/ui';
 import { StatBlock, HPBar } from '@rpg/ui';
 import { Card, CardContent, CardHeader, CardTitle } from '@rpg/ui';
-import type { Character } from '@rpg/types';
+import type { CharacterResponse as Character } from '@rpg/types';
 
 export interface PlayerSheetProps {
   character: Character | null;
@@ -50,12 +50,12 @@ export function PlayerSheet({ character, onAction }: PlayerSheetProps) {
 
 function StatsTab({ character, onAction }: { character: Character; onAction?: (type: string, payload: any) => void }) {
   const abilityScores = [
-    { label: 'STR', value: character.strength },
-    { label: 'DEX', value: character.dexterity },
-    { label: 'CON', value: character.constitution },
-    { label: 'INT', value: character.intelligence },
-    { label: 'WIS', value: character.wisdom },
-    { label: 'CHA', value: character.charisma },
+    { label: 'STR', value: character.strength || 10 },
+    { label: 'DEX', value: character.dexterity || 10 },
+    { label: 'CON', value: character.constitution || 10 },
+    { label: 'INT', value: character.intelligence || 10 },
+    { label: 'WIS', value: character.wisdom || 10 },
+    { label: 'CHA', value: character.charisma || 10 },
   ];
 
   return (
@@ -69,13 +69,13 @@ function StatsTab({ character, onAction }: { character: Character; onAction?: (t
             <span className="font-semibold">Name:</span> {character.name}
           </div>
           <div>
-            <span className="font-semibold">Race:</span> {character.race}
+            <span className="font-semibold">Race:</span> {(character as any).race || 'Unknown'}
           </div>
           <div>
-            <span className="font-semibold">Class:</span> {character.class_name}
+            <span className="font-semibold">Class:</span> {(character as any).class_name || 'Unknown'}
           </div>
           <div>
-            <span className="font-semibold">Level:</span> {character.level}
+            <span className="font-semibold">Level:</span> {character.level || 1}
           </div>
         </CardContent>
       </Card>
@@ -88,7 +88,7 @@ function StatsTab({ character, onAction }: { character: Character; onAction?: (t
           <HPBar
             current={character.current_hp}
             max={character.max_hp}
-            temp={character.temp_hp}
+            temp={character.temp_hp || 0}
           />
         </CardContent>
       </Card>
@@ -117,13 +117,13 @@ function StatsTab({ character, onAction }: { character: Character; onAction?: (t
         </CardHeader>
         <CardContent className="space-y-2">
           <div>
-            <span className="font-semibold">Armor Class:</span> {character.armor_class}
+            <span className="font-semibold">Armor Class:</span> {character.armor_class || 10}
           </div>
           <div>
-            <span className="font-semibold">Speed:</span> {character.speed} ft
+            <span className="font-semibold">Speed:</span> {character.speed || 30} ft
           </div>
           <div>
-            <span className="font-semibold">Initiative:</span> {character.initiative}
+            <span className="font-semibold">Initiative:</span> {character.initiative || 0}
           </div>
         </CardContent>
       </Card>
@@ -138,7 +138,7 @@ function InventoryTab({ character }: { character: Character }) {
         <CardTitle>Inventory</CardTitle>
       </CardHeader>
       <CardContent>
-        {character.inventory.length === 0 ? (
+        {(!character.inventory || character.inventory.length === 0) ? (
           <p className="text-muted-foreground">No items in inventory</p>
         ) : (
           <ul className="space-y-2">
@@ -164,7 +164,7 @@ function SpellsTab({ character }: { character: Character }) {
         <CardTitle>Spells</CardTitle>
       </CardHeader>
       <CardContent>
-        {character.spells.length === 0 ? (
+        {(!character.spells || character.spells.length === 0) ? (
           <p className="text-muted-foreground">No spells known</p>
         ) : (
           <ul className="space-y-2">
@@ -183,7 +183,7 @@ function SpellsTab({ character }: { character: Character }) {
   );
 }
 
-function FeaturesTab({ character }: { character: Character }) {
+function FeaturesTab({ character: _character }: { character: Character }) {
   return (
     <Card>
       <CardHeader>
