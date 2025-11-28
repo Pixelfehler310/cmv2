@@ -1,7 +1,26 @@
-from sqlalchemy import String, Integer, JSON, ForeignKey
+from sqlalchemy import String, Integer, JSON, ForeignKey, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 from src.common.mixins import UUIDMixin, TimestampMixin
+import enum
+
+class CampaignRole(str, enum.Enum):
+    DM = "DM"
+    PLAYER = "PLAYER"
+    SPECTATOR = "SPECTATOR"
+
+class CampaignMember(Base, UUIDMixin, TimestampMixin):
+    __tablename__ = "campaign_members"
+
+    campaign_id: Mapped[str] = mapped_column(ForeignKey("campaigns.id"))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    role: Mapped[CampaignRole] = mapped_column(String, default=CampaignRole.PLAYER)
+    
+    # Optional: Link to a specific character if they are a player
+    active_character_id: Mapped[str] = mapped_column(String, nullable=True)
+
+    campaign: Mapped["Campaign"] = relationship(back_populates="members")
+    # user relationship would be here if we need it, but avoiding circular imports with identity module
 
 
 class Campaign(Base, UUIDMixin, TimestampMixin):
@@ -9,8 +28,8 @@ class Campaign(Base, UUIDMixin, TimestampMixin):
 
     name: Mapped[str] = mapped_column(String, index=True)
     description: Mapped[str] = mapped_column(String, nullable=True)
-    dm_id: Mapped[str] = mapped_column(
-        String, nullable=True)  # User ID of the DM
+    # dm_id is now redundant but we can keep it for quick lookup or legacy support
+    dm_id: Mapped[str] = mapped_column(String, nullable=True)
 
     # State
     current_scene: Mapped[str] = mapped_column(String, nullable=True)
@@ -19,4 +38,7 @@ class Campaign(Base, UUIDMixin, TimestampMixin):
 
     # Relationships
     characters: Mapped[list["Character"]] = relationship(
+        back_populates="campaign", cascade="all, delete-orphan")
+    
+    members: Mapped[list["CampaignMember"]] = relationship(
         back_populates="campaign", cascade="all, delete-orphan")

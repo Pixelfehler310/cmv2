@@ -18,3 +18,6 @@ Theming:
     - Cutesy Fantasy Theme with glassmorphism and cutesy fantasy colors and cute fonts - green, pink, blue, and purple?
     - professional dark theme: normal shad cn design with dark colors
     - professional light theme: normal shad cn design with light colors
+Calendar
+Email Reminders about planned sessions
+Session Scheduling

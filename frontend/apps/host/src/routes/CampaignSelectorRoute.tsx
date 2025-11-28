@@ -1,13 +1,69 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AuthService } from '../lib/auth';
 
-export const CampaignSelectorRoute = () => {
+interface Campaign {
+  id: string;
+  name: string;
+  role: string;
+  image?: string;
+}
+
+export const CampaignSelectorRoute = ({ auth }: { auth: AuthService }) => {
   const navigate = useNavigate();
-  
-  // Mock campaigns
-  const campaigns = [
-    { id: '1', name: 'Curse of Strahd', role: 'DM', image: 'https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=2669&auto=format&fit=crop' },
-    { id: '2', name: 'Lost Mine of Phandelver', role: 'Player', image: 'https://images.unsplash.com/photo-1519074069444-1ba4fff66d16?q=80&w=2574&auto=format&fit=crop' },
-  ];
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
+
+  const fetchCampaigns = async () => {
+    try {
+      const token = auth.getToken();
+      if (!token) return;
+
+      const res = await fetch('/api/campaigns/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCampaigns(data.map((c: any) => ({
+          ...c,
+          image: 'https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=2669&auto=format&fit=crop' // Placeholder
+        })));
+      }
+    } catch (e) {
+      console.error('Failed to fetch campaigns', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    const name = prompt('Campaign Name:');
+    if (!name) return;
+
+    try {
+      const token = auth.getToken();
+      const res = await fetch('/api/campaigns/', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name })
+      });
+      
+      if (res.ok) {
+        fetchCampaigns();
+      }
+    } catch (e) {
+      console.error('Failed to create campaign', e);
+    }
+  };
+
+  if (loading) return <div className="p-8 text-center">Loading realms...</div>;
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -32,7 +88,10 @@ export const CampaignSelectorRoute = () => {
           ))}
           
           {/* Create New */}
-          <div className="aspect-video bg-muted/20 border-2 border-dashed border-muted rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-muted/30 transition-colors">
+          <div 
+            onClick={handleCreate}
+            className="aspect-video bg-muted/20 border-2 border-dashed border-muted rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-muted/30 transition-colors"
+          >
             <span className="text-4xl mb-2 text-muted-foreground">+</span>
             <span className="text-muted-foreground font-medium">Create New</span>
           </div>

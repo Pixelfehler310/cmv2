@@ -10,7 +10,14 @@ class CampaignBase(BaseModel):
 class CampaignCreate(CampaignBase):
     pass
 
+class CampaignMemberResponse(BaseModel):
+    user_id: str
+    role: str
+    active_character_id: Optional[str] = None
+
 class CampaignResponse(CampaignBase):
     model_config = ConfigDict(from_attributes=True)
     id: str
     characters: List[CharacterResponse] = []
+    # We can include members if needed, or just the current user's role
+    role: Optional[str] = None # Computed field for the current user
