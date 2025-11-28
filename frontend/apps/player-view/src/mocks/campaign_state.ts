@@ -19,9 +19,9 @@ export const campaignState: CampaignState = {
       { id: 'token-2', entityId: 'monster-1', x: 8, y: 6, size: 1, isHidden: false, imageUrl: 'https://ui-avatars.com/api/?name=Gob&background=red' },
       { id: 'token-3', entityId: 'monster-2', x: 9, y: 4, size: 1, isHidden: true, imageUrl: 'https://ui-avatars.com/api/?name=Gob&background=red' }, // Hidden goblin
     ],
-    fogOfWar: [ // TODO add id to each shape, so one can easily remove it
-      { type: 'rect', x: 0, y: 0, w: 20, h: 15 }, // Cover everything
-      { type: 'circle', x: 5, y: 5, r: 6 }, // Reveal around player (subtractive logic needed in renderer, or this is revealed area?)
+    fogOfWar: [
+      { id: 'fog-1', type: 'rect', x: 0, y: 0, w: 20, h: 15 }, // Cover everything
+      { id: 'fog-2', type: 'circle', x: 5, y: 5, r: 6 }, // Reveal around player (subtractive logic needed in renderer, or this is revealed area?)
       // Assuming these are REVEALED areas for simplicity in this mock, or standard FoW is "shapes that are hidden"?
       // Let's assume these are UNREVEALED areas (Fog).
       // Actually, usually it's easier to define what is VISIBLE.

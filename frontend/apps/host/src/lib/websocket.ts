@@ -1,4 +1,5 @@
 import { IConnectionState } from '@rpg/bridge';
+import { logger } from './logger';
 
 type MessageHandler = (data: any) => void;
 
@@ -23,16 +24,17 @@ export class WebSocketManager {
     this.isIntentionalClose = false;
     const wsUrl = `${this.url}/campaigns/${campaignId}/ws?token=${token}`;
     
+    logger.info(`Connecting to WebSocket: ${wsUrl}`);
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
-      console.log('WS Connected');
+      logger.info('WS Connected');
       this.state.isConnected = true;
       this.reconnectInterval = 1000; // Reset backoff
     };
 
     this.ws.onclose = () => {
-      console.log('WS Disconnected');
+      logger.info('WS Disconnected');
       this.state.isConnected = false;
       if (!this.isIntentionalClose) {
         this.scheduleReconnect(campaignId, token);
@@ -40,7 +42,7 @@ export class WebSocketManager {
     };
 
     this.ws.onerror = (err) => {
-      console.error('WS Error', err);
+      logger.error('WS Error', err);
     };
 
     this.ws.onmessage = (event) => {
@@ -48,7 +50,7 @@ export class WebSocketManager {
         const data = JSON.parse(event.data);
         this.handlers.forEach(handler => handler(data));
       } catch (e) {
-        console.error('Failed to parse WS message', e);
+        logger.error('Failed to parse WS message', e);
       }
     };
   }
@@ -64,6 +66,7 @@ export class WebSocketManager {
       this.ws.send(JSON.stringify({ type, payload }));
       return Promise.resolve({ success: true });
     } else {
+      logger.warn('Attempted to send action while WebSocket is not connected');
       return Promise.reject(new Error('WebSocket not connected'));
     }
   }
@@ -75,7 +78,7 @@ export class WebSocketManager {
 
   private scheduleReconnect(campaignId: string, token: string) {
     setTimeout(() => {
-      console.log('Reconnecting...');
+      logger.info('Reconnecting...');
       this.connect(campaignId, token);
       this.reconnectInterval = Math.min(this.reconnectInterval * 2, this.maxReconnectInterval);
     }, this.reconnectInterval);

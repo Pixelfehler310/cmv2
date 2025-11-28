@@ -1,4 +1,5 @@
 import { UserProfile, IAuthService } from '@rpg/bridge';
+import { logger } from './logger';
 
 export class AuthService implements IAuthService {
   private user: UserProfile | null = null;
@@ -13,6 +14,7 @@ export class AuthService implements IAuthService {
   }
 
   async login(username: string, password?: string): Promise<boolean> {
+    logger.info(`AuthService.login called for user: ${username}`);
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -23,18 +25,23 @@ export class AuthService implements IAuthService {
         })
       });
       
-      if (!res.ok) return false;
+      if (!res.ok) {
+        logger.warn(`Login failed with status: ${res.status}`);
+        return false;
+      }
       
       const data = await res.json();
       this.setToken(data.access_token);
+      logger.info('Login successful');
       return true;
     } catch (e) {
-      console.error('Login failed', e);
+      logger.error('Login failed with exception', e);
       return false;
     }
   }
 
   async register(username: string, password: string): Promise<boolean> {
+    logger.info(`AuthService.register called for user: ${username}`);
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -42,26 +49,31 @@ export class AuthService implements IAuthService {
         body: JSON.stringify({ username, password })
       });
       
-      if (!res.ok) return false;
+      if (!res.ok) {
+        logger.warn(`Registration failed with status: ${res.status}`);
+        return false;
+      }
+      logger.info('Registration successful');
       return true;
     } catch (e) {
-      console.error('Registration failed', e);
+      logger.error('Registration failed with exception', e);
       return false;
     }
   }
 
-  async devLogin(username: string): Promise<boolean> {
-    console.log('AuthService.devLogin called with:', username);
+  async devLogin(username: string, roles: string[] = ['admin']): Promise<boolean> {
+    logger.info(`AuthService.devLogin called with: ${username}, roles: ${roles.join(', ')}`);
     this.setToken('dev-token');
     this.user = {
       id: 'dev-user',
       username: username,
-      roles: ['admin']
+      roles: roles
     };
     return true;
   }
 
   async logout(): Promise<void> {
+    logger.info('AuthService.logout called');
     this.user = null;
     this.token = null;
     localStorage.removeItem(this.STORAGE_KEY);
@@ -81,10 +93,11 @@ export class AuthService implements IAuthService {
         return this.user;
       } else {
         // Token invalid or expired
+        logger.warn('Token invalid or expired, logging out');
         this.logout();
       }
     } catch (e) {
-      console.error('Failed to fetch user', e);
+      logger.error('Failed to fetch user', e);
     }
     return null;
   }

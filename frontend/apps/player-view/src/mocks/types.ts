@@ -87,7 +87,7 @@ export interface Token {
 }
 
 export interface FogShape {
-  // TODO add id to each shape, so dm can easily remove it by /clear fog <id>
+  id: string;
   type: 'rect' | 'circle' | 'poly';
   points?: number[]; // for poly
   x?: number;

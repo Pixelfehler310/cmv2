@@ -6,6 +6,8 @@ import { AuthService } from '../lib/auth';
 import { WebSocketManager } from '../lib/websocket';
 import { ReactHostBridge } from '../lib/bridge';
 import { QueryClient } from '@tanstack/react-query';
+import { IHostBridge } from '@rpg/bridge';
+import { config } from '../config';
 
 interface SessionRouteProps {
   auth: AuthService;
@@ -15,32 +17,52 @@ interface SessionRouteProps {
 
 export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
   const { id } = useParams();
-  const [bridge, setBridge] = useState<ReactHostBridge | null>(null);
+  const [bridge, setBridge] = useState<IHostBridge | null>(null);
   const [user, setUser] = useState<any>(null); // Should be UserProfile
   const [connection, setConnection] = useState(ws.state);
 
   useEffect(() => {
-    // Initialize Bridge
-    const newBridge = new ReactHostBridge(ws, queryClient, auth);
-    setBridge(newBridge);
+    const initBridge = async () => {
+      if (config.useMocks) {
+        const { MockHostBridge } = await import('../../../player-view/src/mocks/MockHostBridge');
+        const mockBridge = new MockHostBridge();
+        setBridge(mockBridge);
+        setConnection({ isConnected: true, latency: 0 });
+        // Mock user
+        setUser({ username: 'Mock User', id: 'mock-1', roles: ['DM'] });
+      } else {
+        // Initialize Real Bridge
+        const newBridge = new ReactHostBridge(ws, queryClient, auth);
+        setBridge(newBridge);
 
-    // Connect WS
-    const token = auth.getToken();
-    if (id && token) {
-      ws.connect(id, token);
+        // Connect WS
+        const token = auth.getToken();
+        if (id && token) {
+          ws.connect(id, token);
+        }
+      }
+    };
+
+    initBridge();
+
+    // Sync connection state (only for real WS)
+    let interval: NodeJS.Timeout;
+    if (!config.useMocks) {
+        interval = setInterval(() => {
+          setConnection({ ...ws.state });
+        }, 1000);
     }
 
-    // Sync connection state
-    const interval = setInterval(() => {
-      setConnection({ ...ws.state });
-    }, 1000);
-
-    // Load User
-    auth.getUser().then(setUser);
+    // Load User (only for real auth)
+    if (!config.useMocks) {
+        auth.getUser().then(setUser);
+    }
 
     return () => {
-      ws.disconnect();
-      clearInterval(interval);
+      if (!config.useMocks) {
+          ws.disconnect();
+          clearInterval(interval);
+      }
     };
   }, [id, auth, ws, queryClient]);
 
@@ -54,7 +76,7 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
         onLogout={() => auth.logout()} 
       />
       <ViewContainer 
-        viewType="dm" // Hardcoded for now, logic should determine this
+        viewType={user?.roles?.includes('player') ? 'player' : 'dm'} 
         bridge={bridge} 
         campaignId={id || ''} 
       />
