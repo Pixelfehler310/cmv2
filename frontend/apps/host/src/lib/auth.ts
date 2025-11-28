@@ -61,13 +61,14 @@ export class AuthService implements IAuthService {
     }
   }
 
-  async devLogin(username: string, roles: string[] = ['admin']): Promise<boolean> {
-    logger.info(`AuthService.devLogin called with: ${username}, roles: ${roles.join(', ')}`);
+  async devLogin(username: string): Promise<boolean> {
+    logger.info(`AuthService.devLogin called with: ${username}`);
     this.setToken('dev-token');
+    localStorage.setItem('mythic_dev_user', JSON.stringify({ username }));
     this.user = {
       id: 'dev-user',
       username: username,
-      roles: roles
+      is_superuser: true // Dev user is superuser
     };
     return true;
   }
@@ -77,11 +78,29 @@ export class AuthService implements IAuthService {
     this.user = null;
     this.token = null;
     localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.removeItem('mythic_dev_user');
   }
 
   async getUser(): Promise<UserProfile | null> {
     if (this.user) return this.user;
     if (!this.token) return null;
+
+    if (this.token === 'dev-token') {
+        const stored = localStorage.getItem('mythic_dev_user');
+        if (stored) {
+            const { username } = JSON.parse(stored);
+            this.user = {
+                id: 'dev-user',
+                username,
+                is_superuser: true
+            };
+            return this.user;
+        } else {
+            logger.warn('AuthService: dev-token present but no user data found. Logging out.');
+            this.logout();
+            return null;
+        }
+    }
 
     try {
       const res = await fetch('/api/auth/me', {
@@ -90,6 +109,7 @@ export class AuthService implements IAuthService {
       
       if (res.ok) {
         this.user = await res.json();
+        logger.debug(`User retrieved: ${this.user?.username} (${this.user?.id})`);
         return this.user;
       } else {
         // Token invalid or expired

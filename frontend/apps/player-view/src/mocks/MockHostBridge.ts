@@ -43,21 +43,54 @@ class MockActionDispatcher implements IActionDispatcher {
 }
 
 class MockAuthService implements IAuthService {
+  private user: UserProfile | null = null;
+
+  constructor() {
+    // Check local storage for dev user to persist across reloads
+    const stored = localStorage.getItem('mythic_dev_user');
+    if (stored) {
+        const { username, roles } = JSON.parse(stored);
+        this.user = {
+            id: 'dev-user',
+            username,
+            roles,
+            avatarUrl: 'https://github.com/shadcn.png'
+        };
+    } else {
+        this.user = null;
+    }
+  }
+
   async getUser(): Promise<UserProfile | null> {
-    return {
-      id: 'user-1',
-      username: 'Simon',
-      roles: ['admin'],
-      avatarUrl: 'https://github.com/shadcn.png'
-    };
+    return this.user;
   }
 
   async login(username: string): Promise<boolean> {
+    this.user = {
+        id: 'user-1',
+        username,
+        avatarUrl: 'https://github.com/shadcn.png'
+    };
+    return true;
+  }
+
+  async devLogin(username: string, roles: string[] = ['user']): Promise<boolean> {
+    console.log(`[MockAuth] devLogin: ${username}, roles: ${roles}`);
+    this.user = {
+        id: 'dev-user',
+        username,
+        avatarUrl: 'https://github.com/shadcn.png',
+        is_superuser: roles.includes('admin')
+    };
+    localStorage.setItem('mythic_dev_user', JSON.stringify({ username, roles }));
     return true;
   }
 
   async logout(): Promise<void> {
-    // no-op
+    console.log('[MockAuth] Logout');
+    this.user = null;
+    localStorage.removeItem('mythic_dev_user');
+    // todo navigate to login
   }
 }
 

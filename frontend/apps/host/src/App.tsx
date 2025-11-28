@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { LoginRoute } from './routes/LoginRoute';
 import { CampaignSelectorRoute } from './routes/CampaignSelectorRoute';
 import { SessionRoute } from './routes/SessionRoute';
@@ -14,11 +14,22 @@ const queryClient = new QueryClient();
 const authService = new AuthService();
 const wsManager = new WebSocketManager('ws://localhost:8000');
 
+const RouteLogger = () => {
+  const location = useLocation();
+  
+  useEffect(() => {
+    logger.info(`Route changed to: ${location.pathname}${location.search}`);
+  }, [location]);
+
+  return null;
+};
+
 function App() {
   logger.info('App starting...');
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <RouteLogger />
         <div className="min-h-screen bg-background text-foreground font-sans antialiased">
            <Routes>
              <Route path="/" element={<LoginRoute auth={authService} />} />

@@ -9,6 +9,7 @@ export const campaigns: Campaign[] = [
     nextSession: '2023-11-30T19:00:00Z',
     members: [
       { userId: 'user-1', role: 'DM' }, // Me
+      { userId: 'dev-user', role: 'DM' }, // Dev User
       { userId: 'user-2', role: 'PLAYER' },
       { userId: 'user-3', role: 'PLAYER' },
     ]
@@ -22,6 +23,7 @@ export const campaigns: Campaign[] = [
     members: [
       { userId: 'user-4', role: 'DM' },
       { userId: 'user-1', role: 'PLAYER' }, // Me
+      { userId: 'dev-user', role: 'PLAYER' }, // Dev User
       { userId: 'user-5', role: 'PLAYER' },
     ]
   }

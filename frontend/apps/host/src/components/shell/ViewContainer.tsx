@@ -1,13 +1,13 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { IHostBridge } from '@rpg/bridge';
+import { logger } from '../../lib/logger';
 
-// Lazy load MFEs (Placeholder for now, will be real imports later)
-// const PlayerView = React.lazy(() => import('@rpg/player-view'));
+// Lazy load MFEs
+const PlayerView = React.lazy(() => import('@rpg/player-view').then(module => ({ default: module.PlayerView })));
 // const DMView = React.lazy(() => import('@rpg/dm-view'));
 
 // Mock components for now
-const PlayerViewMock = () => <div className="p-10 text-center text-2xl text-primary">Player View Loaded</div>;
-const DMViewMock = () => <div className="p-10 text-center text-2xl text-destructive">DM View Loaded</div>;
+const DMViewMock = () => <div className="p-10 text-center text-2xl text-destructive">ASDF View Loaded</div>;
 
 interface ViewContainerProps {
   viewType: 'player' | 'dm' | 'campaign_creator';
@@ -16,10 +16,14 @@ interface ViewContainerProps {
 }
 
 export const ViewContainer = ({ viewType, bridge, campaignId }: ViewContainerProps) => {
+  useEffect(() => {
+    logger.info(`ViewContainer rendering view: ${viewType} for campaign: ${campaignId}`);
+  }, [viewType, campaignId]);
+
   const renderView = () => {
     switch (viewType) {
       case 'player':
-        return <PlayerViewMock />; // <PlayerView bridge={bridge} campaignId={campaignId} />
+        return <PlayerView bridge={bridge} campaignId={campaignId} />;
       case 'dm':
         return <DMViewMock />; // <DMView bridge={bridge} campaignId={campaignId} />
       case 'campaign_creator':
@@ -30,7 +34,7 @@ export const ViewContainer = ({ viewType, bridge, campaignId }: ViewContainerPro
   };
 
   return (
-    <div className="flex-1 relative overflow-hidden bg-background">
+    <div className="flex-1 relative overflow-hidden bg-background h-full">
       <Suspense fallback={
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>

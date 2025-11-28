@@ -1,0 +1,29 @@
+{
+    "name": "@rpg/player-view",
+    "version": "0.0.0",
+    "type": "module",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "scripts": {
+        "build": "tsc"
+    },
+    "dependencies": {
+        "@rpg/bridge": "workspace:*",
+        "@rpg/ui": "workspace:*",
+        "flexlayout-react": "^0.7.15",
+        "lucide-react": "^0.300.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "clsx": "^2.0.0",
+        "tailwind-merge": "^2.0.0",
+        "zustand": "^4.4.0"
+    },
+    "devDependencies": {
+        "@types/react": "^18.2.43",
+        "@types/react-dom": "^18.2.17",
+        "typescript": "^5.2.2",
+        "autoprefixer": "^10.0.0",
+        "postcss": "^8.0.0",
+        "tailwindcss": "^3.0.0"
+    }
+}

@@ -58,25 +58,18 @@ export const LoginRoute = ({ auth }: { auth: AuthService }) => {
     window.location.href = `/api/auth/${provider}/authorize`;
   };
 
-  const handleDevLogin = async (roles: string[] = ['admin']) => {
-    logger.info(`LoginRoute: handleDevLogin called with roles: ${roles.join(', ')}`);
+  const handleDevLogin = async () => {
+    logger.info(`LoginRoute: handleDevLogin called`);
     
     let effectiveUsername = username;
     if (!effectiveUsername) {
-        const defaultName = roles.includes('player') ? 'DevPlayer' : 'DevUser';
-        logger.info(`LoginRoute: Username empty, using default "${defaultName}"`);
-        effectiveUsername = defaultName;
+        logger.info(`LoginRoute: Username empty, using default "DevUser"`);
+        effectiveUsername = 'DevUser';
         setUsername(effectiveUsername); // Update state for consistency
     }
     
-    if (config.useMocks) {
-        logger.info('LoginRoute: Using mocks, redirecting to /campaigns');
-        navigate('/campaigns');
-        return;
-    }
-
-    logger.info(`LoginRoute: Calling auth.devLogin with ${effectiveUsername} and roles ${roles}`);
-    await auth.devLogin(effectiveUsername, roles);
+    logger.info(`LoginRoute: Calling auth.devLogin with ${effectiveUsername}`);
+    await auth.devLogin(effectiveUsername);
     navigate('/campaigns');
   };
 
@@ -191,14 +184,7 @@ export const LoginRoute = ({ auth }: { auth: AuthService }) => {
             onClick={() => handleDevLogin()}
             className="w-full h-10 bg-secondary text-secondary-foreground font-medium rounded hover:bg-secondary/90 transition-colors"
           >
-            Dev Login (No Backend)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDevLogin(['player'])}
-            className="w-full h-10 mt-2 bg-secondary text-secondary-foreground font-medium rounded hover:bg-secondary/90 transition-colors"
-          >
-            Dev Login (Player)
+            Dev Login
           </button>
         </form>
       </div>

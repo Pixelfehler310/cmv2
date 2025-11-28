@@ -42,5 +42,5 @@ export interface UserProfile {
   id: string;
   username: string;
   avatarUrl?: string;
-  roles: string[];
+  is_superuser?: boolean;
 }
