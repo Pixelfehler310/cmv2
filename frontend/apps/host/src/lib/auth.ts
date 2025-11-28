@@ -3,6 +3,14 @@ import { UserProfile, IAuthService } from '@rpg/bridge';
 export class AuthService implements IAuthService {
   private user: UserProfile | null = null;
   private token: string | null = null;
+  private readonly STORAGE_KEY = 'mythic_auth_token';
+
+  constructor() {
+    this.token = localStorage.getItem(this.STORAGE_KEY);
+    if (this.token) {
+      this.getUser();
+    }
+  }
 
   async login(username: string, password?: string): Promise<boolean> {
     try {
@@ -11,16 +19,14 @@ export class AuthService implements IAuthService {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ 
           username, 
-          password: password || 'password' // Fallback for dev/legacy if needed, but UI should provide it
+          password: password || 'password' 
         })
       });
       
       if (!res.ok) return false;
       
       const data = await res.json();
-      this.token = data.access_token;
-      // Fetch profile immediately after login
-      await this.getUser();
+      this.setToken(data.access_token);
       return true;
     } catch (e) {
       console.error('Login failed', e);
@@ -37,9 +43,6 @@ export class AuthService implements IAuthService {
       });
       
       if (!res.ok) return false;
-      
-      // Auto-login after register? Or just return true and let user login?
-      // Let's return true and let UI handle it (maybe auto-fill login form)
       return true;
     } catch (e) {
       console.error('Registration failed', e);
@@ -49,7 +52,7 @@ export class AuthService implements IAuthService {
 
   async devLogin(username: string): Promise<boolean> {
     console.log('AuthService.devLogin called with:', username);
-    this.token = 'dev-token';
+    this.setToken('dev-token');
     this.user = {
       id: 'dev-user',
       username: username,
@@ -61,7 +64,7 @@ export class AuthService implements IAuthService {
   async logout(): Promise<void> {
     this.user = null;
     this.token = null;
-    // Optional: Call backend logout
+    localStorage.removeItem(this.STORAGE_KEY);
   }
 
   async getUser(): Promise<UserProfile | null> {
@@ -76,6 +79,9 @@ export class AuthService implements IAuthService {
       if (res.ok) {
         this.user = await res.json();
         return this.user;
+      } else {
+        // Token invalid or expired
+        this.logout();
       }
     } catch (e) {
       console.error('Failed to fetch user', e);
@@ -89,6 +95,7 @@ export class AuthService implements IAuthService {
 
   setToken(token: string) {
     this.token = token;
+    localStorage.setItem(this.STORAGE_KEY, token);
     this.getUser();
   }
 }

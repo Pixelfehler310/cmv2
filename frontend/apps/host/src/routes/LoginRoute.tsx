@@ -15,6 +15,9 @@ export const LoginRoute = ({ auth }: { auth: AuthService }) => {
     if (token) {
       auth.setToken(token);
       navigate('/campaigns');
+    } else if (auth.getToken()) {
+      // Check if we already have a token (from localStorage)
+      navigate('/campaigns');
     }
   }, [searchParams, auth, navigate]);
 
