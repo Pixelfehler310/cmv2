@@ -8,12 +8,24 @@ importers:
 
   .:
     devDependencies:
+      '@types/react':
+        specifier: ^18.2.0
+        version: 18.3.27
+      '@types/react-dom':
+        specifier: ^18.2.0
+        version: 18.3.7(@types/react@18.3.27)
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
       vite:
         specifier: ^5.0.0
         version: 5.4.21
+
+  ../../civic/packages/design-system:
+    dependencies:
+      tailwindcss:
+        specifier: '>=3.0.0'
+        version: 3.4.18
 
   apps/host:
     dependencies:
@@ -136,9 +148,15 @@ importers:
 
   packages/ui:
     dependencies:
+      '@civic/design-system':
+        specifier: workspace:*
+        version: link:../../../../civic/packages/design-system
       clsx:
         specifier: ^2.0.0
         version: 2.1.1
+      lucide-react:
+        specifier: ^0.300.0
+        version: 0.300.0(react@18.3.1)
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -149,6 +167,12 @@ importers:
         specifier: ^2.0.0
         version: 2.6.0
     devDependencies:
+      '@types/react':
+        specifier: ^18.2.0
+        version: 18.3.27
+      '@types/react-dom':
+        specifier: ^18.2.0
+        version: 18.3.7(@types/react@18.3.27)
       autoprefixer:
         specifier: ^10.0.0
         version: 10.4.22(postcss@8.5.6)

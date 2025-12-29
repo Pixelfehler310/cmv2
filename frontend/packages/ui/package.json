@@ -28,6 +28,7 @@
         "typescript": "^5.0.0"
     },
     "dependencies": {
+        "@civic/design-system": "workspace:*",
         "clsx": "^2.0.0",
         "tailwind-merge": "^2.0.0",
         "lucide-react": "^0.300.0"

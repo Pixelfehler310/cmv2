@@ -1,8 +1,12 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"settings": {}
+    "folders": [
+        {
+            "path": "."
+        },
+        {
+            "path": "C:\\Users\\simon\\Documents\\GitHub\\civic\\packages\\design-system",
+            "name": "civic-design-system"
+        }
+    ],
+    "settings": {}
 }

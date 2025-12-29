@@ -1,5 +1,8 @@
+import civicTheme from "@civic/design-system";
+
 /** @type {import('tailwindcss').Config} */
 export default {
+    presets: [civicTheme],
     darkMode: ["class"],
     content: ["./src/**/*.{ts,tsx}"],
     theme: {

@@ -1,0 +1,82 @@
+# =============================================================================
+# PRODUCTION CONFIGURATION
+# =============================================================================
+# Verwende diese Datei für Produktions-Deployments:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Diese Konfiguration:
+# - Entfernt Debug-Modi und Development-Tools
+# - Verwendet sichere Secrets (über Environment-Variablen)
+# - Optimiert für Performance und Stabilität
+# =============================================================================
+
+services:
+  db:
+    restart: always
+    # In Produktion: Ports NICHT nach außen öffnen
+    ports: []
+    environment:
+      # Secrets sollten über .env oder Docker Secrets kommen
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # Ressourcen-Limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  redis:
+    restart: always
+    # In Produktion: Ports NICHT nach außen öffnen
+    ports: []
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  backend:
+    restart: always
+    environment:
+      DEBUG: "false"
+      POSTGRES_SERVER: db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      REDIS_HOST: redis
+      SECRET_KEY: ${SECRET_KEY}
+      # Strikte CORS für Produktion
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://yourdomain.com}
+    # Kein Volume-Mount in Produktion - Code ist im Image
+    volumes: []
+    # Uvicorn ohne --reload, mit mehreren Workern
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  frontend:
+    restart: always
+    environment:
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://backend:8000}
+    # Kein Volume-Mount in Produktion
+    volumes: []
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # Optional: Nginx Reverse Proxy für Produktion
+  # nginx:
+  #   image: nginx:alpine
+  #   restart: always
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - backend
+  #     - frontend
