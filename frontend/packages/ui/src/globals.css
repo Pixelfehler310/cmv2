@@ -1,38 +1,137 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Layer 1: Primitive Tokens (The Palette) */
-    --palette-obsidian: 240 10% 4%;
-    --palette-gold: 45 100% 50%;
-    --palette-crimson: 0 100% 40%;
-    --palette-parchment: 35 30% 90%;
-    --palette-steel: 210 20% 70%;
+    /* --- SHARED TOKENS --- */
+    --radius: 24px;
+    --radius-sm: 8px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --radius-xl: 32px;
+    --radius-full: 9999px;
 
-    /* Layer 2: Semantic Tokens (The Usage) */
-    --bg-app: hsl(var(--palette-obsidian));
-    --bg-panel: hsl(var(--palette-obsidian) / 0.8);
-    --text-primary: hsl(var(--palette-parchment));
-    --text-muted: hsl(var(--palette-steel));
-    --accent-main: hsl(var(--palette-gold));
-    --border-subtle: hsl(var(--palette-gold) / 0.2);
-    
-    /* Layer 3: Component Tokens */
-    --radius: 0.5rem;
+    /* Spacing Scale (4pt grid) */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* Violet Palette (Studio Violet) */
+    --violet-50: #f5f3ff;
+    --violet-100: #ede9fe;
+    --violet-200: #ddd6fe;
+    --violet-300: #c4b5fd;
+    --violet-400: #a78bfa;
+    --violet-500: #8b5cf6; /* Primary */
+    --violet-600: #7c3aed; /* Gradient End / Hover */
+    --violet-700: #6d28d9;
+    --violet-800: #5b21b6;
+    --violet-900: #4c1d95;
+
+    /* --- THEME: LIGHT (DEFAULT) --- */
+    --bg-app: #f8fafc;
+    --bg-section: #f1f5f9;
+    --bg-panel: #ffffff;
+    --bg-input: #f1f5f9;
+
+    --text-primary: #0f172a;
+    --text-muted: #475569;
+    --text-subtle: #64748b;
+
+    --accent-main: var(--violet-500);
+    --accent-hover: var(--violet-600);
+
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-btn: 0 4px 14px 0 rgba(139, 92, 246, 0.2);
   }
- 
+
   .dark {
-    /* Dark mode overrides if needed, though our default is dark fantasy */
+    /* --- THEME: DARK --- */
+    --bg-app: #020617;
+    --bg-section: #0f172a;
+    --bg-panel: #0f172a; /* L1 Elevation */
+    --bg-panel-hover: #1e293b; /* L2 Elevation */
+    --bg-input: #0f172a;
+
+    --text-primary: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-subtle: #64748b;
+
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --shadow-card: none;
+    --shadow-btn: none;
+
+    /* Darker context for violet */
+    --accent-main: #a78bfa; /* violet-400 for better contrast on dark */
+    --accent-hover: #8b5cf6;
   }
 }
- 
+
 @layer base {
   * {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased selection:bg-violet-200 selection:text-violet-900;
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center font-bold px-8 h-14 rounded-full transition-all duration-200;
+    background: linear-gradient(135deg, var(--accent-main) 0%, var(--accent-hover) 100%);
+    color: white;
+    box-shadow: var(--shadow-btn);
+  }
+
+  .btn-primary:hover {
+    @apply -translate-y-0.5 scale-[1.02];
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.3);
+  }
+
+  .btn-primary:active {
+    animation: boing 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .surface-card {
+    @apply bg-card rounded-3xl transition-all duration-300;
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .surface-card:hover {
+    @apply scale-[0.98] shadow-none;
+  }
+
+  .input-field {
+    @apply w-full bg-input rounded-2xl px-6 h-14 text-base transition-all duration-200 outline-none border-none;
+    color: var(--text-primary);
+  }
+
+  .input-field:focus {
+    @apply ring-2 ring-primary;
+  }
+}
+
+@keyframes boing {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.92);
+  }
+  70% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
   }
 }

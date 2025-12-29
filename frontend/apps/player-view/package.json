@@ -5,7 +5,8 @@
     "main": "./src/index.ts",
     "types": "./src/index.ts",
     "scripts": {
-        "build": "tsc"
+        "build": "tsc",
+        "dev": "echo '@rpg/player-view ready'"
     },
     "dependencies": {
         "@rpg/bridge": "workspace:*",

@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
     darkMode: ["class"],
     content: ["./src/**/*.{ts,tsx}"],
     theme: {
@@ -12,46 +12,50 @@ module.exports = {
         },
         extend: {
             colors: {
-                border: "hsl(var(--border-subtle))",
-                input: "hsl(var(--bg-panel))",
-                ring: "hsl(var(--accent-main))",
-                background: "hsl(var(--bg-app))",
-                foreground: "hsl(var(--text-primary))",
+                border: "var(--border-subtle)",
+                input: "var(--bg-input)",
+                ring: "var(--accent-main)",
+                background: "var(--bg-app)",
+                foreground: "var(--text-primary)",
                 primary: {
-                    DEFAULT: "hsl(var(--accent-main))",
-                    foreground: "hsl(var(--bg-app))",
+                    DEFAULT: "var(--accent-main)",
+                    foreground: "white",
                 },
                 secondary: {
-                    DEFAULT: "hsl(var(--palette-steel))",
-                    foreground: "hsl(var(--bg-app))",
-                },
-                destructive: {
-                    DEFAULT: "hsl(var(--palette-crimson))",
-                    foreground: "hsl(var(--text-primary))",
+                    DEFAULT: "var(--bg-section)",
+                    foreground: "var(--text-primary)",
                 },
                 muted: {
-                    DEFAULT: "hsl(var(--bg-panel))",
-                    foreground: "hsl(var(--text-muted))",
+                    DEFAULT: "var(--bg-section)",
+                    foreground: "var(--text-muted)",
                 },
                 accent: {
-                    DEFAULT: "hsl(var(--accent-main))",
-                    foreground: "hsl(var(--bg-app))",
-                },
-                popover: {
-                    DEFAULT: "hsl(var(--bg-panel))",
-                    foreground: "hsl(var(--text-primary))",
+                    DEFAULT: "var(--accent-main)",
+                    foreground: "white",
                 },
                 card: {
-                    DEFAULT: "hsl(var(--bg-panel))",
-                    foreground: "hsl(var(--text-primary))",
+                    DEFAULT: "var(--bg-panel)",
+                    foreground: "var(--text-primary)",
                 },
             },
+            fontFamily: {
+                sans: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
+            },
             borderRadius: {
+                "3xl": "24px",
+                "2xl": "16px",
+                xl: "12px",
                 lg: "var(--radius)",
-                md: "calc(var(--radius) - 2px)",
-                sm: "calc(var(--radius) - 4px)",
+                md: "calc(var(--radius) - 8px)",
+                sm: "calc(var(--radius) - 16px)",
             },
             keyframes: {
+                boing: {
+                    "0%": { transform: "scale(1)" },
+                    "40%": { transform: "scale(0.92)" },
+                    "70%": { transform: "scale(1.05)" },
+                    "100%": { transform: "scale(1)" },
+                },
                 "accordion-down": {
                     from: { height: 0 },
                     to: { height: "var(--radix-accordion-content-height)" },
@@ -62,10 +66,11 @@ module.exports = {
                 },
             },
             animation: {
+                boing: "boing 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
                 "accordion-down": "accordion-down 0.2s ease-out",
                 "accordion-up": "accordion-up 0.2s ease-out",
             },
         },
     },
-    plugins: [require("tailwindcss-animate")],
+    plugins: [],
 }
