@@ -29,6 +29,7 @@ export interface ActionResult {
 
 export interface IAuthService {
   getUser(): Promise<UserProfile | null>;
+  getToken(): string | null;
   login(username: string): Promise<boolean>;
   logout(): Promise<void>;
 }

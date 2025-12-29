@@ -65,6 +65,10 @@ class MockAuthService implements IAuthService {
     return this.user;
   }
 
+  getToken(): string | null {
+    return 'mock-token';
+  }
+
   async login(username: string): Promise<boolean> {
     this.user = {
         id: 'user-1',

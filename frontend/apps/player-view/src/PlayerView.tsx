@@ -19,74 +19,50 @@ const jsonModel: IJsonModel = {
   global: {
     tabEnableClose: false,
     tabSetEnableMaximize: true,
-    tabSetEnableTabStrip: true, // Show tabs
+    tabSetEnableTabStrip: true,
+    borderBarSize: 32,
   },
-  borders: [],
+  borders: [
+    {
+        type: "border",
+        location: "left",
+        size: 300,
+        children: [
+            { type: "tab", name: "Notes", component: "notes" },
+            { type: "tab", name: "Party", component: "party" }
+        ]
+    },
+    {
+        type: "border",
+        location: "right",
+        size: 300,
+        children: [
+            { type: "tab", name: "Chat", component: "chat" },
+            { type: "tab", name: "Combat", component: "combat" }
+        ]
+    },
+    {
+        type: "border",
+        location: "bottom",
+        size: 140,
+        children: [
+            { type: "tab", name: "Command Deck", component: "command-deck" }
+        ]
+    }
+  ],
   layout: {
     type: 'row',
     weight: 100,
     children: [
       {
         type: 'tabset',
-        weight: 20,
+        weight: 100,
         children: [
           {
             type: 'tab',
-            name: 'Notes',
-            component: 'notes',
-          },
-          {
-            type: 'tab',
-            name: 'Party',
-            component: 'party',
-          },
-        ],
-      },
-      {
-        type: 'row',
-        weight: 60,
-        children: [
-            {
-                type: 'tabset',
-                weight: 85,
-                children: [
-                {
-                    type: 'tab',
-                    name: 'Map',
-                    component: 'map',
-                    enableClose: false,
-                },
-                ],
-            },
-            {
-                type: 'tabset',
-                weight: 15,
-                height: 120,
-                enableMaximize: false,
-                children: [
-                {
-                    type: 'tab',
-                    name: 'Command Deck',
-                    component: 'command-deck',
-                    enableClose: false,
-                },
-                ],
-            }
-        ]
-      },
-      {
-        type: 'tabset',
-        weight: 20,
-        children: [
-          {
-            type: 'tab',
-            name: 'Chat',
-            component: 'chat',
-          },
-          {
-            type: 'tab',
-            name: 'Combat',
-            component: 'combat',
+            name: 'Map',
+            component: 'map',
+            enableClose: false,
           },
         ],
       },
@@ -110,7 +86,7 @@ export const PlayerView: React.FC<PlayerViewProps> = ({ bridge, campaignId }) =>
       case 'map':
         return <MapWindow />;
       case 'command-deck':
-        return <CommandDeck />;
+        return <CommandDeck bridge={bridge} campaignId={campaignId} />;
       case 'chat':
         return <ChatPanel />;
       case 'combat':

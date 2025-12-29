@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/build
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.git
+**/.vscode
+**/.env
+docker-compose.yml
+.dockerignore
+walkthrough.md
+README.md
