@@ -9,8 +9,14 @@ WORKDIR /app
 COPY frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml frontend/package.json ./
 
 # Copy all packages and apps (source code)
+# Copy all packages and apps (source code)
 COPY frontend/packages ./packages
+COPY frontend/vendor ./vendor
 COPY frontend/apps ./apps
+
+# Patch pnpm-workspace.yaml to use vendored package instead of external link
+# Replaces "../../civic/packages/design-system" with "./vendor/design-system"
+RUN sed -i 's|\.\./\.\./civic/packages/design-system|./vendor/design-system|g' pnpm-workspace.yaml
 
 # Install all dependencies
 RUN pnpm install

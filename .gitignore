@@ -42,3 +42,5 @@ docker-compose.override.yml
 
 # External Libs
 libsrd5/
+
+frontend/vendor

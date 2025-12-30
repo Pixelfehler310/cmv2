@@ -64,6 +64,8 @@ services:
       - /app/packages/bridge/node_modules
       - /app/packages/ui/node_modules
       - /app/packages/types/node_modules
+      # Mount the live design system from the external repo
+      - ../civic/packages/design-system:/app/vendor/design-system
     depends_on:
       - backend
 
