@@ -1,77 +1,76 @@
-@import "@civic/design-system/css";
+/* Civic VTT uses @civic/design-system theme via tailwind.config.js preset */
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Civic VTT Theme Overrides
+ * Base tokens are provided by @civic/design-system
+ * .theme-vtt on <body> activates the arcane color palette
+ */
+
 @layer base {
   :root {
-    /* --- SHARED TOKENS --- */
+    /* Arcane Palette (from @civic/design-system) */
+    --arcane-50: #faf5ff;
+    --arcane-100: #f3e8ff;
+    --arcane-200: #e9d5ff;
+    --arcane-300: #d8b4fe;
+    --arcane-400: #c084fc;
+    --arcane-500: #a855f7;
+    --arcane-600: #9333ea;
+    --arcane-700: #7c3aed;
+    --arcane-800: #6b21a8;
+    --arcane-900: #581c87;
+    --arcane-950: #3b0764;
+
+    /* Slate Palette (from @civic/design-system) */
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-500: #64748b;
+    --slate-800: #1e293b;
+    --slate-900: #0f172a;
+    --slate-950: #020617;
+
+    /* VTT-specific radius for rounded cards */
     --radius: 24px;
-    --radius-sm: 8px;
-    --radius-md: 16px;
-    --radius-lg: 24px;
-    --radius-xl: 32px;
-    --radius-full: 9999px;
 
-    /* Spacing Scale (4pt grid) */
-    --space-1: 4px;
-    --space-2: 8px;
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-6: 24px;
-    --space-8: 32px;
-
-    /* Violet Palette (Studio Violet) */
-    --violet-50: #f5f3ff;
-    --violet-100: #ede9fe;
-    --violet-200: #ddd6fe;
-    --violet-300: #c4b5fd;
-    --violet-400: #a78bfa;
-    --violet-500: #8b5cf6; /* Primary */
-    --violet-600: #7c3aed; /* Gradient End / Hover */
-    --violet-700: #6d28d9;
-    --violet-800: #5b21b6;
-    --violet-900: #4c1d95;
-
-    /* --- THEME: LIGHT (DEFAULT) --- */
-    --bg-app: #f8fafc;
-    --bg-section: #f1f5f9;
+    /* Semantic tokens */
+    --bg-app: var(--slate-50);
+    --bg-section: var(--slate-100);
     --bg-panel: #ffffff;
-    --bg-input: #f1f5f9;
-
-    --text-primary: #0f172a;
-    --text-muted: #475569;
-    --text-subtle: #64748b;
-
-    --accent-main: var(--violet-500);
-    --accent-hover: var(--violet-600);
-
+    --bg-input: var(--slate-100);
+    --text-primary: var(--slate-900);
+    --text-muted: var(--slate-500);
     --border-subtle: rgba(0, 0, 0, 0.08);
     --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-btn: 0 4px 14px 0 rgba(139, 92, 246, 0.2);
+
+    /* VTT accents use arcane palette (purple magic theme) */
+    --accent-main: var(--arcane-500);
+    --accent-hover: var(--arcane-600);
+
+    /* Button shadow with arcane glow */
+    --shadow-btn: 0 4px 14px 0 rgba(168, 85, 247, 0.2);
   }
 
   .dark {
-    /* --- THEME: DARK --- */
-    --bg-app: #020617;
-    --bg-section: #0f172a;
-    --bg-panel: #0f172a; /* L1 Elevation */
-    --bg-panel-hover: #1e293b; /* L2 Elevation */
-    --bg-input: #0f172a;
-
-    --text-primary: #f8fafc;
-    --text-muted: #94a3b8;
-    --text-subtle: #64748b;
-
+    /* Dark mode backgrounds */
+    --bg-app: var(--slate-950);
+    --bg-section: var(--slate-900);
+    --bg-panel: var(--slate-900);
+    --bg-input: var(--slate-900);
+    --text-primary: var(--slate-50);
+    --text-muted: var(--slate-500);
     --border-subtle: rgba(255, 255, 255, 0.08);
     --shadow-card: none;
-    --shadow-btn: none;
 
-    /* Darker context for violet */
-    --accent-main: #a78bfa; /* violet-400 for better contrast on dark */
-    --accent-hover: #8b5cf6;
+    /* In dark mode, use lighter arcane for better contrast */
+    --accent-main: var(--arcane-400);
+    --accent-hover: var(--arcane-500);
+    --shadow-btn: none;
   }
 }
 
@@ -80,7 +79,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-violet-200 selection:text-violet-900;
+    @apply bg-background text-foreground antialiased selection:bg-arcane-200 selection:text-arcane-900;
     font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
   }
 }
@@ -95,7 +94,7 @@
 
   .btn-primary:hover {
     @apply -translate-y-0.5 scale-[1.02];
-    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 6px 20px rgba(168, 85, 247, 0.3);
   }
 
   .btn-primary:active {

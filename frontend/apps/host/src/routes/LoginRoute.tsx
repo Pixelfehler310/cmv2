@@ -84,8 +84,8 @@ export const LoginRoute = ({ auth }: { auth: AuthService }) => {
 
       <div className="relative z-10 w-full max-w-md p-10 surface-card">
         <div className="text-center mb-10">
-          <h1 className="text-5xl font-bold text-primary mb-4 tracking-tight">Mythic VTT</h1>
-          <p className="text-lg text-muted-foreground font-medium">Enter the realm of magic.</p>
+          <h1 className="text-5xl font-bold text-primary mb-4 tracking-tight">Civic VTT</h1>
+          <p className="text-lg text-muted-foreground font-medium">Your table, your rules.</p>
         </div>
 
         <div className="gap-4 flex flex-col mb-10">

@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: rpg_password
       POSTGRES_DB: rpg_db
     ports:
-      - "5432:5432"
+      - "5450:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +20,7 @@ services:
     image: redis:7-alpine
     restart: always
     ports:
-      - "6379:6379"
+      - "6400:6379"
     volumes:
       - redis_data:/data
 
@@ -37,7 +37,7 @@ services:
       REDIS_HOST: redis
       SECRET_KEY: "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
     ports:
-      - "8000:8000"
+      - "8020:8000"
     volumes:
       - ./backend:/app
     depends_on:
@@ -53,8 +53,9 @@ services:
     restart: always
     environment:
       - VITE_BACKEND_URL=http://backend:8000
+      - VITE_HMR_PORT=3020
     ports:
-      - "3000:3000"
+      - "3020:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules

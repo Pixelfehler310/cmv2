@@ -13,8 +13,9 @@ export const AppNavbar = ({ user, connection, onLogout }: AppNavbarProps) => {
     <nav className="h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 flex items-center justify-between">
       {/* Left: Logo */}
       <div className="flex items-center gap-2 font-heading text-xl text-primary cursor-pointer hover:text-primary/80 transition-colors">
-        <span className="text-2xl">🐉</span>
-        <span>Mythic VTT</span>
+        <span className="text-2xl">🎲</span>
+        {/* CIVIC_LOGO_PLACEHOLDER */}
+        <span>Civic VTT</span>
       </div>
 
       {/* Center: Global Search */}

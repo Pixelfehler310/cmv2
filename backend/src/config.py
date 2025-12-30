@@ -26,7 +26,6 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str | None = None
     DISCORD_CLIENT_ID: str | None = None
     DISCORD_CLIENT_SECRET: str | None = None
-    SECRET_KEY: str = "your-secret-key" # Added explicitly if not present, needed for SessionMiddleware/Authlib
 
     @computed_field
     @property
