@@ -82,7 +82,7 @@ export const LoginRoute = ({ auth }: { auth: AuthService }) => {
       <ThemeSwitcher />
       <div className="absolute inset-0 bg-background/50 backdrop-blur-[2px]" />
 
-      <div className="relative z-10 w-full max-w-md p-10 surface-card">
+      <div className="relative z-10 w-full max-w-md p-10 card card-elevated animate-fade-in-up">
         <div className="text-center mb-10">
           <h1 className="text-5xl font-bold text-primary mb-4 tracking-tight">Civic VTT</h1>
           <p className="text-lg text-muted-foreground font-medium">Your table, your rules.</p>
@@ -122,13 +122,13 @@ export const LoginRoute = ({ auth }: { auth: AuthService }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-bold mb-2 ml-1 text-text-subtle">Username</label>
-            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="input-field" placeholder="Gandalf" />
+            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="input input-lg" placeholder="Gandalf" />
           </div>
           <div>
             <label className="block text-sm font-bold mb-2 ml-1 text-text-subtle">Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-field" placeholder="••••••••" />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input input-lg" placeholder="••••••••" />
           </div>
-          <button type="submit" className="btn-primary w-full">
+          <button type="submit" className="btn btn-primary btn-lg w-full">
             {isLogin ? "Enter Realm" : "Claim Your Name"}
           </button>
 
@@ -148,11 +148,7 @@ export const LoginRoute = ({ auth }: { auth: AuthService }) => {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => handleDevLogin()}
-            className="w-full h-14 bg-secondary text-secondary-foreground font-bold rounded-full hover:bg-secondary/80 transition-all border border-border"
-          >
+          <button type="button" onClick={() => handleDevLogin()} className="btn btn-ghost btn-lg w-full">
             Dev Portal
           </button>
         </form>

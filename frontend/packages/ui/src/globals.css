@@ -1,137 +1,16 @@
-/* Civic VTT uses @civic/design-system theme via tailwind.config.js preset */
+/* =============================================================================
+ * Civic VTT Global Styles
+ * Uses @civic/design-system v2 with Tailwind v4
+ * ============================================================================= */
+
+/* Import Google Fonts - Plus Jakarta Sans */
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap");
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Core design system import - provides all tokens, themes, utilities */
+@import "@civic/design-system";
+@import "@civic/design-system/components";
 
-/*
- * Civic VTT Theme Overrides
- * Base tokens are provided by @civic/design-system
- * .theme-vtt on <body> activates the arcane color palette
- */
-
-@layer base {
-  :root {
-    /* Arcane Palette (from @civic/design-system) */
-    --arcane-50: #faf5ff;
-    --arcane-100: #f3e8ff;
-    --arcane-200: #e9d5ff;
-    --arcane-300: #d8b4fe;
-    --arcane-400: #c084fc;
-    --arcane-500: #a855f7;
-    --arcane-600: #9333ea;
-    --arcane-700: #7c3aed;
-    --arcane-800: #6b21a8;
-    --arcane-900: #581c87;
-    --arcane-950: #3b0764;
-
-    /* Slate Palette (from @civic/design-system) */
-    --slate-50: #f8fafc;
-    --slate-100: #f1f5f9;
-    --slate-200: #e2e8f0;
-    --slate-500: #64748b;
-    --slate-800: #1e293b;
-    --slate-900: #0f172a;
-    --slate-950: #020617;
-
-    /* VTT-specific radius for rounded cards */
-    --radius: 24px;
-
-    /* Semantic tokens */
-    --bg-app: var(--slate-50);
-    --bg-section: var(--slate-100);
-    --bg-panel: #ffffff;
-    --bg-input: var(--slate-100);
-    --text-primary: var(--slate-900);
-    --text-muted: var(--slate-500);
-    --border-subtle: rgba(0, 0, 0, 0.08);
-    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-
-    /* VTT accents use arcane palette (purple magic theme) */
-    --accent-main: var(--arcane-500);
-    --accent-hover: var(--arcane-600);
-
-    /* Button shadow with arcane glow */
-    --shadow-btn: 0 4px 14px 0 rgba(168, 85, 247, 0.2);
-  }
-
-  .dark {
-    /* Dark mode backgrounds */
-    --bg-app: var(--slate-950);
-    --bg-section: var(--slate-900);
-    --bg-panel: var(--slate-900);
-    --bg-input: var(--slate-900);
-    --text-primary: var(--slate-50);
-    --text-muted: var(--slate-500);
-    --border-subtle: rgba(255, 255, 255, 0.08);
-    --shadow-card: none;
-
-    /* In dark mode, use lighter arcane for better contrast */
-    --accent-main: var(--arcane-400);
-    --accent-hover: var(--arcane-500);
-    --shadow-btn: none;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground antialiased selection:bg-arcane-200 selection:text-arcane-900;
-    font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
-  }
-}
-
-@layer components {
-  .btn-primary {
-    @apply inline-flex items-center justify-center font-bold px-8 h-14 rounded-full transition-all duration-200;
-    background: linear-gradient(135deg, var(--accent-main) 0%, var(--accent-hover) 100%);
-    color: white;
-    box-shadow: var(--shadow-btn);
-  }
-
-  .btn-primary:hover {
-    @apply -translate-y-0.5 scale-[1.02];
-    box-shadow: 0 6px 20px rgba(168, 85, 247, 0.3);
-  }
-
-  .btn-primary:active {
-    animation: boing 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-
-  .surface-card {
-    @apply bg-card rounded-3xl transition-all duration-300;
-    box-shadow: var(--shadow-card);
-    border: 1px solid var(--border-subtle);
-  }
-
-  .surface-card:hover {
-    @apply scale-[0.98] shadow-none;
-  }
-
-  .input-field {
-    @apply w-full bg-input rounded-2xl px-6 h-14 text-base transition-all duration-200 outline-none border-none;
-    color: var(--text-primary);
-  }
-
-  .input-field:focus {
-    @apply ring-2 ring-primary;
-  }
-}
-
-@keyframes boing {
-  0% {
-    transform: scale(1);
-  }
-  40% {
-    transform: scale(0.92);
-  }
-  70% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
+/* VTT-specific overrides */
+body {
+  @apply selection:bg-arcane-200 selection:text-arcane-900;
 }

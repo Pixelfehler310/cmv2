@@ -23,11 +23,7 @@ export const ThemeSwitcher = () => {
   };
 
   return (
-    <button
-      onClick={toggleTheme}
-      className="fixed top-6 right-6 p-3 rounded-full bg-card border border-border surface-card flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50"
-      aria-label="Toggle Theme"
-    >
+    <button onClick={toggleTheme} className="fixed top-6 right-6 p-3 btn btn-ghost card card-elevated hover-scale z-50" aria-label="Toggle Theme">
       {theme === "light" ? <Moon className="w-5 h-5 text-violet-500" /> : <Sun className="w-5 h-5 text-violet-400" />}
     </button>
   );

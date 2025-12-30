@@ -1,4 +1,4 @@
-import civicTheme from "@civic/design-system";
+import civicTheme from "@civic/design-system/tailwind";
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -14,51 +14,41 @@ export default {
             },
         },
         extend: {
+            // VTT-specific semantic mappings (bridge between Tailwind utilities and design system tokens)
             colors: {
+                // These map Tailwind's bg-background, text-foreground etc to design system tokens
                 border: "var(--border-subtle)",
                 input: "var(--bg-input)",
-                ring: "var(--accent-main)",
-                background: "var(--bg-app)",
+                ring: "var(--color-primary)",
+                background: "var(--bg-canvas)",
                 foreground: "var(--text-primary)",
                 primary: {
-                    DEFAULT: "var(--accent-main)",
+                    DEFAULT: "var(--color-primary)",
                     foreground: "white",
                 },
                 secondary: {
-                    DEFAULT: "var(--bg-section)",
+                    DEFAULT: "var(--bg-surface)",
                     foreground: "var(--text-primary)",
                 },
                 muted: {
-                    DEFAULT: "var(--bg-section)",
+                    DEFAULT: "var(--bg-subtle)",
                     foreground: "var(--text-muted)",
                 },
                 accent: {
-                    DEFAULT: "var(--accent-main)",
+                    DEFAULT: "var(--color-accent)",
                     foreground: "white",
                 },
                 card: {
-                    DEFAULT: "var(--bg-panel)",
+                    DEFAULT: "var(--bg-surface)",
                     foreground: "var(--text-primary)",
                 },
-            },
-            fontFamily: {
-                sans: ["'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
-            },
-            borderRadius: {
-                "3xl": "24px",
-                "2xl": "16px",
-                xl: "12px",
-                lg: "var(--radius)",
-                md: "calc(var(--radius) - 8px)",
-                sm: "calc(var(--radius) - 16px)",
-            },
-            keyframes: {
-                boing: {
-                    "0%": { transform: "scale(1)" },
-                    "40%": { transform: "scale(0.92)" },
-                    "70%": { transform: "scale(1.05)" },
-                    "100%": { transform: "scale(1)" },
+                destructive: {
+                    DEFAULT: "var(--color-alert-500)",
+                    foreground: "white",
                 },
+            },
+            // Accordion animations for Radix components
+            keyframes: {
                 "accordion-down": {
                     from: { height: 0 },
                     to: { height: "var(--radix-accordion-content-height)" },
@@ -69,7 +59,6 @@ export default {
                 },
             },
             animation: {
-                boing: "boing 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
                 "accordion-down": "accordion-down 0.2s ease-out",
                 "accordion-up": "accordion-up 0.2s ease-out",
             },

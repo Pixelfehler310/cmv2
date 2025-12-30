@@ -10,11 +10,7 @@ export const ChatPanel = () => {
         </div>
       </div>
       <div className="p-2 border-t border-border">
-        <input
-          type="text"
-          placeholder="Type a message..."
-          className="w-full px-3 py-2 bg-input rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-        />
+        <input type="text" placeholder="Type a message..." className="input w-full" />
       </div>
     </div>
   );
