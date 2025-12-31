@@ -11,14 +11,24 @@ app = FastAPI(
     version="0.1.0"
 )
 
-# CORS Configuration
-origins = [
-    "http://localhost:3000",  # React Host
-    "http://localhost:5173",  # Vite Default
-]
-
 from starlette.middleware.sessions import SessionMiddleware
 from src.config import settings
+
+# CORS Configuration
+origins = [
+    "http://localhost:3000",
+    "http://localhost:3020",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3020",
+]
+
+# Add origins from environment if present
+if hasattr(settings, "CORS_ORIGINS") and settings.CORS_ORIGINS:
+    if isinstance(settings.CORS_ORIGINS, str):
+        origins.extend([o.strip() for o in settings.CORS_ORIGINS.split(",")])
+    else:
+        origins.extend(settings.CORS_ORIGINS)
 
 app.add_middleware(
     SessionMiddleware,
@@ -45,7 +55,7 @@ app.include_router(monsters.router)
 app.include_router(definitions.router)
 app.include_router(campaigns.router)
 app.include_router(characters.router)
-app.include_router(identity_router.router)
+app.include_router(identity_router)
 
 
 @app.get("/")

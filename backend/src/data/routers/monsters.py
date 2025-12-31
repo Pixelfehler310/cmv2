@@ -9,7 +9,7 @@ from src.schemas.monster import MonsterResponse
 router = APIRouter(prefix="/monsters", tags=["Monsters"])
 
 
-@router.get("/", response_model=List[MonsterResponse])
+@router.get("", response_model=List[MonsterResponse])
 async def get_monsters(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Monster).offset(skip).limit(limit))
     return result.scalars().all()

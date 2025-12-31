@@ -10,7 +10,7 @@ from src.schemas.character import CharacterCreate, CharacterResponse
 router = APIRouter(prefix="/characters", tags=["Characters"])
 
 
-@router.post("/", response_model=CharacterResponse)
+@router.post("", response_model=CharacterResponse)
 async def create_character(character: CharacterCreate, db: AsyncSession = Depends(get_db)):
     db_character = Character(**character.model_dump())
     db.add(db_character)
@@ -19,7 +19,7 @@ async def create_character(character: CharacterCreate, db: AsyncSession = Depend
     return db_character
 
 
-@router.get("/", response_model=List[CharacterResponse])
+@router.get("", response_model=List[CharacterResponse])
 async def get_characters(
     skip: int = 0, 
     limit: int = 100, 

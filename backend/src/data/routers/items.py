@@ -9,7 +9,7 @@ from src.schemas.item import ItemResponse
 router = APIRouter(prefix="/items", tags=["Items"])
 
 
-@router.get("/", response_model=List[ItemResponse])
+@router.get("", response_model=List[ItemResponse])
 async def get_items(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Item).offset(skip).limit(limit))
     return result.scalars().all()

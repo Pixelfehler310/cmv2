@@ -9,7 +9,7 @@ from src.schemas.spell import SpellResponse
 router = APIRouter(prefix="/spells", tags=["Spells"])
 
 
-@router.get("/", response_model=List[SpellResponse])
+@router.get("", response_model=List[SpellResponse])
 async def get_spells(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Spell).offset(skip).limit(limit))
     return result.scalars().all()
