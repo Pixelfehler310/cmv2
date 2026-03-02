@@ -1,8 +1,5 @@
-import civicTheme from "@civic/design-system/tailwind";
-
 /** @type {import('tailwindcss').Config} */
 export default {
-    presets: [civicTheme],
     darkMode: ["class"],
     content: ["./src/**/*.{ts,tsx}"],
     theme: {
@@ -18,33 +15,33 @@ export default {
             colors: {
                 // These map Tailwind's bg-background, text-foreground etc to design system tokens
                 border: "var(--border-subtle)",
-                input: "var(--bg-input)",
+                input: "var(--bg-inset)",
                 ring: "var(--color-primary)",
                 background: "var(--bg-canvas)",
-                foreground: "var(--text-primary)",
+                foreground: "var(--on-canvas)",
                 primary: {
                     DEFAULT: "var(--color-primary)",
-                    foreground: "white",
+                    foreground: "var(--on-primary)",
                 },
                 secondary: {
-                    DEFAULT: "var(--bg-surface)",
-                    foreground: "var(--text-primary)",
+                    DEFAULT: "var(--bg-surface-1)",
+                    foreground: "var(--on-surface)",
                 },
                 muted: {
                     DEFAULT: "var(--bg-subtle)",
-                    foreground: "var(--text-muted)",
+                    foreground: "var(--on-muted)",
                 },
                 accent: {
                     DEFAULT: "var(--color-accent)",
-                    foreground: "white",
+                    foreground: "var(--on-accent)",
                 },
                 card: {
-                    DEFAULT: "var(--bg-surface)",
-                    foreground: "var(--text-primary)",
+                    DEFAULT: "var(--bg-surface-1)",
+                    foreground: "var(--on-surface)",
                 },
                 destructive: {
-                    DEFAULT: "var(--color-alert-500)",
-                    foreground: "white",
+                    DEFAULT: "var(--color-error)",
+                    foreground: "var(--on-primary)",
                 },
             },
             // Accordion animations for Radix components
@@ -66,3 +63,4 @@ export default {
     },
     plugins: [],
 }
+

@@ -30,9 +30,9 @@
         "typescript": "^5.0.0"
     },
     "dependencies": {
-        "@civic/design-system": "^2.0.0",
+        "@civic/design-system": "^3.0.2",
         "clsx": "^2.0.0",
-        "tailwind-merge": "^2.0.0",
-        "lucide-react": "^0.300.0"
+        "lucide-react": "^0.300.0",
+        "tailwind-merge": "^2.0.0"
     }
 }

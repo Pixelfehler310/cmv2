@@ -155,8 +155,8 @@ importers:
   packages/ui:
     dependencies:
       '@civic/design-system':
-        specifier: ^2.0.0
-        version: 2.0.0(tailwindcss@4.1.18)
+        specifier: ^3.0.2
+        version: 3.0.2(tailwindcss@4.1.18)
       clsx:
         specifier: ^2.0.0
         version: 2.1.1
@@ -287,8 +287,8 @@ packages:
     resolution: {integrity: sha512-qQ5m48eI/MFLQ5PxQj4PFaprjyCTLI37ElWMmNs0K8Lk3dVeOdNpB3ks8jc7yM5CDmVC73eMVk/trk3fgmrUpA==}
     engines: {node: '>=6.9.0'}
 
-  '@civic/design-system@2.0.0':
-    resolution: {integrity: sha512-2bQ2CeuovFwmBEj/pPQgdLm92TOEHeZVkQFTH/ywr3icf2OF6ieu0ooX4zItxWzg7X2FtSrSTujPfj7GZWvAQA==}
+  '@civic/design-system@3.0.2':
+    resolution: {integrity: sha512-mx/tJGvFoVJAeiVHGm3seCAQd4qG2DtVtv57vy+tXAk2/n8cSd61Uy4mTq7L+kFlkMhM/lUG7fUU3Oqe/5MRBA==}
     peerDependencies:
       tailwindcss: '>=4.0.0'
 
@@ -1140,7 +1140,7 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
-  '@civic/design-system@2.0.0(tailwindcss@4.1.18)':
+  '@civic/design-system@3.0.2(tailwindcss@4.1.18)':
     dependencies:
       tailwindcss: 4.1.18
 

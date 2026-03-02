@@ -12,5 +12,5 @@
 
 /* VTT-specific overrides */
 body {
-  @apply selection:bg-arcane-200 selection:text-arcane-900;
+  @apply selection:bg-vtt-200 selection:text-vtt-900;
 }
