@@ -1,28 +1,46 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useCombatStore } from "../../shared/src/stores/useCombatStore";
 
-// Using inline styles for the prototype to avoid complex CSS setups initially.
-// In a real implementation this would use Tailwind / our Design System.
+// In a real app, campaignId would come from the router URL parameter.
+const HARDCODED_CAMPAIGN_ID = "test_123";
 
-export const DmCommandDeck = ({ selectedCombatant }) => {
+// @ts-ignore
+export const DmCommandDeck = ({ selectedCombatantId }) => {
+  const { gameState, isConnected, connect, endTurn } = useCombatStore();
+
+  useEffect(() => {
+    // Automatically connect as DM when mounting the DM view
+    connect(HARDCODED_CAMPAIGN_ID, "dm");
+  }, [connect]);
+
+  if (!isConnected || !gameState) {
+    return <div style={styles.deckContainer}>Connecting to Backend Engine...</div>;
+  }
+
+  // Find the selected combatant from the live synced state
+  const selectedCombatant = gameState.combatants.find((c: any) => c.id === selectedCombatantId);
+
   if (!selectedCombatant) {
     return (
       <div style={styles.deckContainer}>
         <h3>Global Scene Controls</h3>
         <p>No token selected. Select a token to view Action Economy.</p>
-        <div style={styles.buttonRow}>
-          <button style={styles.btn}>Advance Time</button>
+        <div style={styles.actionGrid}>
+          <button style={styles.btn} onClick={() => endTurn()}>
+            Force End Turn
+          </button>
           <button style={styles.btn}>Toggle Audio</button>
         </div>
       </div>
     );
   }
 
-  const { name, hp_current, hp_max, action_used, bonus_action_used, movement_remaining } = selectedCombatant;
+  const { public_name, hp_current, hp_max, action_used, bonus_action_used, movement_remaining } = selectedCombatant;
 
   return (
     <div style={styles.deckContainer}>
       <div style={styles.header}>
-        <h3>{name} (DM View)</h3>
+        <h3>{public_name} (DM View)</h3>
         <span style={styles.secretHp}>
           HP: {hp_current} / {hp_max}
         </span>
@@ -52,7 +70,7 @@ export const DmCommandDeck = ({ selectedCombatant }) => {
 
 const styles = {
   deckContainer: {
-    position: "fixed",
+    position: "fixed" as const,
     bottom: 0,
     left: "20%",
     width: "60%",
