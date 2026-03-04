@@ -25,6 +25,7 @@ dist/
 build/
 .npm
 .eslintcache
+.pnpm-store/
 
 # OS
 .DS_Store

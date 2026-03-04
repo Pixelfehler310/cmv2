@@ -11,6 +11,6 @@
 @import "@civic/design-system/components";
 
 /* VTT-specific overrides */
-body {
-  @apply selection:bg-vtt-200 selection:text-vtt-900;
-}
+/* body {
+  @apply selection:bg-primary-300 selection:text-primary-950;
+} */

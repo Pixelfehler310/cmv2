@@ -4,10 +4,10 @@ import { logger } from "../../lib/logger";
 
 // Lazy load MFEs
 const PlayerView = React.lazy(() => import("@rpg/player-view").then((module) => ({ default: module.PlayerView })));
-// const DMView = React.lazy(() => import('@rpg/dm-view'));
+const DMView = React.lazy(() => import("@rpg/dm-view").then((module) => ({ default: module.DmDashboard })));
 
 // Mock components for now
-const DMViewMock = () => <div className="p-10 text-center text-2xl text-destructive">ASDF View Loaded</div>;
+// const DMViewMock = () => <div className="p-10 text-center text-2xl text-destructive">ASDF View Loaded</div>;
 
 interface ViewContainerProps {
   viewType: "player" | "dm" | "campaign_creator";
@@ -25,7 +25,7 @@ export const ViewContainer = ({ viewType, bridge, campaignId }: ViewContainerPro
       case "player":
         return <PlayerView bridge={bridge} campaignId={campaignId} />;
       case "dm":
-        return <DMViewMock />; // <DMView bridge={bridge} campaignId={campaignId} />
+        return <DMView />;
       case "campaign_creator":
         return <div>Campaign Creator</div>;
       default:

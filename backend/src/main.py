@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .data.routers import items, spells, monsters, definitions
 from .campaigns.routers import campaigns, characters
+from .campaigns.router import router as campaigns_ws_router
 from .identity.router import router as identity_router
 from .database import engine, Base
 
@@ -54,6 +55,7 @@ app.include_router(spells.router)
 app.include_router(monsters.router)
 app.include_router(definitions.router)
 app.include_router(campaigns.router)
+app.include_router(campaigns_ws_router)
 app.include_router(characters.router)
 app.include_router(identity_router)
 

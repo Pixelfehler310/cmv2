@@ -1,20 +1,15 @@
 import React, { useEffect } from "react";
-import { useCombatStore } from "../../shared/src/stores/useCombatStore";
+import { useCombatStore } from "@rpg/shared";
 
 // In a real app, campaignId would come from the router URL parameter.
 const HARDCODED_CAMPAIGN_ID = "test_123";
 
 // @ts-ignore
 export const DmCommandDeck = ({ selectedCombatantId }) => {
-  const { gameState, isConnected, connect, endTurn } = useCombatStore();
+  const { gameState, endTurn } = useCombatStore();
 
-  useEffect(() => {
-    // Automatically connect as DM when mounting the DM view
-    connect(HARDCODED_CAMPAIGN_ID, "dm");
-  }, [connect]);
-
-  if (!isConnected || !gameState) {
-    return <div style={styles.deckContainer}>Connecting to Backend Engine...</div>;
+  if (!gameState) {
+    return null;
   }
 
   // Find the selected combatant from the live synced state
@@ -27,15 +22,18 @@ export const DmCommandDeck = ({ selectedCombatantId }) => {
         <p>No token selected. Select a token to view Action Economy.</p>
         <div style={styles.actionGrid}>
           <button style={styles.btn} onClick={() => endTurn()}>
-            Force End Turn
+            Next Turn
           </button>
-          <button style={styles.btn}>Toggle Audio</button>
         </div>
       </div>
     );
   }
 
   const { public_name, hp_current, hp_max, action_used, bonus_action_used, movement_remaining } = selectedCombatant;
+
+  const handleAction = (actionType: string) => {
+    useCombatStore.getState().dispatchAction(actionType, { target_id: selectedCombatantId });
+  };
 
   return (
     <div style={styles.deckContainer}>
@@ -59,10 +57,18 @@ export const DmCommandDeck = ({ selectedCombatantId }) => {
       </div>
 
       <div style={styles.actionGrid}>
-        <button style={styles.attackBtn}>⚔️ Basic Attack</button>
-        <button style={styles.castBtn}>✨ Cast Spell</button>
-        <button style={styles.btn}>Dash</button>
-        <button style={styles.btn}>Disengage</button>
+        <button style={{ ...styles.attackBtn, opacity: action_used ? 0.3 : 1 }} disabled={action_used} onClick={() => handleAction("ATTACK")}>
+          ⚔️ Basic Attack
+        </button>
+        <button style={{ ...styles.castBtn, opacity: action_used ? 0.3 : 1 }} disabled={action_used} onClick={() => handleAction("CAST_SPELL")}>
+          ✨ Cast Spell
+        </button>
+        <button style={styles.btn} onClick={() => handleAction("DASH")}>
+          Dash
+        </button>
+        <button style={styles.btn} onClick={() => handleAction("DISENGAGE")}>
+          Disengage
+        </button>
       </div>
     </div>
   );

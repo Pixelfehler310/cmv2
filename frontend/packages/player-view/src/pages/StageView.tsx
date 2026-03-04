@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { useCombatStore } from "../../shared/src/stores/useCombatStore";
+import { useCombatStore } from "@rpg/shared";
 
 const HARDCODED_CAMPAIGN_ID = "test_123";
 
@@ -54,12 +54,24 @@ const SanitizedToken = ({ data }) => {
   if (healthPercent < 0.75) ringColor = "#aaaa00"; // Wounded
   if (healthPercent < 0.25) ringColor = "#ff0000"; // Bloodied
 
+  // Evaluate Size
+  let sizeSquares = 1;
+  if (data.size === "Large") sizeSquares = 2;
+  if (data.size === "Huge") sizeSquares = 3;
+  if (data.size === "Gargantuan") sizeSquares = 4;
+  if (data.size === "Tiny") sizeSquares = 0.5;
+
+  const baseTokenSizePx = 50;
+  const tokenWidth = baseTokenSizePx * sizeSquares;
+
   return (
     <div
       style={{
         ...styles.token,
-        left: `${data.x * 50}px`, // Assuming 50px grid squares
-        top: `${data.y * 50}px`,
+        left: `${data.x * baseTokenSizePx}px`,
+        top: `${data.y * baseTokenSizePx}px`,
+        width: `${tokenWidth - 10}px`,
+        height: `${tokenWidth - 10}px`,
         borderColor: ringColor,
       }}
     >
@@ -118,8 +130,6 @@ const styles = {
   },
   token: {
     position: "absolute" as const,
-    width: "40px",
-    height: "40px",
     borderRadius: "50%",
     border: "4px solid",
     backgroundColor: "#444",
@@ -128,6 +138,7 @@ const styles = {
     justifyContent: "center",
     transition: "all 0.3s ease-in-out",
     zIndex: 5,
+    margin: "5px", // Center nicely in the grid chunk
   },
   tokenLabel: {
     position: "absolute" as const,

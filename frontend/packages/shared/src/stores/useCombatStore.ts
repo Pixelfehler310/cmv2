@@ -40,8 +40,11 @@ export interface CombatStore {
   disconnect: () => void;
 
   // DM Intents
+  dispatchIntent: (action: string, payload: any) => void;
   moveToken: (targetId: string, path: [number, number][]) => void;
   endTurn: () => void;
+  applyDamage: (targetId: string, amount: number, damageType: string) => void;
+  dispatchAction: (actionType: string, payload: any) => void;
 }
 
 export const useCombatStore = create<CombatStore>((set, get) => ({
@@ -51,11 +54,11 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   errorMessage: null,
   socket: null,
 
-  connect: (campaignId, role) => {
+  connect: (campaignId: string, role: "dm" | "observer") => {
     // Prevent double connections
     if (get().socket) return;
 
-    const wsUrl = `ws://localhost:8000/campaigns/${campaignId}/ws?role=${role}`;
+    const wsUrl = `ws://localhost:8020/campaigns/${campaignId}/ws?role=${role}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
@@ -94,22 +97,27 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
 
   // --- Intent Dispatchers (Only DM should call these ideally) ---
 
-  moveToken: (targetId, path) => {
+  dispatchIntent: (action: string, payload: any) => {
     const { socket, role } = get();
     if (!socket || role !== "dm") return;
 
-    const intent = {
-      action: "MOVE_TOKEN",
-      payload: { target_id: targetId, path },
-    };
+    const intent = { action, payload };
     socket.send(JSON.stringify(intent));
   },
 
-  endTurn: () => {
-    const { socket, role } = get();
-    if (!socket || role !== "dm") return;
+  moveToken: (targetId: string, path: [number, number][]) => {
+    get().dispatchIntent("MOVE_TOKEN", { target_id: targetId, path });
+  },
 
-    const intent = { action: "END_TURN", payload: {} };
-    socket.send(JSON.stringify(intent));
+  endTurn: () => {
+    get().dispatchIntent("END_TURN", {});
+  },
+
+  applyDamage: (targetId: string, amount: number, damageType: string) => {
+    get().dispatchIntent("APPLY_DAMAGE", { target_id: targetId, amount, damage_type: damageType });
+  },
+
+  dispatchAction: (actionType: string, payload: any) => {
+    get().dispatchIntent(actionType, payload);
   },
 }));
