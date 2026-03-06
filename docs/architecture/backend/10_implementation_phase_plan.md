@@ -331,10 +331,10 @@ def test_new_concentration_spell_ends_previous():
 
 ### Acceptance Criteria
 
-- [ ] Initiative order is correct with tie-breaking by DEX
-- [ ] Turn budget correctly resets action/bonus/movement each turn, reaction each round
-- [ ] Effect durations tick and auto-expire
-- [ ] Concentration breaks on: damage (failed save), incapacitating condition, new concentration spell
+- [x] Initiative order is correct with tie-breaking by DEX
+- [x] Turn budget correctly resets action/bonus/movement each turn, reaction each round
+- [x] Effect durations tick and auto-expire
+- [x] Concentration breaks on: damage (failed save), incapacitating condition, new concentration spell
 
 ---
 
