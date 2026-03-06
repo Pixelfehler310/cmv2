@@ -439,11 +439,11 @@ def test_attack_against_paralyzed_auto_crits_in_melee():
 
 ### Acceptance Criteria
 
-- [ ] Attack rolls correctly apply advantage/disadvantage, nat 1/20, and condition modifiers
-- [ ] Critical hits double damage dice (not bonus)
-- [ ] Save-based actions compute pass/fail per target with correct half-damage
-- [ ] Healing restores HP capped at max
-- [ ] Action consumption integrates with TurnBudget
+- [x] Attack rolls correctly apply advantage/disadvantage, nat 1/20, and condition modifiers
+- [x] Critical hits double damage dice (not bonus)
+- [x] Save-based actions compute pass/fail per target with correct half-damage
+- [x] Healing restores HP capped at max
+- [x] Action consumption integrates with TurnBudget
 
 ---
 
