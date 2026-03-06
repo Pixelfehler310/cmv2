@@ -215,11 +215,11 @@ def test_damage_below_zero_triggers_death():
 
 ### Acceptance Criteria
 
-- [ ] All ability modifier and proficiency bonus calculations match PHB tables
-- [ ] Effect stacking works in correct order: SET → BONUS → MULTIPLY → Conditions
-- [ ] All 15 conditions produce correct mechanical effects
-- [ ] Exhaustion levels 1–6 stack cumulatively
-- [ ] Damage pipeline handles immunity/resistance/vulnerability/temp HP correctly
+- [x] All ability modifier and proficiency bonus calculations match PHB tables
+- [x] Effect stacking works in correct order: SET → BONUS → MULTIPLY → Conditions
+- [x] All 15 conditions produce correct mechanical effects
+- [x] Exhaustion levels 1–6 stack cumulatively
+- [x] Damage pipeline handles immunity/resistance/vulnerability/temp HP correctly
 
 ---
 
