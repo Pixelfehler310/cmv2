@@ -4,6 +4,8 @@ from .data.routers import items, spells, monsters, definitions
 from .campaigns.routers import campaigns, characters
 from .campaigns.router import router as campaigns_ws_router
 from .identity.router import router as identity_router
+from .core.ws_dispatcher import router as ws_dispatcher_router, register_system_handler
+from .systems.dnd5e.ws_handler import Dnd5eWsHandler
 from .database import engine, Base
 
 app = FastAPI(
@@ -47,6 +49,8 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def init_tables():
+    # Register game system handlers
+    register_system_handler("dnd5e", Dnd5eWsHandler())
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -58,6 +62,7 @@ app.include_router(campaigns.router)
 app.include_router(campaigns_ws_router)
 app.include_router(characters.router)
 app.include_router(identity_router)
+app.include_router(ws_dispatcher_router)
 
 
 @app.get("/")

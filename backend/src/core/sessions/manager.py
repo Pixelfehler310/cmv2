@@ -1,0 +1,159 @@
+"""
+Session Manager.
+
+Manages in-memory campaign rooms, user connections, and visibility-aware
+broadcasting. System-agnostic — the dispatch layer decides *what* to
+broadcast; this layer decides *who* receives it.
+
+Per architecture doc 09 § 3.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Optional
+
+from fastapi import WebSocket
+
+from .models import CampaignRoom, ConnectedUser, SessionContext, UserRole
+from ..ws_protocol import Visibility, WsOutbound
+
+logger = logging.getLogger(__name__)
+
+
+class SessionManager:
+    """In-memory registry of campaign rooms and connected users."""
+
+    def __init__(self) -> None:
+        self._rooms: dict[str, CampaignRoom] = {}
+
+    # ------------------------------------------------------------------
+    # Connection lifecycle
+    # ------------------------------------------------------------------
+
+    def register_connection(
+        self,
+        campaign_id: str,
+        user: ConnectedUser,
+        *,
+        game_system: str = "dnd5e",
+    ) -> SessionContext:
+        """Add a user to a campaign room; creates the room if needed."""
+        if campaign_id not in self._rooms:
+            self._rooms[campaign_id] = CampaignRoom(
+                campaign_id=campaign_id,
+                game_system=game_system,
+            )
+
+        room = self._rooms[campaign_id]
+        room.users[user.user_id] = user
+
+        logger.info(
+            "User %s (%s) joined room %s",
+            user.display_name, user.role.value, campaign_id,
+        )
+
+        return SessionContext(
+            campaign_id=campaign_id,
+            user_id=user.user_id,
+            display_name=user.display_name,
+            role=user.role,
+            game_system=room.game_system,
+        )
+
+    def unregister_connection(self, campaign_id: str, user_id: str) -> None:
+        """Remove a user from a campaign room. Deletes room if empty."""
+        room = self._rooms.get(campaign_id)
+        if room is None:
+            return
+
+        room.users.pop(user_id, None)
+        logger.info("User %s left room %s", user_id, campaign_id)
+
+        if room.is_empty():
+            del self._rooms[campaign_id]
+            logger.info("Room %s is empty — removed", campaign_id)
+
+    # ------------------------------------------------------------------
+    # Room queries
+    # ------------------------------------------------------------------
+
+    def get_room(self, campaign_id: str) -> Optional[CampaignRoom]:
+        return self._rooms.get(campaign_id)
+
+    def get_connected_users(self, campaign_id: str) -> list[ConnectedUser]:
+        room = self._rooms.get(campaign_id)
+        if room is None:
+            return []
+        return list(room.users.values())
+
+    # ------------------------------------------------------------------
+    # Broadcasting
+    # ------------------------------------------------------------------
+
+    async def broadcast(
+        self,
+        campaign_id: str,
+        event: WsOutbound,
+    ) -> None:
+        """Send an event to the appropriate recipients based on visibility."""
+        room = self._rooms.get(campaign_id)
+        if room is None:
+            return
+
+        payload = event.model_dump(mode="json", exclude={"visibility", "target_user_id"})
+
+        for user in room.users.values():
+            if self._should_receive(user, event):
+                try:
+                    await user.ws.send_json(payload)
+                except Exception:
+                    logger.warning(
+                        "Failed to send to user %s in room %s",
+                        user.user_id, campaign_id,
+                    )
+
+    async def send_to_user(
+        self,
+        campaign_id: str,
+        user_id: str,
+        event: WsOutbound,
+    ) -> None:
+        """Send an event to a specific user in a room."""
+        room = self._rooms.get(campaign_id)
+        if room is None:
+            return
+
+        user = room.users.get(user_id)
+        if user is None:
+            return
+
+        payload = event.model_dump(mode="json", exclude={"visibility", "target_user_id"})
+        try:
+            await user.ws.send_json(payload)
+        except Exception:
+            logger.warning("Failed to send to user %s", user_id)
+
+    # ------------------------------------------------------------------
+    # Visibility logic
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _should_receive(user: ConnectedUser, event: WsOutbound) -> bool:
+        """Determine if a user should receive an event based on visibility."""
+        vis = event.visibility
+
+        if vis == Visibility.ALL:
+            return True
+
+        if vis == Visibility.DM_ONLY:
+            return user.role == UserRole.DM
+
+        if vis == Visibility.ACTOR_OWNER:
+            # DM always sees everything; otherwise only the target user
+            return user.role == UserRole.DM or user.user_id == event.target_user_id
+
+        if vis == Visibility.EXCLUDE_ACTOR:
+            return user.user_id != event.target_user_id
+
+        return True
