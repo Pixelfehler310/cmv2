@@ -119,9 +119,72 @@ classDiagram
         +str source
     }
 
+    class RaceDefinition {
+        +str slug
+        +str name
+        +str desc
+        +SpeedBlock speed
+        +Size size
+        +list~AbilityScoreBonus~ ability_bonuses
+        +list~str~ languages
+        +list~TraitDefinition~ racial_traits
+        +list~str~ proficiencies
+        +list~SubraceDefinition~ subraces
+    }
+
+    class SubraceDefinition {
+        +str slug
+        +str name
+        +str desc
+        +list~AbilityScoreBonus~ ability_bonuses
+        +list~TraitDefinition~ racial_traits
+        +list~str~ proficiencies
+    }
+
+    class ClassDefinition {
+        +str slug
+        +str name
+        +str desc
+        +str hit_die
+        +list~Ability~ saving_throw_proficiencies
+        +list~str~ armor_proficiencies
+        +list~str~ weapon_proficiencies
+        +list~str~ tool_proficiencies
+        +SkillChoice skill_choices
+        +list~str~ starting_equipment
+        +list~LevelFeature~ level_features
+        +SpellcastingProgression spellcasting
+        +list~SubclassDefinition~ subclasses
+    }
+
+    class SubclassDefinition {
+        +str slug
+        +str name
+        +str desc
+        +str parent_class_slug
+        +list~LevelFeature~ level_features
+        +list~str~ bonus_spell_list
+    }
+
+    class BackgroundDefinition {
+        +str slug
+        +str name
+        +str desc
+        +list~str~ skill_proficiencies
+        +list~str~ tool_proficiencies
+        +list~str~ languages
+        +list~str~ starting_equipment
+        +TraitDefinition feature
+    }
+
     MonsterDefinition *-- ActionDefinition : actions
     MonsterDefinition *-- TraitDefinition : special_abilities
     ItemDefinition *-- EffectDefinition : effects
+    RaceDefinition *-- SubraceDefinition : subraces
+    RaceDefinition *-- TraitDefinition : racial_traits
+    ClassDefinition *-- SubclassDefinition : subclasses
+    ClassDefinition *-- LevelFeature : level_features
+    BackgroundDefinition *-- TraitDefinition : feature
 ```
 
 ### Supporting Value Types
@@ -184,6 +247,31 @@ classDiagram
     class UsageLimit {
         +int uses
         +ResetOn reset_on
+    }
+
+    class AbilityScoreBonus {
+        +Ability ability
+        +int bonus
+    }
+
+    class SkillChoice {
+        +list~str~ options
+        +int choose
+    }
+
+    class LevelFeature {
+        +int level
+        +str feature_slug
+        +list~EffectDefinition~ effects
+        +list~ActionDefinition~ granted_actions
+        +ResourceCounter granted_resource
+    }
+
+    class SpellcastingProgression {
+        +Ability ability
+        +str type
+        +int cantrips_known_at_1
+        +dict~int,SpellSlots~ slots_by_level
     }
 ```
 
@@ -261,19 +349,27 @@ class ActionType(str, Enum):
     MELEE_SPELL = "melee_spell"
     RANGED_SPELL = "ranged_spell"
     SAVE_EFFECT = "save_effect"    # No attack roll, forces a save (e.g., breath weapons)
-    UTILITY = "utility"            # Non-damaging (e.g., Frightful Presence)
-    # What about Healing actions? are those just spells?
+    HEALING = "healing"            # Cure Wounds, Healing Word, Lay on Hands, Potions
+    UTILITY = "utility"            # Non-damaging, non-healing (Frightful Presence, Dash, Dodge)
 
 class EffectType(str, Enum):
-    BONUS = "BONUS"       # +2 AC
-    SET = "SET"           # Set STR to 19
-    MULTIPLY = "MULTIPLY" # Speed × 2
-    ADVANTAGE = "ADVANTAGE"
+    # --- Stat Modifiers ---
+    BONUS = "BONUS"               # +2 AC, +1d6 damage
+    SET = "SET"                   # Set STR to 19 (Gauntlets of Ogre Power)
+    MULTIPLY = "MULTIPLY"         # Speed × 2 (Haste)
+    # --- Roll Modifiers ---
+    ADVANTAGE = "ADVANTAGE"       # On attacks, saves, or checks
     DISADVANTAGE = "DISADVANTAGE"
-    IMMUNITY = "IMMUNITY"
-    RESISTANCE = "RESISTANCE"
-    VULNERABILITY = "VULNERABILITY"
-    # what about a damage effect? or status effects? where do those go?
+    # --- Damage Interaction ---
+    IMMUNITY = "IMMUNITY"         # Immune to fire damage
+    RESISTANCE = "RESISTANCE"     # Half fire damage
+    VULNERABILITY = "VULNERABILITY" # Double fire damage
+    # --- Per-Turn Effects ---
+    DAMAGE_PER_TURN = "DAMAGE_PER_TURN"   # e.g., standing in Moonbeam, Witch Bolt
+    HEALING_PER_TURN = "HEALING_PER_TURN" # e.g., Regeneration
+    # --- Status/Condition Effects ---
+    GRANT_CONDITION = "GRANT_CONDITION"    # Applies a ConditionType to the target
+    REMOVE_CONDITION = "REMOVE_CONDITION"  # Removes a ConditionType from the target
 
 class ResetOn(str, Enum):
     SHORT_REST = "short_rest"
@@ -521,16 +617,133 @@ classDiagram
 
 ---
 
-## 6. Summary: File Map
+## 6. Races, Classes & Character Creation
+
+Player characters are assembled from compendium definitions during character creation. The result is an `ActorInstance` with `actor_type = "pc"`, populated from the chosen race, class, and background.
+
+### Character Creation Blueprint
+
+The `CharacterCreationBlueprint` is a transient object — it exists only during character creation and is consumed to produce an `ActorInstance`.
+
+```mermaid
+classDiagram
+    class CharacterCreationBlueprint {
+        +str name
+        +str race_slug
+        +str subrace_slug
+        +str class_slug
+        +str subclass_slug
+        +str background_slug
+        +int level
+        +AbilityScores base_abilities
+        +list~str~ chosen_skills
+        +list~str~ chosen_languages
+        +list~str~ chosen_equipment
+        +str alignment
+        +str personality_traits
+        +str ideals
+        +str bonds
+        +str flaws
+    }
+
+    class CharacterBuilder {
+        +build(blueprint) ActorInstance
+        -apply_race(actor, race_def) void
+        -apply_class(actor, class_def, level) void
+        -apply_background(actor, bg_def) void
+        -compute_derived_stats(actor) void
+    }
+
+    CharacterCreationBlueprint --> CharacterBuilder : consumed by
+    CharacterBuilder --> ActorInstance : produces
+```
+
+### Character Assembly Flow
+
+```mermaid
+flowchart TD
+    A["CharacterCreationBlueprint"] --> B["Validate all slugs exist\nin CompendiumRegistry"]
+    B --> C["Create empty ActorInstance\nactor_type = pc"]
+
+    C --> D["Apply Race"]
+    D --> D1["Set base speed from RaceDefinition"]
+    D --> D2["Apply ability score bonuses\n(race + subrace)"]
+    D --> D3["Grant racial traits as\nEffectInstances / ResourceCounters"]
+    D --> D4["Add racial proficiencies"]
+
+    D1 & D2 & D3 & D4 --> E["Apply Class (at level)"]
+    E --> E1["Set hit die → compute max HP\n(level 1: max die + CON mod)"]
+    E --> E2["Grant saving throw proficiencies"]
+    E --> E3["Grant armor/weapon proficiencies"]
+    E --> E4["Apply all LevelFeatures\nup to chosen level"]
+    E --> E5["Set up SpellcastingState\n(if spellcaster)"]
+    E --> E6["Apply subclass features\n(if subclass_slug set)"]
+
+    E1 & E2 & E3 & E4 & E5 & E6 --> F["Apply Background"]
+    F --> F1["Grant skill proficiencies"]
+    F --> F2["Grant tool proficiencies / languages"]
+    F --> F3["Add starting equipment\nas ItemInstances"]
+    F --> F4["Grant background feature\nas TraitDefinition"]
+
+    F1 & F2 & F3 & F4 --> G["Compute Derived Stats"]
+    G --> G1["proficiency_bonus = f(level)"]
+    G --> G2["armor_class = base + DEX + armor"]
+    G --> G3["spell_save_dc = 8 + prof + ability_mod"]
+    G --> G4["spell_attack_bonus = prof + ability_mod"]
+
+    G1 & G2 & G3 & G4 --> H["Final ActorInstance\nready for encounter"]
+```
+
+### How Class Features Work
+
+Each class has a list of `LevelFeature` entries. When building a character at level N, the builder applies all features where `level <= N`.
+
+**Example: Fighter (levels 1–5)**
+
+| Level | Feature                   | Implementation                                                                        |
+| ----- | ------------------------- | ------------------------------------------------------------------------------------- |
+| 1     | Fighting Style            | `EffectDefinition` — e.g., Defense: +1 AC while wearing armor                         |
+| 1     | Second Wind               | `ResourceCounter` — 1 use, resets on short rest. `ActionDefinition` of type `HEALING` |
+| 2     | Action Surge              | `ResourceCounter` — 1 use, resets on short rest. Grants extra action                  |
+| 3     | Martial Archetype         | Subclass selection point — loads `SubclassDefinition` features                        |
+| 4     | Ability Score Improvement | +2 to one ability or +1 to two, or a Feat                                             |
+| 5     | Extra Attack              | `EffectDefinition` — modifies attack action to allow 2 attacks per action             |
+
+**Example: Wizard (spellcasting)**
+
+| Level | Cantrips Known | Spell Slots (1st/2nd/3rd) | Features                    |
+| ----- | -------------- | ------------------------- | --------------------------- |
+| 1     | 3              | 2/—/—                     | Arcane Recovery             |
+| 2     | 3              | 3/—/—                     | Arcane Tradition (subclass) |
+| 3     | 3              | 4/2/—                     | —                           |
+| 4     | 4              | 4/3/—                     | ASI                         |
+| 5     | 4              | 4/3/2                     | —                           |
+
+### Race Feature Examples
+
+| Race     | Trait                | Implementation                                                                      |
+| -------- | -------------------- | ----------------------------------------------------------------------------------- |
+| Dwarf    | Darkvision 60 ft.    | `TraitDefinition` — display/informational                                           |
+| Dwarf    | Dwarven Resilience   | `EffectDefinition` — `RESISTANCE` to `poison` damage + `ADVANTAGE` on poison saves  |
+| Dwarf    | Stonecunning         | `TraitDefinition` — double proficiency on History checks for stonework              |
+| Elf      | Fey Ancestry         | `EffectDefinition` — `ADVANTAGE` on saves vs. Charmed + `IMMUNITY` to magical sleep |
+| Half-Orc | Relentless Endurance | `ResourceCounter` — 1/long rest. When dropped to 0 HP, drop to 1 instead            |
+| Half-Orc | Savage Attacks       | `EffectDefinition` — extra die on melee crit                                        |
+
+---
+
+## 7. Summary: File Map
 
 All data model files inside `src/systems/dnd5e/`:
 
-| File                     | Contains                                                                                        |
-| ------------------------ | ----------------------------------------------------------------------------------------------- |
-| `schemas/enums.py`       | All enums: `Size`, `DamageType`, `Ability`, `ConditionType`, etc.                               |
-| `schemas/common.py`      | Value types: `AbilityScores`, `SpeedBlock`, `Components`, `Position`, `AreaOfEffect`            |
-| `schemas/definitions.py` | `MonsterDefinition`, `SpellDefinition`, `ItemDefinition`, `ActionDefinition`, `TraitDefinition` |
-| `schemas/instances.py`   | `ActorInstance`, `EffectInstance`, `ConditionInstance`, `ItemInstance`, `SpellcastingState`     |
-| `schemas/encounter.py`   | `EncounterState`, `MapState`, `MapToken`                                                        |
-| `data/loader.py`         | `CompendiumLoader` — parses SRD JSON into Definition models                                     |
-| `data/registry.py`       | `CompendiumRegistry` — in-memory lookup by slug                                                 |
+| File                     | Contains                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `schemas/enums.py`       | All enums: `Size`, `DamageType`, `Ability`, `ConditionType`, `ActionType`, `EffectType`, etc.                             |
+| `schemas/common.py`      | Value types: `AbilityScores`, `SpeedBlock`, `Components`, `Position`, `AreaOfEffect`, `AbilityScoreBonus`, `LevelFeature` |
+| `schemas/definitions.py` | `MonsterDefinition`, `SpellDefinition`, `ItemDefinition`, `ActionDefinition`, `TraitDefinition`                           |
+| `schemas/character.py`   | `RaceDefinition`, `SubraceDefinition`, `ClassDefinition`, `SubclassDefinition`, `BackgroundDefinition`                    |
+| `schemas/creation.py`    | `CharacterCreationBlueprint`, `CharacterBuilder`                                                                          |
+| `schemas/instances.py`   | `ActorInstance`, `EffectInstance`, `ConditionInstance`, `ItemInstance`, `SpellcastingState`                               |
+| `schemas/encounter.py`   | `EncounterState`, `MapState`, `MapToken`                                                                                  |
+| `data/loader.py`         | `CompendiumLoader` — parses SRD JSON into Definition models                                                               |
+| `data/registry.py`       | `CompendiumRegistry` — in-memory lookup by slug                                                                           |
