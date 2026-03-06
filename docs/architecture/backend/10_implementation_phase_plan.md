@@ -80,9 +80,9 @@ def test_registry_lookup_missing_returns_none():
 
 ### Acceptance Criteria
 
-- [ ] All enums and value types compile
-- [ ] Full SRD monster/spell/item JSON corpus parses without validation errors
-- [ ] `CompendiumRegistry` provides slug-based lookup for all entity types
+- [x] All enums and value types compile
+- [x] Full SRD monster/spell/item JSON corpus parses without validation errors
+- [x] `CompendiumRegistry` provides slug-based lookup for all entity types
 
 ---
 

@@ -1,0 +1,12 @@
+{
+    "name": "Longsword",
+    "slug": "longsword",
+    "category": "Martial Melee Weapons",
+    "cost": "15 gp",
+    "damage_dice": "1d8",
+    "damage_type": "slashing",
+    "weight": "3 lb.",
+    "properties": [
+        "versatile (1d10)"
+    ]
+}
