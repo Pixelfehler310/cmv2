@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AuthService } from "../lib/auth";
 import { config } from "../config";
 import { AppNavbar } from "../components/shell/AppNavbar";
+import { CampaignList } from "@rpg/management-view";
 
 interface Campaign {
   id: string;
@@ -58,7 +59,7 @@ export const CampaignSelectorRoute = ({ auth }: { auth: AuthService }) => {
               role: role,
               image: c.image || "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=2669&auto=format&fit=crop",
             };
-          })
+          }),
         );
         setLoading(false);
         return;
@@ -79,7 +80,7 @@ export const CampaignSelectorRoute = ({ auth }: { auth: AuthService }) => {
           data.map((c: any) => ({
             ...c,
             image: "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=2669&auto=format&fit=crop", // Placeholder
-          }))
+          })),
         );
       } else {
         logger.warn(`CampaignSelectorRoute: Failed to fetch campaigns, status: ${res.status}`);
@@ -123,8 +124,14 @@ export const CampaignSelectorRoute = ({ auth }: { auth: AuthService }) => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <AppNavbar user={user} connection={{ isConnected: true, latency: 0 }} onLogout={handleLogout} />
-      <div className="p-8 flex-1">
-        <div className="max-w-5xl mx-auto">
+      <div className="p-8 flex-1 flex flex-col items-center">
+        {/* Render the ugly walking skeleton CRUD list temporarily */}
+        <div className="w-full max-w-4xl bg-white rounded shadow text-black mb-8 p-4">
+          <h2 className="text-red-500 font-bold mb-4 uppercase">Walking Skeleton Phase 1.5</h2>
+          <CampaignList />
+        </div>
+
+        <div className="max-w-5xl mx-auto w-full">
           <h1 className="text-3xl font-heading text-primary mb-8">Select Campaign</h1>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

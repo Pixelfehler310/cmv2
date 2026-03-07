@@ -4,15 +4,16 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { LoginRoute } from "./routes/LoginRoute";
 import { CampaignSelectorRoute } from "./routes/CampaignSelectorRoute";
 import { SessionRoute } from "./routes/SessionRoute";
+import { StageRoute } from "./routes/StageRoute";
 import { AuthService } from "./lib/auth";
-import { WebSocketManager } from "./lib/websocket";
+import { WsClient } from "@rpg/bridge";
 
 import { logger } from "./lib/logger";
 
 // Initialize Core Services
 const queryClient = new QueryClient();
 const authService = new AuthService();
-const wsManager = new WebSocketManager("ws://localhost:8000");
+const wsManager = new WsClient("ws://localhost:8000");
 
 const RouteLogger = () => {
   const location = useLocation();
@@ -35,6 +36,7 @@ function App() {
             <Route path="/" element={<LoginRoute auth={authService} />} />
             <Route path="/campaigns" element={<CampaignSelectorRoute auth={authService} />} />
             <Route path="/session/:id" element={<SessionRoute auth={authService} ws={wsManager} queryClient={queryClient} />} />
+            <Route path="/stage/:id" element={<StageRoute auth={authService} />} />
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

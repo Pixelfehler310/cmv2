@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect } from "react";
 import { IHostBridge } from "@rpg/bridge";
 import { logger } from "../../lib/logger";
+import { JSONDebugger } from "../JSONDebugger";
 
 // Lazy load MFEs
 const PlayerView = React.lazy(() => import("@rpg/player-view").then((module) => ({ default: module.PlayerView })));
@@ -43,6 +44,9 @@ export const ViewContainer = ({ viewType, bridge, campaignId }: ViewContainerPro
         }
       >
         {renderView()}
+        <div className="absolute top-0 right-0 z-50 pointer-events-none opacity-80 backdrop-blur-sm">
+          <JSONDebugger />
+        </div>
       </Suspense>
     </div>
   );

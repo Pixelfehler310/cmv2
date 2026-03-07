@@ -8,7 +8,7 @@ export interface IHostBridge {
   connection: IConnectionState;
 
   // 3. UI Utilities
-  toast: (message: string, type: 'info' | 'error' | 'success' | 'warning') => void;
+  toast: (message: string, type: "info" | "error" | "success" | "warning") => void;
   openModal: (id: string, props?: any) => void;
 }
 
@@ -45,3 +45,5 @@ export interface UserProfile {
   avatarUrl?: string;
   is_superuser?: boolean;
 }
+
+export * from "./WsClient";

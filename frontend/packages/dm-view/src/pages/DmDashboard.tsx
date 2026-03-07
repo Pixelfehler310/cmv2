@@ -3,6 +3,7 @@ import { useCombatStore } from "@rpg/shared";
 import { MapBoard } from "../components/MapBoard";
 import { DmCommandDeck } from "../components/CommandDeck";
 import { InitiativePanel } from "../components/InitiativePanel";
+import { ActionDeck } from "../components/ActionDeck";
 
 export const DmDashboard = () => {
   const { isConnected, connect } = useCombatStore();
@@ -23,6 +24,11 @@ export const DmDashboard = () => {
       <MapBoard selectedCombatantId={selectedCombatantId} onSelectCombatant={setSelectedCombatantId} />
       {/* The CommandDeck renders conditionally on having a selection, or handles null internally. We pass the ID down. */}
       {selectedCombatantId && <DmCommandDeck selectedCombatantId={selectedCombatantId} />}
+
+      {/* Raw ActionDeck for Walking Skeleton */}
+      <div className="absolute top-10 right-10 w-96 z-50">
+        <ActionDeck />
+      </div>
     </div>
   );
 };

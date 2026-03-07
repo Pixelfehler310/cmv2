@@ -1,6 +1,6 @@
-import { IHostBridge, IEventBus, IActionDispatcher, IAuthService, IConnectionState, ActionResult } from '@rpg/bridge';
-import { WebSocketManager } from './websocket';
-import { QueryClient } from '@tanstack/react-query';
+import { IHostBridge, IEventBus, IActionDispatcher, IAuthService, IConnectionState, ActionResult } from "@rpg/bridge";
+import { WsClient } from "@rpg/bridge";
+import { QueryClient } from "@tanstack/react-query";
 
 class EventEmitter implements IEventBus {
   private listeners: Map<string, Set<(payload: any) => void>> = new Map();
@@ -8,7 +8,7 @@ class EventEmitter implements IEventBus {
   emit(event: string, payload: any): void {
     const handlers = this.listeners.get(event);
     if (handlers) {
-      handlers.forEach(h => h(payload));
+      handlers.forEach((h) => h(payload));
     }
   }
 
@@ -27,15 +27,15 @@ export class ReactHostBridge implements IHostBridge {
   public events: IEventBus;
   public actions: IActionDispatcher;
   public auth: IAuthService;
-  
+
   constructor(
-    private ws: WebSocketManager,
+    private ws: WsClient,
     private queryClient: QueryClient,
-    authService: IAuthService
+    authService: IAuthService,
   ) {
     this.events = new EventEmitter();
     this.auth = authService;
-    
+
     this.actions = {
       dispatch: async (type: string, payload: any): Promise<ActionResult> => {
         try {
@@ -45,7 +45,7 @@ export class ReactHostBridge implements IHostBridge {
         } catch (e: any) {
           return { success: false, error: e.message };
         }
-      }
+      },
     };
   }
 
@@ -53,7 +53,7 @@ export class ReactHostBridge implements IHostBridge {
     return this.ws.state;
   }
 
-  toast(message: string, type: 'info' | 'error' | 'success' | 'warning') {
+  toast(message: string, type: "info" | "error" | "success" | "warning") {
     console.log(`[TOAST] ${type}: ${message}`);
     // In a real app, this would trigger a UI toast component
   }
