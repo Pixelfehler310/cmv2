@@ -11,6 +11,26 @@ The Action Resolver is the high-level orchestration layer that unites the statel
 - **Healing Pipelines (`resolve_healing`)**: Computes healing rolls and explicitly prevents hit points from exceeding the actor's `max_hp`.
 - **Encounter Integration (`resolve_and_apply`)**: Wraps the core pipelines to synchronize with the `EncounterState`. Successfully resolving an attack deducts from the initiating actor's `TurnBudget` and triggers automated flags (like concentration checks) on affected combatants.
 
+```mermaid
+sequenceDiagram
+    participant Resolver as action_resolver
+    participant Actor as Attacker
+    participant Target
+    participant Dice as DiceService
+    participant Damage as damage pipeline
+
+    Resolver->>Actor: compute_attack_context() (Adv/Disadv)
+    Resolver->>Dice: roll_d20()
+    Dice-->>Resolver: natural_roll
+    Resolver->>Resolver: Check Nat 1 / Nat 20 / Target AC
+    Resolver->>Dice: roll_damage() (Double dice if critical)
+    Dice-->>Resolver: total_damage
+    Resolver->>Damage: apply_damage(amount, damage_type)
+    Damage->>Target: Evaluate Immunities/Resistances/Temp HP
+    Damage-->>Resolver: DamageResult
+    Resolver-->>Resolver: Consume TurnBudget
+```
+
 ## 3. Key Schemas / Interfaces
 
 - **`AttackResult`**: Details the outcome of an attack, specifying a boolean `hit`, `is_critical`, the isolated natural `roll_used`, and attaching the downstream `DamageResult`.

@@ -11,6 +11,22 @@ The WebSocket subsystem handles real-time bidirectional communication between th
 - **Role-Based Routing**: Before an inbound message invokes an engine function, it passes through `check_permission()`. This guarantees, for example, that only the DM can trigger overarching state shifts like `start_combat`, while a standard user is strictly confined to moving their owned tokens or executing their own attacks.
 - **Handler Dispatch**: The `Dnd5eWsHandler` manages the lifecycle of the connection and delegates inbound traffic through to functions inside Phase 2–4 modules (`action_resolver`, `combat_state`, `dice`, etc.).
 
+```mermaid
+sequenceDiagram
+    participant Client
+    participant CoreDispatcher as core/ws_dispatcher.py
+    participant DndHandler as systems/dnd5e/ws_handler.py
+    participant Engine as systems/dnd5e/engine/
+
+    Client->>CoreDispatcher: {"type": "action", "payload": {"actor_id": "...", ...}}
+    CoreDispatcher->>DndHandler: handle(WsEnvelope, SessionContext)
+    DndHandler->>DndHandler: check_permission(envelope.type, ctx)
+    DndHandler->>Engine: resolve_and_apply(...)
+    Engine-->>DndHandler: AttackResult
+    DndHandler-->>CoreDispatcher: [WsOutbound("attack_result"), WsOutbound("actor_damaged")]
+    CoreDispatcher->>Client: Broadcast WsOutbound Events (Subject to Visibility)
+```
+
 ## 3. Key Schemas / Interfaces
 
 - **`WsEnvelope`**: The base inbound structure containing `type` (e.g., `"roll_dice"`) and a `payload` dictionary.

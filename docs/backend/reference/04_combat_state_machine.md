@@ -11,6 +11,24 @@ The Combat State Machine controls the temporal flow of an encounter, managing in
 - **Effect Ticking**: The effect engine ticks on a per-source tracking basis. When an actor begins or concludes a turn, any effects they created update their `remaining_rounds`. Expired effects are immediately truncated alongside any mechanically linked rules (like `ConditionType`).
 - **Concentration Rules**: Utilizing the effect engine, a character beginning a new concentration effect inherently severs their prior one. Sustaining damage determines the saving throw DC via `max(10, floor(damage / 2))`. Additionally, enduring incapacitating conditions (Incapacitated, Paralyzed, Petrified, Stunned, Unconscious) instantly terminates concentration.
 
+```mermaid
+stateDiagram-v2
+    [*] --> StartCombat: Roll Initiatives
+    StartCombat --> ActorTurn: next_turn()
+
+    state ActorTurn {
+        [*] --> ResetBudget
+        ResetBudget --> TickEffects: source_id = active_actor
+        TickEffects --> AwaitActions
+        AwaitActions --> AwaitActions: Consume Actions/Bonus/Move
+        AwaitActions --> EndTurn
+    }
+
+    ActorTurn --> ActorTurn: next_turn() (Same Round)
+    ActorTurn --> RoundWrap: active_index >= len(combatants)
+    RoundWrap --> ActorTurn: Increment Round, active_index = 0
+```
+
 ## 3. Key Schemas / Interfaces
 
 - **`InitiativeEntry`**: Bundles a participant's `actor_id`, final evaluated `roll`, and `dex_score` (utilized purely for deterministic tie-breaking).
