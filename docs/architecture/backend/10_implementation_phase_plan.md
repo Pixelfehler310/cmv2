@@ -509,10 +509,10 @@ def test_invalid_slug_raises_validation_error():
 
 ### Acceptance Criteria
 
-- [ ] Builder produces valid `ActorInstance` from blueprint
-- [ ] Race bonuses, class features, background proficiencies all apply correctly
-- [ ] Spellcasting slots match PHB progression tables
-- [ ] Invalid slugs produce clear errors
+- [x] Builder produces valid `ActorInstance` from blueprint
+- [x] Race bonuses, class features, background proficiencies all apply correctly
+- [x] Spellcasting slots match PHB progression tables
+- [x] Invalid slugs produce clear errors
 
 ---
 

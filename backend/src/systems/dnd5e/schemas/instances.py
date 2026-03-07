@@ -139,3 +139,7 @@ class ActorInstance(BaseModel):
     resources: ResourcePool = Field(default_factory=ResourcePool)
     concentration: ConcentrationState = Field(default_factory=ConcentrationState)
     exhaustion_level: int = 0
+
+    # Proficiencies (populated by CharacterBuilder for PCs)
+    saving_throw_proficiencies: List[Ability] = Field(default_factory=list)
+    skill_proficiencies: List[str] = Field(default_factory=list)

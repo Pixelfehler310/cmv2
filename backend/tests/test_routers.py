@@ -40,7 +40,7 @@ async def test_get_items(client):
     
     app.dependency_overrides[get_db] = lambda: mock_session
     
-    response = await client.get("/items/")
+    response = await client.get("/items")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -59,7 +59,7 @@ async def test_get_spells(client):
     
     app.dependency_overrides[get_db] = lambda: mock_session
     
-    response = await client.get("/spells/")
+    response = await client.get("/spells")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -78,7 +78,7 @@ async def test_get_monsters(client):
     
     app.dependency_overrides[get_db] = lambda: mock_session
     
-    response = await client.get("/monsters/")
+    response = await client.get("/monsters")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1

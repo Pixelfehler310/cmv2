@@ -1,7 +1,8 @@
 """
 D&D 5e Compendium Registry.
 
-In-memory slug → Definition lookup for monsters, spells, and items.
+In-memory slug → Definition lookup for monsters, spells, items,
+races, classes, and backgrounds.
 Populated by the CompendiumLoader at application startup.
 """
 
@@ -10,10 +11,17 @@ from __future__ import annotations
 from typing import Optional, List
 
 from ..schemas.definitions import (
+    BackgroundDefinition,
+    ClassDefinition,
     ItemDefinition,
     MonsterDefinition,
+    RaceDefinition,
     SpellDefinition,
 )
+
+
+class CompendiumLookupError(Exception):
+    """Raised when a compendium slug cannot be resolved."""
 
 
 class CompendiumRegistry:
@@ -23,6 +31,9 @@ class CompendiumRegistry:
         self._monsters: dict[str, MonsterDefinition] = {}
         self._spells: dict[str, SpellDefinition] = {}
         self._items: dict[str, ItemDefinition] = {}
+        self._races: dict[str, RaceDefinition] = {}
+        self._classes: dict[str, ClassDefinition] = {}
+        self._backgrounds: dict[str, BackgroundDefinition] = {}
 
     # ------------------------------------------------------------------
     # Registration
@@ -37,6 +48,15 @@ class CompendiumRegistry:
     def register_item(self, definition: ItemDefinition) -> None:
         self._items[definition.slug] = definition
 
+    def register_race(self, definition: RaceDefinition) -> None:
+        self._races[definition.slug] = definition
+
+    def register_class(self, definition: ClassDefinition) -> None:
+        self._classes[definition.slug] = definition
+
+    def register_background(self, definition: BackgroundDefinition) -> None:
+        self._backgrounds[definition.slug] = definition
+
     # ------------------------------------------------------------------
     # Lookup
     # ------------------------------------------------------------------
@@ -49,6 +69,15 @@ class CompendiumRegistry:
 
     def get_item(self, slug: str) -> Optional[ItemDefinition]:
         return self._items.get(slug)
+
+    def get_race(self, slug: str) -> Optional[RaceDefinition]:
+        return self._races.get(slug)
+
+    def get_class(self, slug: str) -> Optional[ClassDefinition]:
+        return self._classes.get(slug)
+
+    def get_background(self, slug: str) -> Optional[BackgroundDefinition]:
+        return self._backgrounds.get(slug)
 
     # ------------------------------------------------------------------
     # Introspection
@@ -73,6 +102,9 @@ class CompendiumRegistry:
             "monsters": self._monsters,
             "spells": self._spells,
             "items": self._items,
+            "races": self._races,
+            "classes": self._classes,
+            "backgrounds": self._backgrounds,
         }
         store = stores.get(entity_type)
         if store is None:
