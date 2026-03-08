@@ -1,4 +1,5 @@
 import { Bell, User, Settings, LogOut } from "lucide-react";
+import { NavLink } from "react-router-dom";
 import { cn } from "@rpg/ui";
 import { IConnectionState, UserProfile } from "@rpg/bridge";
 
@@ -17,6 +18,16 @@ export const AppNavbar = ({ user, connection, onLogout }: AppNavbarProps) => {
           <span className="text-xl text-white">🎲</span>
         </div>
         <span className="bg-clip-text text-transparent gradient-vtt font-bold">Civic VTT</span>
+      </div>
+
+      {/* Center: Navigation Links */}
+      <div className="flex-1 flex justify-center items-center gap-6">
+        <NavLink to="/campaigns" className={({ isActive }) => cn("text-sm font-bold transition-colors", isActive ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
+          Campaigns
+        </NavLink>
+        <NavLink to="/content" className={({ isActive }) => cn("text-sm font-bold transition-colors", isActive ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
+          Content Manager
+        </NavLink>
       </div>
 
       {/* Right: Status & User */}

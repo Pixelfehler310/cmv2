@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Campaign {
   id: string;
@@ -12,6 +13,7 @@ export const CampaignGrid = () => {
   const [newCampaignName, setNewCampaignName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const fetchCampaigns = async () => {
     try {
@@ -91,6 +93,7 @@ export const CampaignGrid = () => {
           {campaigns.map((c) => (
             <div
               key={c.id}
+              onClick={() => navigate(`/campaigns/${c.id}/story`)}
               className="card card-interactive bg-surface-100 hover:scale-[1.02] transition-transform p-6 flex flex-col cursor-pointer border-t-4 border-t-transparent hover:border-t-primary"
             >
               <div className="flex-1">
