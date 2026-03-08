@@ -19,13 +19,14 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target: process.env.VITE_BACKEND_URL || "http://localhost:8000",
+        target: process.env.VITE_BACKEND_URL || "http://localhost:8020",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
       "/ws": {
-        target: process.env.VITE_BACKEND_URL?.replace("http", "ws") || "ws://localhost:8000",
+        target: process.env.VITE_BACKEND_URL?.replace("http", "ws") || "ws://localhost:8020",
         ws: true,
+        rewrite: (path) => path.replace(/^\/ws/, ""),
       },
     },
   },

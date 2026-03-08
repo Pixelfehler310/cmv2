@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AppNavbar } from "../components/shell/AppNavbar";
 import { ViewContainer } from "../components/shell/ViewContainer";
 import { AuthService } from "../lib/auth";
 import { WsClient } from "@rpg/bridge";
@@ -123,15 +122,7 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
   if (!bridge) return <div>Initializing...</div>;
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <AppNavbar
-        user={user}
-        connection={connection}
-        onLogout={async () => {
-          await auth.logout();
-          navigate("/");
-        }}
-      />
+    <div className="h-full flex flex-col bg-background">
       <ViewContainer viewType={role.toLowerCase() === "dm" ? "dm" : "player"} bridge={bridge} campaignId={id || ""} />
     </div>
   );

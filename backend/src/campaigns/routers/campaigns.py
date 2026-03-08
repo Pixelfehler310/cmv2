@@ -33,10 +33,14 @@ async def create_campaign(
     db.add(member)
     
     await db.commit()
-    await db.refresh(db_campaign)
+    
+    # Refresh with relationships loaded
+    stmt = select(Campaign).options(selectinload(Campaign.characters)).where(Campaign.id == db_campaign.id)
+    result = await db.execute(stmt)
+    db_campaign_loaded = result.scalar_one()
     
     # Return with role
-    response = CampaignResponse.model_validate(db_campaign)
+    response = CampaignResponse.model_validate(db_campaign_loaded)
     response.role = "DM"
     return response
 
@@ -51,6 +55,7 @@ async def get_campaigns(
     # Fetch campaigns where user is a member
     stmt = (
         select(Campaign, CampaignMember.role)
+        .options(selectinload(Campaign.characters))
         .join(CampaignMember, Campaign.id == CampaignMember.campaign_id)
         .where(CampaignMember.user_id == current_user.id)
         .offset(skip)

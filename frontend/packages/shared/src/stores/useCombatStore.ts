@@ -58,7 +58,9 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     // Prevent double connections
     if (get().socket) return;
 
-    const wsUrl = `ws://localhost:8020/campaigns/${campaignId}/ws?role=${role}`;
+    const host = typeof window !== "undefined" ? window.location.host : "localhost:3000";
+    const protocol = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${host}/ws/campaigns/${campaignId}/ws?role=${role}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {

@@ -20,6 +20,16 @@ async def test_create_campaign(client):
     
     mock_session.refresh = AsyncMock(side_effect=side_effect_refresh)
     
+    mock_result = MagicMock()
+    mock_result.scalar_one.return_value = Campaign(
+        id="generated_id",
+        name="New Campaign",
+        description="Test Desc",
+        dm_id="dm1",
+        characters=[]
+    )
+    mock_session.execute.return_value = mock_result
+    
     app.dependency_overrides[get_db] = lambda: mock_session
     app.dependency_overrides[get_current_active_user] = lambda: dummy_user
     
