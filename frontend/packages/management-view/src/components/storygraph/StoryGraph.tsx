@@ -53,36 +53,34 @@ const StoryGraphCanvas = () => {
   );
 
   return (
-    <div style={{ display: "flex", width: "100%", height: "100vh" }}>
-      <div style={{ flexGrow: 1, position: "relative" }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          onPaneClick={onPaneClick}
-          nodeTypes={nodeTypes}
-          fitView
-          selectNodesOnDrag={false}
-        >
-          <Background />
-          <Controls />
-          <MiniMap />
-          <Panel position="top-left" style={{ background: "white", padding: "8px", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", display: "flex", gap: "8px" }}>
-            <button onClick={() => handleAddNode("sceneNode")} style={buttonStyle}>
-              + Scene
-            </button>
-            <button onClick={() => handleAddNode("encounterNode")} style={buttonStyle}>
-              + Encounter
-            </button>
-            <button onClick={() => handleAddNode("noteNode")} style={buttonStyle}>
-              + Note
-            </button>
-          </Panel>
-        </ReactFlow>
-      </div>
+    <div style={{ position: "relative", width: "100%", height: "100vh" }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
+        nodeTypes={nodeTypes}
+        fitView
+        selectNodesOnDrag={false}
+      >
+        <Background />
+        <Controls />
+        <MiniMap />
+        <Panel position="top-left" style={{ background: "white", padding: "8px", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", display: "flex", gap: "8px" }}>
+          <button onClick={() => handleAddNode("sceneNode")} style={buttonStyle}>
+            + Scene
+          </button>
+          <button onClick={() => handleAddNode("encounterNode")} style={buttonStyle}>
+            + Encounter
+          </button>
+          <button onClick={() => handleAddNode("noteNode")} style={buttonStyle}>
+            + Note
+          </button>
+        </Panel>
+      </ReactFlow>
       <InspectorPanel />
     </div>
   );
