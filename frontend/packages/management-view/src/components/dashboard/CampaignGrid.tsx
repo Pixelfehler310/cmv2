@@ -93,16 +93,40 @@ export const CampaignGrid = () => {
           {campaigns.map((c) => (
             <div
               key={c.id}
-              onClick={() => navigate(`/campaigns/${c.id}/story`)}
-              className="card card-interactive bg-surface-100 hover:scale-[1.02] transition-transform p-6 flex flex-col cursor-pointer border-t-4 border-t-transparent hover:border-t-primary"
+              className="card bg-surface-100 p-6 flex flex-col border-t-4 border-t-transparent hover:border-t-primary transition-colors"
             >
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-foreground mb-2">{c.name}</h3>
+              <div className="flex-1 mb-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-xl font-bold text-foreground">{c.name}</h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full gradient-vtt text-white font-bold">Active</span>
+                </div>
                 <p className="text-muted-foreground text-sm line-clamp-2">{c.description || "No description provided."}</p>
               </div>
-              <div className="mt-4 pt-4 border-t border-border flex justify-between items-center">
-                <span className="text-xs font-medium text-muted-foreground truncate flex-1">ID: {c.id}</span>
-                <span className="text-xs px-2 py-1 rounded-full gradient-vtt text-white font-bold ml-2">Active</span>
+              <div className="mt-auto pt-4 border-t border-border flex flex-col gap-3">
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => navigate(`/campaigns/${c.id}/story`)}
+                    className="flex-1 py-2 px-3 rounded text-sm font-medium bg-surface-200 hover:bg-surface-300 text-foreground transition-colors border border-border"
+                  >
+                    Edit (StoryGraph)
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => window.open(`/session/${c.id}`, '_blank')}
+                    className="flex-1 py-2 px-3 rounded text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(var(--color-primary),0.3)]"
+                    title="Launch DM Podium"
+                  >
+                    Play (DM)
+                  </button>
+                  <button 
+                    onClick={() => window.open(`/stage/${c.id}`, '_blank')}
+                    className="flex-1 py-2 px-3 rounded text-sm font-bold bg-green-600 text-white hover:bg-green-500 transition-colors shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+                    title="Launch Stage View for Players"
+                  >
+                    Play (Stage)
+                  </button>
+                </div>
               </div>
             </div>
           ))}

@@ -35,92 +35,46 @@ export const InspectorPanel: React.FC = () => {
       minWidth={250}
       minHeight={300}
       bounds="parent"
-      dragHandleClassName="inspector-drag-handle"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        background: "#fff",
-        borderRadius: "8px",
-        boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
-        overflow: "hidden",
-        border: "1px solid #e0e0e0",
-        zIndex: 100,
-      }}
+      className="flex flex-col bg-surface-100 rounded-xl shadow-2xl overflow-hidden border border-border z-[100] text-foreground"
     >
       {/* Drag Handle & Header */}
-      <div
-        className="inspector-drag-handle"
-        style={{
-          padding: "12px 16px",
-          background: "#2c3e50",
-          color: "white",
-          cursor: "grab",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ fontWeight: "bold", fontSize: "0.95rem" }}>Inspector</div>
-        <button
-          onClick={() => setSelectedNodeId(null)}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "white",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "4px",
-            borderRadius: "4px",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-        >
+      <div className="inspector-drag-handle flex justify-between items-center px-4 py-3 bg-surface-200 border-b border-border cursor-grab">
+        <div className="font-bold text-sm tracking-wide text-foreground">Inspector</div>
+        <button onClick={() => setSelectedNodeId(null)} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-300 transition-colors">
           <X size={16} />
         </button>
       </div>
 
-      <div style={{ flexGrow: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "16px", borderBottom: "1px solid #e0e0e0", background: "#f8f9fa" }}>
-          <h2 style={{ margin: 0, fontSize: "1.1rem", textTransform: "capitalize" }}>{selectedNode.type?.replace("Node", "")} Node</h2>
-          <div style={{ fontSize: "0.8rem", color: "#888", marginTop: "4px" }}>ID: {selectedNode.id}</div>
+      <div className="flex-grow overflow-y-auto flex flex-col">
+        <div className="p-4 border-b border-border bg-surface-50">
+          <h2 className="m-0 text-lg capitalize font-heading text-foreground">{selectedNode.type?.replace("Node", "")} Node</h2>
+          <div className="text-xs text-muted-foreground mt-1 font-mono">ID: {selectedNode.id}</div>
         </div>
 
-        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div className="p-4 flex flex-col gap-4">
           <div>
-            <label style={{ display: "block", marginBottom: "4px", fontSize: "0.9rem", fontWeight: "bold" }}>Label</label>
-            <input
-              type="text"
-              value={(selectedNode.data.label as string) || ""}
-              onChange={handleChangeLabel}
-              style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc", boxSizing: "border-box" }}
-            />
+            <label className="block mb-1.5 text-sm font-bold text-foreground">Label</label>
+            <input type="text" value={(selectedNode.data.label as string) || ""} onChange={handleChangeLabel} className="input w-full" />
           </div>
 
           {selectedNode.type === "noteNode" && (
             <div>
-              <label style={{ display: "block", marginBottom: "4px", fontSize: "0.9rem", fontWeight: "bold" }}>Content</label>
-              <textarea
-                value={(selectedNode.data.noteContent as string) || ""}
-                onChange={handleChangeNote}
-                rows={6}
-                style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc", resize: "vertical", boxSizing: "border-box" }}
-              />
+              <label className="block mb-1.5 text-sm font-bold text-foreground">Content</label>
+              <textarea value={(selectedNode.data.noteContent as string) || ""} onChange={handleChangeNote} rows={6} className="input w-full resize-y" />
             </div>
           )}
         </div>
 
         {selectedNode.type === "encounterNode" && (
-          <div style={{ borderTop: "1px solid #eee", marginTop: "auto" }}>
+          <div className="border-t border-border mt-auto">
             <EncounterBuilder />
           </div>
         )}
 
         {selectedNode.type === "sceneNode" && (
-          <div style={{ padding: "16px", borderTop: "1px solid #eee", marginTop: "auto", background: "#fafafa" }}>
-            <h3 style={{ margin: "0 0 8px 0", fontSize: "1rem" }}>Scene Properties</h3>
-            <p style={{ fontSize: "0.85rem", color: "#666" }}>Scene features like background image and ambient music will be configured here.</p>
+          <div className="p-4 border-t border-border mt-auto bg-surface-50">
+            <h3 className="m-0 mb-2 font-heading text-lg text-foreground">Scene Properties</h3>
+            <p className="text-sm text-muted-foreground">Scene features like background image and ambient music will be configured here.</p>
           </div>
         )}
       </div>

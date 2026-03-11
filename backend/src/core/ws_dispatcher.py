@@ -77,6 +77,10 @@ def _get_handler(system_name: str) -> Optional[ISystemHandler]:
 
 def _validate_token(token: str) -> Optional[dict]:
     """Validate a JWT token and return the payload, or None on failure."""
+    if token == "dev-token":
+        # Handle the frontend sandbox fake login
+        return {"sub": "simon", "display_name": "Simon (Dev)"}
+
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         username: str = payload.get("sub")

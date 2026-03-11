@@ -21,7 +21,8 @@ export class WsClient {
 
   connect(campaignId: string, token: string) {
     this.isIntentionalClose = false;
-    const wsUrl = `${this.url}/campaigns/${campaignId}/ws?token=${token}`;
+    // Connects to the main ws_dispatcher.py route: /ws/{campaign_id}
+    const wsUrl = `${this.url}/ws/${campaignId}?token=${token}`;
 
     console.info(`[WsClient] Connecting to WebSocket: ${wsUrl}`);
     this.ws = new WebSocket(wsUrl);

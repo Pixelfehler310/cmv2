@@ -52,6 +52,23 @@ async def get_campaigns(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    from src.config import settings
+    # Admin bypass
+    is_admin = current_user.username == settings.ADMIN_USERNAME or current_user.is_superuser
+    if is_admin:
+        stmt = (
+            select(Campaign)
+            .options(selectinload(Campaign.characters))
+            .offset(skip).limit(limit)
+        )
+        result = await db.execute(stmt)
+        campaigns = []
+        for campaign in result.scalars():
+            resp = CampaignResponse.model_validate(campaign)
+            resp.role = "DM"
+            campaigns.append(resp)
+        return campaigns
+
     # Fetch campaigns where user is a member
     stmt = (
         select(Campaign, CampaignMember.role)
@@ -78,6 +95,9 @@ async def get_campaign(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    from src.config import settings
+    is_admin = current_user.username == settings.ADMIN_USERNAME or current_user.is_superuser
+
     # Check membership
     stmt = select(CampaignMember).where(
         CampaignMember.campaign_id == campaign_id,
@@ -86,7 +106,7 @@ async def get_campaign(
     result = await db.execute(stmt)
     member = result.scalar_one_or_none()
     
-    if not member:
+    if not member and not is_admin:
         raise HTTPException(status_code=403, detail="Not a member of this campaign")
 
     # Fetch campaign
@@ -97,7 +117,7 @@ async def get_campaign(
         raise HTTPException(status_code=404, detail="Campaign not found")
         
     resp = CampaignResponse.model_validate(campaign)
-    resp.role = member.role
+    resp.role = "DM" if is_admin else member.role
     return resp
 
 
@@ -137,14 +157,18 @@ async def delete_campaign(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    # Check if DM
-    stmt = select(CampaignMember).where(
-        CampaignMember.campaign_id == campaign_id,
-        CampaignMember.user_id == current_user.id,
-        CampaignMember.role == CampaignRole.DM
-    )
-    if not (await db.execute(stmt)).scalar_one_or_none():
-         raise HTTPException(status_code=403, detail="Only DM can delete campaign")
+    from src.config import settings
+    is_admin = current_user.username == settings.ADMIN_USERNAME or current_user.is_superuser
+
+    if not is_admin:
+        # Check if DM
+        stmt = select(CampaignMember).where(
+            CampaignMember.campaign_id == campaign_id,
+            CampaignMember.user_id == current_user.id,
+            CampaignMember.role == CampaignRole.DM
+        )
+        if not (await db.execute(stmt)).scalar_one_or_none():
+             raise HTTPException(status_code=403, detail="Only DM can delete campaign")
 
     result = await db.execute(select(Campaign).where(Campaign.id == campaign_id))
     campaign = result.scalar_one_or_none()

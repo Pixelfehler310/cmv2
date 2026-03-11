@@ -6,20 +6,13 @@ import React from "react";
 export const SceneNode = ({ data, selected }: { data: any; selected?: boolean }) => {
   return (
     <div
-      style={{
-        padding: "10px 20px",
-        borderRadius: "8px",
-        background: "#2c3e50",
-        color: "white",
-        border: selected ? "2px solid #3498db" : "2px solid #1a252f",
-        boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-        minWidth: "150px",
-        textAlign: "center",
-      }}
+      className={`px-5 py-3 rounded-xl shadow-md min-w-[150px] text-center border-2 transition-colors backdrop-blur-sm ${
+        selected ? "border-blue-500 bg-blue-500/20" : "border-surface-300 bg-surface-200"
+      } text-foreground`}
     >
       <Handle type="target" position={Position.Top} />
-      <div style={{ fontSize: "0.8rem", opacity: 0.8, textTransform: "uppercase" }}>Scene</div>
-      <div style={{ fontWeight: "bold", marginTop: "4px" }}>{data.label}</div>
+      <div className="text-xs uppercase tracking-wider font-semibold opacity-70">Scene</div>
+      <div className="font-bold mt-1 text-lg">{data.label}</div>
       <Handle type="source" position={Position.Bottom} />
     </div>
   );

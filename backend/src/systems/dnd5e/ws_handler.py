@@ -56,9 +56,34 @@ _encounters: dict[str, EncounterState] = {}
 def get_or_create_encounter(campaign_id: str) -> EncounterState:
     """Get the encounter for a campaign, or create a default one."""
     if campaign_id not in _encounters:
+        from .schemas.instances import ActorInstance
+        from .schemas.encounter import MapState, MapToken
+        
+        arannis = ActorInstance(
+            id="hero_1",
+            name="Arannis",
+            current_hp=45,
+            max_hp=45
+        )
+        goblin = ActorInstance(
+            id="goblin_1",
+            name="Goblin",
+            current_hp=7,
+            max_hp=7
+        )
+
         _encounters[campaign_id] = EncounterState(
             id=f"enc_{campaign_id}",
             campaign_id=campaign_id,
+            combatants=[arannis, goblin],
+            map=MapState(
+                width=40,
+                height=40,
+                tokens=[
+                    MapToken(actor_id="hero_1", position={"x": 5, "y": 10}),
+                    MapToken(actor_id="goblin_1", position={"x": 6, "y": 11})
+                ]
+            )
         )
     return _encounters[campaign_id]
 

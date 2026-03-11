@@ -15,27 +15,22 @@ export const EncounterBuilder: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-      <h3 style={{ margin: 0 }}>Encounter Builder</h3>
-      <div style={{ fontSize: "0.9rem", color: "#666" }}>
-        Editing: <strong>{node.data.label as string}</strong>
+    <div className="p-4 flex flex-col gap-3">
+      <h3 className="m-0 font-heading text-lg text-foreground">Encounter Builder</h3>
+      <div className="text-sm text-muted-foreground">
+        Editing: <strong className="text-foreground">{node.data.label as string}</strong>
       </div>
 
       <div>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Difficulty</label>
-        <div style={{ display: "flex", gap: "8px" }}>
+        <label className="block mb-2 font-bold text-sm text-foreground">Difficulty</label>
+        <div className="flex gap-2">
           {["Easy", "Medium", "Hard", "Deadly"].map((diff) => (
             <button
               key={diff}
               onClick={() => handleChangeDifficulty(diff as any)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                background: node.data.difficultyBadge === diff ? "#3498db" : "#fff",
-                color: node.data.difficultyBadge === diff ? "#fff" : "#333",
-                cursor: "pointer",
-              }}
+              className={`px-3 py-1.5 rounded border transition-colors text-sm font-medium ${
+                node.data.difficultyBadge === diff ? "bg-primary border-primary text-primary-foreground" : "bg-surface-200 border-border text-foreground hover:bg-surface-300"
+              }`}
             >
               {diff}
             </button>
@@ -43,18 +38,16 @@ export const EncounterBuilder: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ marginTop: "16px", padding: "12px", background: "#f8f9fa", borderRadius: "4px", border: "1px solid #eee" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-          <span>Total XP:</span>
-          <strong>1250 XP</strong>
+      <div className="mt-4 p-3 bg-surface-200 rounded-md border border-border">
+        <div className="flex justify-between mb-2 text-foreground">
+          <span className="text-sm font-medium">Total XP:</span>
+          <strong className="text-primary font-bold">1250 XP</strong>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>Party Level:</span>
-          <strong>Level 3 (4 PCs)</strong>
+        <div className="flex justify-between text-foreground">
+          <span className="text-sm font-medium">Party Level:</span>
+          <strong className="font-bold">Level 3 (4 PCs)</strong>
         </div>
-        <p style={{ marginTop: "12px", fontSize: "0.85rem", color: "#666" }}>
-          <em>Mock data: In a real implementation, you would add monsters to this encounter to calculate these values.</em>
-        </p>
+        <p className="mt-3 text-xs text-muted-foreground italic">Mock data: In a real implementation, you would add monsters to this encounter to calculate these values.</p>
       </div>
     </div>
   );

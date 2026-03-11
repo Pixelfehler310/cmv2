@@ -4,6 +4,7 @@ import { WsClient } from "@rpg/bridge";
 import { logger } from "../lib/logger";
 import { config } from "../config";
 import { AuthService } from "../lib/auth";
+import { StageLayout, StageCartographer, PublicCombatLog, useStageFilter } from "@rpg/dm-view";
 
 interface StageRouteProps {
   auth: AuthService;
@@ -47,19 +48,18 @@ export const StageRoute = ({ auth }: StageRouteProps) => {
     };
   }, [id, auth]);
 
-  return (
-    <div className="h-screen w-screen bg-black flex flex-col p-4">
-      <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
-        <h1 className="text-2xl text-white font-bold tracking-widest uppercase">Stage View (Player)</h1>
-        <div className="flex items-center space-x-2">
-          <div className={`w-3 h-3 rounded-full ${connection.isConnected ? "bg-green-500" : "bg-red-500"}`} />
-          <span className="text-gray-400 text-sm font-mono">{connection.isConnected ? "CONNECTED" : "OFFLINE"}</span>
-        </div>
-      </div>
+  // Sanitize the raw state for player view
+  const stageState = useStageFilter(localState);
 
-      <div className="flex-1 bg-gray-900 border border-gray-700 rounded-lg overflow-auto p-4 text-green-400 font-mono text-sm max-h-full">
-        {localState ? <pre>{JSON.stringify(localState, null, 2)}</pre> : <div className="text-gray-500 italic animate-pulse">Awaiting stage hydration...</div>}
+  return (
+    <StageLayout>
+      <StageCartographer tokens={stageState.tokens} mapUrl={stageState.mapUrl} />
+      <PublicCombatLog logs={stageState.logs} />
+
+      <div className="absolute top-2 right-2 flex items-center space-x-2 z-50 opacity-50 hover:opacity-100 transition-opacity bg-black/50 p-1 rounded">
+        <div className={`w-2 h-2 rounded-full ${connection.isConnected ? "bg-green-500" : "bg-red-500"}`} />
+        <span className="text-gray-400 text-xs font-mono">{connection.isConnected ? "CONN" : "OFF"}</span>
       </div>
-    </div>
+    </StageLayout>
   );
 };

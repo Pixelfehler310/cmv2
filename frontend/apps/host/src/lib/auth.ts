@@ -63,13 +63,13 @@ export class AuthService implements IAuthService {
 
   async devLogin(username: string): Promise<boolean> {
     logger.info(`AuthService.devLogin called with: ${username}`);
-    this.setToken("dev-token");
     localStorage.setItem("civic_dev_user", JSON.stringify({ username }));
     this.user = {
       id: "dev-user",
       username: username,
       is_superuser: true, // Dev user is superuser
     };
+    this.setToken("dev-token");
     return true;
   }
 
