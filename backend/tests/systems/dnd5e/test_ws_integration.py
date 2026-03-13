@@ -134,7 +134,8 @@ class TestPermissions:
     async def test_player_cannot_send_dm_only_actions(self, handler, player_ctx, mgr):
         envelope = WsEnvelope(
             type="apply_damage",
-            payload={"actor_id": "goblin_1", "amount": 10, "damage_type": "slashing"},
+            payload={"actor_id": "goblin_1",
+                     "amount": 10, "damage_type": "slashing"},
         )
         events = await handler.handle(envelope, player_ctx, mgr)
         assert len(events) == 1
@@ -179,6 +180,11 @@ class TestCombat:
     @pytest.mark.anyio
     async def test_start_combat_no_combatants(self, handler, dm_ctx, mgr):
         """Starting combat with no combatants returns an error."""
+        set_encounter(
+            "test_campaign",
+            EncounterState(
+                id="enc_empty", campaign_id="test_campaign", combatants=[]),
+        )
         envelope = WsEnvelope(type="start_combat")
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert len(events) == 1
@@ -190,7 +196,8 @@ class TestCombat:
         await handler.handle(WsEnvelope(type="start_combat"), dm_ctx, mgr)
 
         # End turn
-        envelope = WsEnvelope(type="end_turn", payload={"actor_id": "fighter_1"})
+        envelope = WsEnvelope(type="end_turn", payload={
+                              "actor_id": "fighter_1"})
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert len(events) == 1
         assert events[0].type == "turn_advanced"
@@ -213,7 +220,8 @@ class TestDamageHealing:
     async def test_apply_damage(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="apply_damage",
-            payload={"actor_id": "goblin_1", "amount": 5, "damage_type": "slashing"},
+            payload={"actor_id": "goblin_1",
+                     "amount": 5, "damage_type": "slashing"},
         )
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert any(e.type == "actor_damaged" for e in events)
@@ -224,7 +232,8 @@ class TestDamageHealing:
     async def test_apply_lethal_damage(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="apply_damage",
-            payload={"actor_id": "goblin_1", "amount": 20, "damage_type": "slashing"},
+            payload={"actor_id": "goblin_1",
+                     "amount": 20, "damage_type": "slashing"},
         )
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert any(e.type == "actor_died" for e in events)
@@ -233,7 +242,8 @@ class TestDamageHealing:
     async def test_apply_healing(self, handler, dm_ctx, mgr, combat_encounter):
         # Damage first
         await handler.handle(
-            WsEnvelope(type="apply_damage", payload={"actor_id": "fighter_1", "amount": 10, "damage_type": "slashing"}),
+            WsEnvelope(type="apply_damage", payload={
+                       "actor_id": "fighter_1", "amount": 10, "damage_type": "slashing"}),
             dm_ctx, mgr,
         )
 
@@ -260,7 +270,8 @@ class TestDamageHealing:
     async def test_damage_invalid_target(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="apply_damage",
-            payload={"actor_id": "nonexistent", "amount": 5, "damage_type": "slashing"},
+            payload={"actor_id": "nonexistent",
+                     "amount": 5, "damage_type": "slashing"},
         )
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert events[0].type == "error"
@@ -285,13 +296,15 @@ class TestConditions:
 
         # Verify it was actually applied
         goblin = combat_encounter.combatants[1]
-        assert any(c.condition == ConditionType.STUNNED for c in goblin.conditions)
+        assert any(c.condition ==
+                   ConditionType.STUNNED for c in goblin.conditions)
 
     @pytest.mark.anyio
     async def test_remove_condition(self, handler, dm_ctx, mgr, combat_encounter):
         # Apply first
         goblin = combat_encounter.combatants[1]
-        goblin.conditions.append(ConditionInstance(condition=ConditionType.PRONE))
+        goblin.conditions.append(
+            ConditionInstance(condition=ConditionType.PRONE))
 
         envelope = WsEnvelope(
             type="remove_condition",
@@ -299,7 +312,8 @@ class TestConditions:
         )
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert events[0].type == "condition_removed"
-        assert not any(c.condition == ConditionType.PRONE for c in goblin.conditions)
+        assert not any(
+            c.condition == ConditionType.PRONE for c in goblin.conditions)
 
     @pytest.mark.anyio
     async def test_invalid_condition(self, handler, dm_ctx, mgr, combat_encounter):

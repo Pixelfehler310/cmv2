@@ -31,38 +31,6 @@ const RouteLogger = () => {
 };
 
 function App() {
-  useEffect(() => {
-    if (!config.useMocks) {
-      logger.info("VITE_USE_MOCKS is false; skipping seed import call.");
-      return;
-    }
-
-    const normalizedApiUrl = config.apiUrl.replace(/\/$/, "");
-    const seedPath = normalizedApiUrl === "/api"
-      ? "/api/dev/load-seeds"
-      : normalizedApiUrl.endsWith("/api")
-        ? "/dev/load-seeds"
-        : "/api/dev/load-seeds";
-    const seedUrl = `${normalizedApiUrl}${seedPath}`;
-    logger.info(`VITE_USE_MOCKS is true; calling seed import endpoint: ${seedUrl}`);
-
-    void fetch(seedUrl, { method: "POST" })
-      .then(async (response) => {
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          logger.error(
-            `Seed import failed: ${response.status} ${response.statusText}`,
-            payload
-          );
-          return;
-        }
-        logger.info("Seed import response", payload);
-      })
-      .catch((error) => {
-        logger.error("Seed import request failed", error);
-      });
-  }, []);
-
   logger.info("App starting...");
   return (
     <QueryClientProvider client={queryClient}>
