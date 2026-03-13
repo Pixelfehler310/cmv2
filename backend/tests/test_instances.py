@@ -5,6 +5,7 @@ from src.schemas.character import CharacterBase
 from src.campaigns.lib.inventory import InventoryManager
 from src.campaigns.lib.instance_factory import InstanceFactory
 
+
 class TestInventoryManager:
     def test_add_item(self):
         inventory = []
@@ -14,9 +15,9 @@ class TestInventoryManager:
             type="Weapon",
             rarity="Common"
         )
-        
+
         instance = InventoryManager.add_item(inventory, item_template)
-        
+
         assert len(inventory) == 1
         assert inventory[0].item_id == "item-1"
         assert inventory[0].quantity == 1
@@ -24,32 +25,38 @@ class TestInventoryManager:
 
     def test_remove_item(self):
         inventory = []
-        item_template = ItemResponse(id="item-1", name="Sword", type="Weapon", rarity="Common")
-        instance = InventoryManager.add_item(inventory, item_template, quantity=5)
-        
+        item_template = ItemResponse(
+            id="item-1", name="Sword", type="Weapon", rarity="Common")
+        instance = InventoryManager.add_item(
+            inventory, item_template, quantity=5)
+
         # Remove partial
-        success = InventoryManager.remove_item(inventory, instance.id, quantity=2)
+        success = InventoryManager.remove_item(
+            inventory, instance.id, quantity=2)
         assert success
         assert inventory[0].quantity == 3
-        
+
         # Remove rest
-        success = InventoryManager.remove_item(inventory, instance.id, quantity=3)
+        success = InventoryManager.remove_item(
+            inventory, instance.id, quantity=3)
         assert success
         assert len(inventory) == 0
 
     def test_equip_logic(self):
         inventory = []
-        armor1 = ItemResponse(id="armor-1", name="Leather", type="Armor", rarity="Common")
-        armor2 = ItemResponse(id="armor-2", name="Plate", type="Armor", rarity="Common")
-        
+        armor1 = ItemResponse(id="armor-1", name="Leather",
+                              type="Armor", rarity="Common")
+        armor2 = ItemResponse(id="armor-2", name="Plate",
+                              type="Armor", rarity="Common")
+
         inst1 = InventoryManager.add_item(inventory, armor1)
         inst2 = InventoryManager.add_item(inventory, armor2)
-        
+
         # Equip first armor
         InventoryManager.equip_item(inventory, inst1.id)
         assert inst1.equipped
         assert not inst2.equipped
-        
+
         # Equip second armor (should unequip first)
         InventoryManager.equip_item(inventory, inst2.id)
         assert not inst1.equipped
@@ -64,14 +71,16 @@ class TestInventoryManager:
             languages="Common, Orc", challenge_rating=0.5, xp=100
         )
         monster = InstanceFactory.create_monster_instance(template)
-        
+
         # Add item to monster's inventory
-        axe = ItemResponse(id="axe-1", name="Greataxe", type="Weapon", rarity="Common")
+        axe = ItemResponse(id="axe-1", name="Greataxe",
+                           type="Weapon", rarity="Common")
         InventoryManager.add_item(monster.inventory, axe)
-        
+
         assert len(monster.inventory) == 1
+        assert isinstance(monster.inventory[0].template, ItemResponse)
         assert monster.inventory[0].template.name == "Greataxe"
-        
+
         # Equip it
         InventoryManager.equip_item(monster.inventory, monster.inventory[0].id)
         assert monster.inventory[0].equipped
@@ -86,17 +95,20 @@ class TestInventoryManager:
             current_hp=10,
             hit_dice="1d10"
         )
-        
+
         # Add item to character's inventory
-        potion = ItemResponse(id="pot-1", name="Potion of Healing", type="Consumable", rarity="Common")
+        potion = ItemResponse(
+            id="pot-1", name="Potion of Healing", type="Consumable", rarity="Common")
         InventoryManager.add_item(character.inventory, potion, quantity=3)
-        
+
         assert len(character.inventory) == 1
         assert character.inventory[0].quantity == 3
-        
+
         # Remove one
-        InventoryManager.remove_item(character.inventory, character.inventory[0].id, quantity=1)
+        InventoryManager.remove_item(
+            character.inventory, character.inventory[0].id, quantity=1)
         assert character.inventory[0].quantity == 2
+
 
 class TestInstanceFactory:
     def test_create_monster_instance_static_hp(self):
@@ -108,14 +120,14 @@ class TestInstanceFactory:
             alignment="NE",
             armor_class=15,
             hit_points=7,
-            hit_dice="", # No dice, use static
+            hit_dice="",  # No dice, use static
             speed={"walk": 30},
             strength=8, dexterity=14, constitution=10, intelligence=10, wisdom=8, charisma=8,
             languages="Goblin",
             challenge_rating=0.25,
             xp=50
         )
-        
+
         instance = InstanceFactory.create_monster_instance(template)
         assert instance.monster_id == "goblin-1"
         assert instance.current_hp == 7
@@ -131,14 +143,14 @@ class TestInstanceFactory:
             alignment="NE",
             armor_class=15,
             hit_points=7,
-            hit_dice="2d6", # Range 2-12
+            hit_dice="2d6",  # Range 2-12
             speed={"walk": 30},
             strength=8, dexterity=14, constitution=10, intelligence=10, wisdom=8, charisma=8,
             languages="Goblin",
             challenge_rating=0.25,
             xp=50
         )
-        
+
         instance = InstanceFactory.create_monster_instance(template)
         assert 2 <= instance.max_hp <= 12
         assert instance.current_hp == instance.max_hp
