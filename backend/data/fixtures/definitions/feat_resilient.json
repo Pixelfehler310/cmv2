@@ -1,0 +1,7 @@
+{
+  "id": "feat_resilient",
+  "name": "Resilient",
+  "description": "Resilient feat for advanced character builds.",
+  "prerequisites": "None",
+  "effects": []
+}

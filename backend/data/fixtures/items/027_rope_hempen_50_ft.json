@@ -1,0 +1,12 @@
+{
+  "name": "Rope, Hempen 50 ft",
+  "description": "Rope, Hempen 50 ft fixture entry for large campaign testing.",
+  "type": "gear",
+  "rarity": "common",
+  "weight": 4.0,
+  "price": 1350,
+  "properties": {
+    "length": 50
+  },
+  "effects": []
+}

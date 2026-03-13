@@ -1,0 +1,46 @@
+{
+  "name": "Cult Fanatic",
+  "description": "Cult Fanatic monster fixture used for broad encounter coverage.",
+  "size": "Medium",
+  "type": "humanoid",
+  "alignment": "unaligned",
+  "armor_class": 13,
+  "hit_points": 33,
+  "hit_dice": "6d8+6",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 16,
+  "dexterity": 14,
+  "constitution": 15,
+  "intelligence": 10,
+  "wisdom": 12,
+  "charisma": 11,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 6
+    }
+  ],
+  "senses": {
+    "passive_perception": 14
+  },
+  "languages": "Common",
+  "challenge_rating": 2,
+  "xp": 450,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

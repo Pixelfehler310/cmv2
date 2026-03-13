@@ -1,0 +1,37 @@
+{
+  "name": "Jora",
+  "player_name": "Player10",
+  "campaign_id": "ironmarch-001",
+  "species_id": "species_halfling",
+  "class_id": "class_rogue",
+  "background_id": "background_criminal",
+  "level": 4,
+  "xp": 3600,
+  "alignment": "Neutral Good",
+  "strength": 9,
+  "dexterity": 17,
+  "constitution": 12,
+  "intelligence": 13,
+  "wisdom": 11,
+  "charisma": 15,
+  "max_hp": 26,
+  "current_hp": 16,
+  "temp_hp": 0,
+  "hit_dice": "4d8",
+  "armor_class": 15,
+  "speed": 30,
+  "initiative": 8,
+  "inventory": [
+    {
+      "id": "jora_item_1",
+      "item_id": "longsword",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false
+    }
+  ],
+  "spells": [],
+  "spell_slots": {},
+  "actions": [],
+  "effects": []
+}

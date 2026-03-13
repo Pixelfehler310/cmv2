@@ -1,0 +1,37 @@
+{
+  "name": "Garrick",
+  "player_name": "Player7",
+  "campaign_id": "ironmarch-001",
+  "species_id": "species_human",
+  "class_id": "class_fighter",
+  "background_id": "background_soldier",
+  "level": 5,
+  "xp": 4500,
+  "alignment": "Neutral Good",
+  "strength": 17,
+  "dexterity": 13,
+  "constitution": 15,
+  "intelligence": 9,
+  "wisdom": 11,
+  "charisma": 10,
+  "max_hp": 44,
+  "current_hp": 37,
+  "temp_hp": 0,
+  "hit_dice": "5d10",
+  "armor_class": 17,
+  "speed": 30,
+  "initiative": 3,
+  "inventory": [
+    {
+      "id": "garrick_item_1",
+      "item_id": "longsword",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": false
+    }
+  ],
+  "spells": [],
+  "spell_slots": {},
+  "actions": [],
+  "effects": []
+}

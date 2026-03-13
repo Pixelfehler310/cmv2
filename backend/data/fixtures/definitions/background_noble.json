@@ -1,0 +1,19 @@
+{
+  "id": "background_noble",
+  "name": "Noble",
+  "description": "Noble background with social and exploration hooks.",
+  "skill_proficiencies": [
+    "History",
+    "Persuasion"
+  ],
+  "tool_proficiencies": [],
+  "equipment": [
+    "Traveler clothes",
+    "Pouch",
+    "10 gp"
+  ],
+  "feature": {
+    "name": "Noble Feature",
+    "description": "Feature granted by Noble background."
+  }
+}

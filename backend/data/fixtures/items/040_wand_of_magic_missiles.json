@@ -1,0 +1,12 @@
+{
+  "name": "Wand of Magic Missiles",
+  "description": "Wand of Magic Missiles fixture entry for large campaign testing.",
+  "type": "wand",
+  "rarity": "uncommon",
+  "weight": 1.0,
+  "price": 2000,
+  "properties": {
+    "charges": 7
+  },
+  "effects": []
+}

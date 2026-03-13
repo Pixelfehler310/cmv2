@@ -1,0 +1,46 @@
+{
+  "name": "Cultist",
+  "description": "Cultist monster fixture used for broad encounter coverage.",
+  "size": "Medium",
+  "type": "humanoid",
+  "alignment": "unaligned",
+  "armor_class": 12,
+  "hit_points": 9,
+  "hit_dice": "2d8",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 15,
+  "dexterity": 13,
+  "constitution": 14,
+  "intelligence": 9,
+  "wisdom": 11,
+  "charisma": 10,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 5
+    }
+  ],
+  "senses": {
+    "passive_perception": 13
+  },
+  "languages": "Common",
+  "challenge_rating": 0.125,
+  "xp": 25,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

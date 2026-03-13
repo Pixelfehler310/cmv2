@@ -1,0 +1,12 @@
+{
+  "name": "Healers Kit",
+  "description": "Healers Kit fixture entry for large campaign testing.",
+  "type": "gear",
+  "rarity": "common",
+  "weight": 7.0,
+  "price": 1500,
+  "properties": {
+    "charges": 10
+  },
+  "effects": []
+}

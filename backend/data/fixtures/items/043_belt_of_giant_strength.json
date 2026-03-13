@@ -1,0 +1,12 @@
+{
+  "name": "Belt of Giant Strength",
+  "description": "Belt of Giant Strength fixture entry for large campaign testing.",
+  "type": "wondrous",
+  "rarity": "rare",
+  "weight": 4.0,
+  "price": 2150,
+  "properties": {
+    "set_strength": 21
+  },
+  "effects": []
+}

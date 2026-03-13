@@ -1,0 +1,46 @@
+{
+  "name": "Bandit Captain",
+  "description": "Bandit Captain monster fixture used for broad encounter coverage.",
+  "size": "Medium",
+  "type": "humanoid",
+  "alignment": "unaligned",
+  "armor_class": 15,
+  "hit_points": 65,
+  "hit_dice": "10d8+20",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 14,
+  "dexterity": 12,
+  "constitution": 13,
+  "intelligence": 8,
+  "wisdom": 10,
+  "charisma": 9,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 4
+    }
+  ],
+  "senses": {
+    "passive_perception": 12
+  },
+  "languages": "Common",
+  "challenge_rating": 2,
+  "xp": 450,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

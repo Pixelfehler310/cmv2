@@ -1,0 +1,29 @@
+{
+  "id": "species_half_orc",
+  "name": "Half-Orc",
+  "description": "Half-Orc ancestry commonly found in the border kingdoms.",
+  "speed": 30,
+  "size": "Medium",
+  "ability_bonuses": {
+    "strength": 2,
+    "constitution": 1
+  },
+  "traits": [
+    {
+      "name": "Darkvision",
+      "description": "Darkvision trait."
+    },
+    {
+      "name": "Relentless Endurance",
+      "description": "Relentless Endurance trait."
+    },
+    {
+      "name": "Savage Attacks",
+      "description": "Savage Attacks trait."
+    }
+  ],
+  "languages": [
+    "Common",
+    "Orc"
+  ]
+}

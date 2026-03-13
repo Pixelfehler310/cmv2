@@ -1,0 +1,13 @@
+{
+  "name": "Dagger",
+  "description": "Dagger fixture entry for large campaign testing.",
+  "type": "weapon",
+  "rarity": "common",
+  "weight": 8.0,
+  "price": 350,
+  "properties": {
+    "damage": "1d4",
+    "damage_type": "piercing"
+  },
+  "effects": []
+}

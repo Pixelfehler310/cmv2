@@ -1,0 +1,19 @@
+{
+  "id": "background_criminal",
+  "name": "Criminal",
+  "description": "Criminal background with social and exploration hooks.",
+  "skill_proficiencies": [
+    "Stealth",
+    "Deception"
+  ],
+  "tool_proficiencies": [],
+  "equipment": [
+    "Traveler clothes",
+    "Pouch",
+    "10 gp"
+  ],
+  "feature": {
+    "name": "Criminal Feature",
+    "description": "Feature granted by Criminal background."
+  }
+}

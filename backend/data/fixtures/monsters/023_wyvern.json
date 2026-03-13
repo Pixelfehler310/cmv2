@@ -1,0 +1,46 @@
+{
+  "name": "Wyvern",
+  "description": "Wyvern monster fixture used for broad encounter coverage.",
+  "size": "Large",
+  "type": "dragon",
+  "alignment": "unaligned",
+  "armor_class": 13,
+  "hit_points": 110,
+  "hit_dice": "13d10+39",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 17,
+  "dexterity": 13,
+  "constitution": 16,
+  "intelligence": 13,
+  "wisdom": 13,
+  "charisma": 9,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 5
+    }
+  ],
+  "senses": {
+    "passive_perception": 13
+  },
+  "languages": "Common",
+  "challenge_rating": 6,
+  "xp": 2300,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

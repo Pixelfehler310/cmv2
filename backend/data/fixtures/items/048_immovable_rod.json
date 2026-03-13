@@ -1,0 +1,12 @@
+{
+  "name": "Immovable Rod",
+  "description": "Immovable Rod fixture entry for large campaign testing.",
+  "type": "wondrous",
+  "rarity": "uncommon",
+  "weight": 1.0,
+  "price": 2400,
+  "properties": {
+    "utility": "immovable"
+  },
+  "effects": []
+}

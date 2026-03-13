@@ -1,0 +1,12 @@
+{
+  "name": "Frost Brand",
+  "description": "Frost Brand fixture entry for large campaign testing.",
+  "type": "weapon",
+  "rarity": "rare",
+  "weight": 6.0,
+  "price": 2250,
+  "properties": {
+    "bonus_damage": "1d6 cold"
+  },
+  "effects": []
+}

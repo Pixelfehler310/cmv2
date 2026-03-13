@@ -1,0 +1,7 @@
+{
+  "id": "feat_alert",
+  "name": "Alert",
+  "description": "Alert feat for advanced character builds.",
+  "prerequisites": "None",
+  "effects": []
+}

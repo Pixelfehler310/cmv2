@@ -1,0 +1,12 @@
+{
+  "name": "Shield",
+  "description": "Shield fixture entry for large campaign testing.",
+  "type": "armor",
+  "rarity": "common",
+  "weight": 6.0,
+  "price": 1050,
+  "properties": {
+    "ac_bonus": 2
+  },
+  "effects": []
+}

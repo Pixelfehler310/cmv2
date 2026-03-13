@@ -1,0 +1,44 @@
+{
+  "name": "Kael",
+  "player_name": "Player11",
+  "campaign_id": "ironmarch-001",
+  "species_id": "species_half_orc",
+  "class_id": "class_ranger",
+  "background_id": "background_outlander",
+  "level": 4,
+  "xp": 3600,
+  "alignment": "Neutral Good",
+  "strength": 15,
+  "dexterity": 15,
+  "constitution": 14,
+  "intelligence": 10,
+  "wisdom": 13,
+  "charisma": 9,
+  "max_hp": 35,
+  "current_hp": 24,
+  "temp_hp": 0,
+  "hit_dice": "4d10",
+  "armor_class": 16,
+  "speed": 30,
+  "initiative": 1,
+  "inventory": [
+    {
+      "id": "kael_item_1",
+      "item_id": "longsword",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": false
+    }
+  ],
+  "spells": [
+    {
+      "name": "Bless"
+    }
+  ],
+  "spell_slots": {
+    "1": 4,
+    "2": 0
+  },
+  "actions": [],
+  "effects": []
+}

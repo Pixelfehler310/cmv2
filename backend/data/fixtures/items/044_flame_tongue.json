@@ -1,0 +1,12 @@
+{
+  "name": "Flame Tongue",
+  "description": "Flame Tongue fixture entry for large campaign testing.",
+  "type": "weapon",
+  "rarity": "rare",
+  "weight": 5.0,
+  "price": 2200,
+  "properties": {
+    "bonus_damage": "2d6 fire"
+  },
+  "effects": []
+}

@@ -1,0 +1,234 @@
+{
+  "id": "enc_large-map-001",
+  "campaign_id": "large-map-001",
+  "round_number": 0,
+  "turn_phase": "pre_combat",
+  "active_index": 0,
+  "combatants": [
+    {
+      "id": "pc_1",
+      "definition_slug": "hero-fighter",
+      "name": "Arannis",
+      "actor_type": "pc",
+      "abilities": {
+        "strength": 16,
+        "dexterity": 14,
+        "constitution": 15,
+        "intelligence": 10,
+        "wisdom": 12,
+        "charisma": 8
+      },
+      "current_hp": 45,
+      "max_hp": 45,
+      "temp_hp": 0,
+      "armor_class": 16,
+      "speed": {
+        "walk": 30,
+        "fly": 0,
+        "swim": 0,
+        "climb": 0
+      },
+      "proficiency_bonus": 3,
+      "position": {
+        "x": 5,
+        "y": 10
+      },
+      "conditions": [],
+      "effects": [],
+      "inventory": [],
+      "resources": {
+        "counters": {}
+      },
+      "concentration": {
+        "is_concentrating": false,
+        "effect_id": null
+      },
+      "exhaustion_level": 0,
+      "saving_throw_proficiencies": [
+        "strength",
+        "constitution"
+      ],
+      "skill_proficiencies": [
+        "athletics",
+        "perception"
+      ]
+    },
+    {
+      "id": "pc_2",
+      "definition_slug": "hero-wizard",
+      "name": "Elara",
+      "actor_type": "pc",
+      "abilities": {
+        "strength": 8,
+        "dexterity": 14,
+        "constitution": 12,
+        "intelligence": 18,
+        "wisdom": 14,
+        "charisma": 10
+      },
+      "current_hp": 26,
+      "max_hp": 26,
+      "temp_hp": 0,
+      "armor_class": 12,
+      "speed": {
+        "walk": 30,
+        "fly": 0,
+        "swim": 0,
+        "climb": 0
+      },
+      "proficiency_bonus": 3,
+      "position": {
+        "x": 6,
+        "y": 11
+      },
+      "conditions": [],
+      "effects": [],
+      "inventory": [],
+      "resources": {
+        "counters": {}
+      },
+      "concentration": {
+        "is_concentrating": false,
+        "effect_id": null
+      },
+      "exhaustion_level": 0,
+      "saving_throw_proficiencies": [
+        "intelligence",
+        "wisdom"
+      ],
+      "skill_proficiencies": [
+        "arcana",
+        "history"
+      ]
+    },
+    {
+      "id": "mon_1",
+      "definition_slug": "goblin_boss",
+      "name": "Goblin Boss",
+      "actor_type": "monster",
+      "abilities": {
+        "strength": 10,
+        "dexterity": 14,
+        "constitution": 10,
+        "intelligence": 10,
+        "wisdom": 8,
+        "charisma": 10
+      },
+      "current_hp": 21,
+      "max_hp": 21,
+      "temp_hp": 0,
+      "armor_class": 15,
+      "speed": {
+        "walk": 30,
+        "fly": 0,
+        "swim": 0,
+        "climb": 0
+      },
+      "proficiency_bonus": 2,
+      "position": {
+        "x": 15,
+        "y": 10
+      },
+      "conditions": [],
+      "effects": [],
+      "inventory": [],
+      "resources": {
+        "counters": {}
+      },
+      "concentration": {
+        "is_concentrating": false,
+        "effect_id": null
+      },
+      "exhaustion_level": 0,
+      "saving_throw_proficiencies": [],
+      "skill_proficiencies": [
+        "stealth"
+      ]
+    },
+    {
+      "id": "mon_2",
+      "definition_slug": "goblin",
+      "name": "Goblin Scum",
+      "actor_type": "monster",
+      "abilities": {
+        "strength": 8,
+        "dexterity": 14,
+        "constitution": 10,
+        "intelligence": 10,
+        "wisdom": 8,
+        "charisma": 8
+      },
+      "current_hp": 7,
+      "max_hp": 7,
+      "temp_hp": 0,
+      "armor_class": 15,
+      "speed": {
+        "walk": 30,
+        "fly": 0,
+        "swim": 0,
+        "climb": 0
+      },
+      "proficiency_bonus": 2,
+      "position": {
+        "x": 16,
+        "y": 12
+      },
+      "conditions": [],
+      "effects": [],
+      "inventory": [],
+      "resources": {
+        "counters": {}
+      },
+      "concentration": {
+        "is_concentrating": false,
+        "effect_id": null
+      },
+      "exhaustion_level": 0,
+      "saving_throw_proficiencies": [],
+      "skill_proficiencies": [
+        "stealth"
+      ]
+    }
+  ],
+  "global_effects": [],
+  "map": {
+    "width": 100,
+    "height": 100,
+    "grid_type": "square",
+    "difficult_terrain": [],
+    "tokens": [
+      {
+        "actor_id": "pc_1",
+        "position": {
+          "x": 5,
+          "y": 10
+        },
+        "size": "Medium"
+      },
+      {
+        "actor_id": "pc_2",
+        "position": {
+          "x": 6,
+          "y": 11
+        },
+        "size": "Medium"
+      },
+      {
+        "actor_id": "mon_1",
+        "position": {
+          "x": 15,
+          "y": 10
+        },
+        "size": "Medium"
+      },
+      {
+        "actor_id": "mon_2",
+        "position": {
+          "x": 16,
+          "y": 12
+        },
+        "size": "Medium"
+      }
+    ]
+  }
+}

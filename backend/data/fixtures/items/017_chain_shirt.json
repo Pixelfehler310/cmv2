@@ -1,0 +1,12 @@
+{
+  "name": "Chain Shirt",
+  "description": "Chain Shirt fixture entry for large campaign testing.",
+  "type": "armor",
+  "rarity": "common",
+  "weight": 2.0,
+  "price": 850,
+  "properties": {
+    "ac_bonus": 3
+  },
+  "effects": []
+}

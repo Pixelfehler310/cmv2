@@ -1,0 +1,46 @@
+{
+  "name": "Mimic",
+  "description": "Mimic monster fixture used for broad encounter coverage.",
+  "size": "Medium",
+  "type": "monstrosity",
+  "alignment": "neutral evil",
+  "armor_class": 12,
+  "hit_points": 58,
+  "hit_dice": "9d8+18",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 17,
+  "dexterity": 12,
+  "constitution": 16,
+  "intelligence": 7,
+  "wisdom": 13,
+  "charisma": 10,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 4
+    }
+  ],
+  "senses": {
+    "passive_perception": 12
+  },
+  "languages": "Common",
+  "challenge_rating": 2,
+  "xp": 450,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

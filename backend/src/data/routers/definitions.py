@@ -1,4 +1,5 @@
 from typing import List
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -13,6 +14,7 @@ from src.schemas.definitions import (
 )
 
 router = APIRouter(prefix="/definitions", tags=["Definitions"])
+logger = logging.getLogger(__name__)
 
 # Species
 
@@ -28,8 +30,13 @@ async def create_species(species: SpeciesBase, db: AsyncSession = Depends(get_db
 
 @router.get("/species", response_model=List[SpeciesResponse])
 async def get_all_species(db: AsyncSession = Depends(get_db)):
+    logger.info("GET /definitions/species called")
     result = await db.execute(select(Species))
-    return result.scalars().all()
+    species = result.scalars().all()
+    if not species:
+        logger.warning("GET /definitions/species returned 0 rows")
+    logger.info("GET /definitions/species returning count=%s", len(species))
+    return species
 
 # Classes
 
@@ -45,8 +52,13 @@ async def create_class(char_class: ClassBase, db: AsyncSession = Depends(get_db)
 
 @router.get("/classes", response_model=List[ClassResponse])
 async def get_all_classes(db: AsyncSession = Depends(get_db)):
+    logger.info("GET /definitions/classes called")
     result = await db.execute(select(ClassModel))
-    return result.scalars().all()
+    classes = result.scalars().all()
+    if not classes:
+        logger.warning("GET /definitions/classes returned 0 rows")
+    logger.info("GET /definitions/classes returning count=%s", len(classes))
+    return classes
 
 # Backgrounds
 
@@ -62,5 +74,10 @@ async def create_background(background: BackgroundBase, db: AsyncSession = Depen
 
 @router.get("/backgrounds", response_model=List[BackgroundResponse])
 async def get_all_backgrounds(db: AsyncSession = Depends(get_db)):
+    logger.info("GET /definitions/backgrounds called")
     result = await db.execute(select(Background))
-    return result.scalars().all()
+    backgrounds = result.scalars().all()
+    if not backgrounds:
+        logger.warning("GET /definitions/backgrounds returned 0 rows")
+    logger.info("GET /definitions/backgrounds returning count=%s", len(backgrounds))
+    return backgrounds

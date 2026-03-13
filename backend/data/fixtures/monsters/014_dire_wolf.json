@@ -1,0 +1,46 @@
+{
+  "name": "Dire Wolf",
+  "description": "Dire Wolf monster fixture used for broad encounter coverage.",
+  "size": "Large",
+  "type": "beast",
+  "alignment": "unaligned",
+  "armor_class": 14,
+  "hit_points": 37,
+  "hit_dice": "5d10+10",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 14,
+  "dexterity": 14,
+  "constitution": 13,
+  "intelligence": 12,
+  "wisdom": 10,
+  "charisma": 7,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 6
+    }
+  ],
+  "senses": {
+    "passive_perception": 14
+  },
+  "languages": "Common",
+  "challenge_rating": 1,
+  "xp": 200,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

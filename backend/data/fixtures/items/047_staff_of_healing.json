@@ -1,0 +1,12 @@
+{
+  "name": "Staff of Healing",
+  "description": "Staff of Healing fixture entry for large campaign testing.",
+  "type": "staff",
+  "rarity": "rare",
+  "weight": 8.0,
+  "price": 2350,
+  "properties": {
+    "charges": 10
+  },
+  "effects": []
+}

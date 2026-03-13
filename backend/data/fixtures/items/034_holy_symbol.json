@@ -1,0 +1,12 @@
+{
+  "name": "Holy Symbol",
+  "description": "Holy Symbol fixture entry for large campaign testing.",
+  "type": "focus",
+  "rarity": "common",
+  "weight": 3.0,
+  "price": 1700,
+  "properties": {
+    "spell_focus": true
+  },
+  "effects": []
+}

@@ -1,0 +1,8 @@
+{
+  "id": "feature_arcane_recovery",
+  "name": "Arcane Recovery",
+  "description": "Arcane Recovery rules text.",
+  "source": "Class",
+  "level_required": 1,
+  "effects": []
+}

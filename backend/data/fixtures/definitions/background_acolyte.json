@@ -1,0 +1,12 @@
+{
+  "id": "background_acolyte",
+  "name": "Acolyte",
+  "description": "You have spent your life in the service of a temple to a specific god or pantheon of gods.",
+  "skill_proficiencies": ["Insight", "Religion"],
+  "tool_proficiencies": [],
+  "equipment": ["A holy symbol", "A prayer book or prayer wheel", "5 sticks of incense", "Vestments", "A set of common clothes", "15 gp"],
+  "feature": {
+    "name": "Shelter of the Faithful",
+    "description": "As an acolyte, you command the respect of those who share your faith..."
+  }
+}

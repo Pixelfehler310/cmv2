@@ -1,0 +1,12 @@
+{
+  "name": "Antitoxin",
+  "description": "Antitoxin fixture entry for large campaign testing.",
+  "type": "consumable",
+  "rarity": "common",
+  "weight": 2.0,
+  "price": 1250,
+  "properties": {
+    "duration": "1 hour"
+  },
+  "effects": []
+}

@@ -1,0 +1,44 @@
+{
+  "name": "Lyra",
+  "player_name": "Player12",
+  "campaign_id": "ironmarch-001",
+  "species_id": "species_tiefling",
+  "class_id": "class_paladin",
+  "background_id": "background_noble",
+  "level": 4,
+  "xp": 3600,
+  "alignment": "Neutral Good",
+  "strength": 15,
+  "dexterity": 10,
+  "constitution": 13,
+  "intelligence": 11,
+  "wisdom": 12,
+  "charisma": 17,
+  "max_hp": 33,
+  "current_hp": 33,
+  "temp_hp": 5,
+  "hit_dice": "4d10",
+  "armor_class": 18,
+  "speed": 30,
+  "initiative": 11,
+  "inventory": [
+    {
+      "id": "lyra_item_1",
+      "item_id": "longsword",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": false
+    }
+  ],
+  "spells": [
+    {
+      "name": "Bless"
+    }
+  ],
+  "spell_slots": {
+    "1": 4,
+    "2": 0
+  },
+  "actions": [],
+  "effects": []
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Boots of Elvenkind",
+  "description": "Boots of Elvenkind fixture entry for large campaign testing.",
+  "type": "wondrous",
+  "rarity": "uncommon",
+  "weight": 7.0,
+  "price": 1900,
+  "properties": {
+    "stealth_advantage": true
+  },
+  "effects": []
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Scale Mail",
+  "description": "Scale Mail fixture entry for large campaign testing.",
+  "type": "armor",
+  "rarity": "common",
+  "weight": 3.0,
+  "price": 900,
+  "properties": {
+    "ac_bonus": 4
+  },
+  "effects": []
+}

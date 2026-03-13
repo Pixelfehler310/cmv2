@@ -1,0 +1,355 @@
+{
+  "id": "enc_ironmarch_10",
+  "campaign_id": "ironmarch-001",
+  "round_number": 10,
+  "turn_phase": "post_combat",
+  "active_index": 0,
+  "combatants": [
+    {
+      "id": "pc_1",
+      "definition_slug": "caelen",
+      "name": "Caelen",
+      "actor_type": "pc",
+      "abilities": {
+        "strength": 18,
+        "dexterity": 12,
+        "constitution": 16,
+        "intelligence": 10,
+        "wisdom": 12,
+        "charisma": 10
+      },
+      "current_hp": 68,
+      "max_hp": 68,
+      "temp_hp": 0,
+      "armor_class": 19,
+      "speed": {
+        "walk": 30,
+        "fly": 0,
+        "swim": 0,
+        "climb": 0
+      },
+      "proficiency_bonus": 3,
+      "position": {
+        "x": 5,
+        "y": 8
+      },
+      "conditions": [],
+      "effects": [],
+      "inventory": [],
+      "resources": {
+        "counters": {}
+      },
+      "concentration": {
+        "is_concentrating": false,
+        "effect_id": null
+      },
+      "exhaustion_level": 0,
+      "saving_throw_proficiencies": [
+        "strength"
+      ],
+      "skill_proficiencies": [
+        "perception"
+      ]
+    },
+    {
+      "id": "pc_2",
+      "definition_slug": "aelar",
+      "name": "Aelar",
+      "actor_type": "pc",
+      "abilities": {
+        "strength": 8,
+        "dexterity": 14,
+        "constitution": 14,
+        "intelligence": 18,
+        "wisdom": 12,
+        "charisma": 10
+      },
+      "current_hp": 38,
+      "max_hp": 38,
+      "temp_hp": 0,
+      "armor_class": 14,
+      "speed": {
+        "walk": 30,
+        "fly": 0,
+        "swim": 0,
+        "climb": 0
+      },
+      "proficiency_bonus": 3,
+      "position": {
+        "x": 6,
+        "y": 9
+      },
+      "conditions": [],
+      "effects": [],
+      "inventory": [],
+      "resources": {
+        "counters": {}
+      },
+      "concentration": {
+        "is_concentrating": false,
+        "effect_id": null
+      },
+      "exhaustion_level": 0,
+      "saving_throw_proficiencies": [
+        "strength"
+      ],
+      "skill_proficiencies": [
+        "perception"
+      ]
+    },
+    {
+      "id": "pc_3",
+      "definition_slug": "brunna",
+      "name": "Brunna",
+      "actor_type": "pc",
+      "abilities": {
+        "strength": 14,
+        "dexterity": 10,
+        "constitution": 16,
+        "intelligence": 10,
+        "wisdom": 17,
+        "charisma": 12
+      },
+      "current_hp": 52,
+      "max_hp": 52,
+      "temp_hp": 0,
+      "armor_class": 18,
+      "speed": {
+        "walk": 30,
+        "fly": 0,
+        "swim": 0,
+        "climb": 0
+      },
+      "proficiency_bonus": 3,
+      "position": {
+        "x": 7,
+        "y": 10
+      },
+      "conditions": [],
+      "effects": [],
+      "inventory": [],
+      "resources": {
+        "counters": {}
+      },
+      "concentration": {
+        "is_concentrating": false,
+        "effect_id": null
+      },
+      "exhaustion_level": 0,
+      "saving_throw_proficiencies": [
+        "strength"
+      ],
+      "skill_proficiencies": [
+        "perception"
+      ]
+    },
+    {
+      "id": "mon_1",
+      "definition_slug": "goblin",
+      "name": "Goblin",
+      "actor_type": "monster",
+      "abilities": {
+        "strength": 8,
+        "dexterity": 14,
+        "constitution": 10,
+        "intelligence": 10,
+        "wisdom": 8,
+        "charisma": 8
+      },
+      "current_hp": 7,
+      "max_hp": 7,
+      "temp_hp": 0,
+      "armor_class": 15,
+      "speed": {
+        "walk": 30,
+        "fly": 0,
+        "swim": 0,
+        "climb": 0
+      },
+      "proficiency_bonus": 2,
+      "position": {
+        "x": 18,
+        "y": 8
+      },
+      "conditions": [],
+      "effects": [],
+      "inventory": [],
+      "resources": {
+        "counters": {}
+      },
+      "concentration": {
+        "is_concentrating": false,
+        "effect_id": null
+      },
+      "exhaustion_level": 0,
+      "saving_throw_proficiencies": [
+        "strength"
+      ],
+      "skill_proficiencies": [
+        "perception"
+      ]
+    },
+    {
+      "id": "mon_2",
+      "definition_slug": "orc",
+      "name": "Orc",
+      "actor_type": "monster",
+      "abilities": {
+        "strength": 16,
+        "dexterity": 12,
+        "constitution": 16,
+        "intelligence": 7,
+        "wisdom": 11,
+        "charisma": 10
+      },
+      "current_hp": 15,
+      "max_hp": 15,
+      "temp_hp": 0,
+      "armor_class": 13,
+      "speed": {
+        "walk": 30,
+        "fly": 0,
+        "swim": 0,
+        "climb": 0
+      },
+      "proficiency_bonus": 2,
+      "position": {
+        "x": 19,
+        "y": 9
+      },
+      "conditions": [],
+      "effects": [],
+      "inventory": [],
+      "resources": {
+        "counters": {}
+      },
+      "concentration": {
+        "is_concentrating": false,
+        "effect_id": null
+      },
+      "exhaustion_level": 0,
+      "saving_throw_proficiencies": [
+        "strength"
+      ],
+      "skill_proficiencies": [
+        "perception"
+      ]
+    },
+    {
+      "id": "mon_3",
+      "definition_slug": "hobgoblin",
+      "name": "Hobgoblin",
+      "actor_type": "monster",
+      "abilities": {
+        "strength": 13,
+        "dexterity": 12,
+        "constitution": 12,
+        "intelligence": 10,
+        "wisdom": 10,
+        "charisma": 9
+      },
+      "current_hp": 11,
+      "max_hp": 11,
+      "temp_hp": 0,
+      "armor_class": 18,
+      "speed": {
+        "walk": 30,
+        "fly": 0,
+        "swim": 0,
+        "climb": 0
+      },
+      "proficiency_bonus": 2,
+      "position": {
+        "x": 20,
+        "y": 11
+      },
+      "conditions": [],
+      "effects": [],
+      "inventory": [],
+      "resources": {
+        "counters": {}
+      },
+      "concentration": {
+        "is_concentrating": false,
+        "effect_id": null
+      },
+      "exhaustion_level": 0,
+      "saving_throw_proficiencies": [
+        "strength"
+      ],
+      "skill_proficiencies": [
+        "perception"
+      ]
+    }
+  ],
+  "global_effects": [
+    {
+      "id": "global_bless_10",
+      "name": "Battle Prayer",
+      "source_id": "pc_3",
+      "target_id": "",
+      "type": "BONUS",
+      "target_stat": "attack_roll",
+      "value": 1,
+      "duration_type": "rounds",
+      "remaining_rounds": 3,
+      "requires_concentration": false
+    }
+  ],
+  "map": {
+    "width": 90,
+    "height": 90,
+    "grid_type": "square",
+    "difficult_terrain": [],
+    "tokens": [
+      {
+        "actor_id": "pc_1",
+        "position": {
+          "x": 5,
+          "y": 8
+        },
+        "size": "Medium"
+      },
+      {
+        "actor_id": "pc_2",
+        "position": {
+          "x": 6,
+          "y": 9
+        },
+        "size": "Medium"
+      },
+      {
+        "actor_id": "pc_3",
+        "position": {
+          "x": 7,
+          "y": 10
+        },
+        "size": "Medium"
+      },
+      {
+        "actor_id": "mon_1",
+        "position": {
+          "x": 18,
+          "y": 8
+        },
+        "size": "Medium"
+      },
+      {
+        "actor_id": "mon_2",
+        "position": {
+          "x": 19,
+          "y": 9
+        },
+        "size": "Medium"
+      },
+      {
+        "actor_id": "mon_3",
+        "position": {
+          "x": 20,
+          "y": 11
+        },
+        "size": "Medium"
+      }
+    ]
+  }
+}

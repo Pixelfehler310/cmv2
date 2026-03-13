@@ -1,0 +1,13 @@
+{
+  "id": "feat_actor",
+  "name": "Actor",
+  "description": "Skilled at mimicry and dramatics, you gain the following benefits: ...",
+  "prerequisites": "None",
+  "effects": [
+    {
+      "type": "ABILITY_SCORE_INCREASE",
+      "ability": "charisma",
+      "value": 1
+    }
+  ]
+}

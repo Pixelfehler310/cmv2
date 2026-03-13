@@ -1,0 +1,12 @@
+{
+  "name": "Spellbook",
+  "description": "Spellbook fixture entry for large campaign testing.",
+  "type": "gear",
+  "rarity": "common",
+  "weight": 8.0,
+  "price": 1550,
+  "properties": {
+    "pages": 100
+  },
+  "effects": []
+}

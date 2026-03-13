@@ -1,0 +1,40 @@
+{
+  "id": "class_wizard",
+  "name": "Wizard",
+  "description": "Wizard adventurer class.",
+  "hit_die": "d6",
+  "proficiencies": {
+    "armor": [
+      "Light armor",
+      "Medium armor"
+    ],
+    "weapons": [
+      "Simple weapons"
+    ],
+    "tools": []
+  },
+  "saving_throws": [
+    "Intelligence",
+    "Wisdom"
+  ],
+  "progression": [
+    {
+      "level": 1,
+      "features": [
+        "Core Training"
+      ]
+    },
+    {
+      "level": 2,
+      "features": [
+        "Class Technique"
+      ]
+    },
+    {
+      "level": 3,
+      "features": [
+        "Subclass Feature"
+      ]
+    }
+  ]
+}

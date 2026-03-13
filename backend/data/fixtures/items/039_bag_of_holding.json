@@ -1,0 +1,12 @@
+{
+  "name": "Bag of Holding",
+  "description": "Bag of Holding fixture entry for large campaign testing.",
+  "type": "wondrous",
+  "rarity": "uncommon",
+  "weight": 8.0,
+  "price": 1950,
+  "properties": {
+    "capacity_lb": 500
+  },
+  "effects": []
+}

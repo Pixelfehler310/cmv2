@@ -27,6 +27,7 @@
         "vitest": "^4.0.18"
     },
     "dependencies": {
+        "@rpg/bridge": "workspace:*",
         "@rpg/ui": "workspace:*",
         "@tanstack/react-query": "^5.0.0",
         "@xyflow/react": "^12.10.1",

@@ -1,0 +1,13 @@
+{
+  "name": "Greatsword",
+  "description": "Greatsword fixture entry for large campaign testing.",
+  "type": "weapon",
+  "rarity": "common",
+  "weight": 4.0,
+  "price": 150,
+  "properties": {
+    "damage": "2d6",
+    "damage_type": "slashing"
+  },
+  "effects": []
+}

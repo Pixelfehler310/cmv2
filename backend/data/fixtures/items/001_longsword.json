@@ -1,0 +1,13 @@
+{
+  "name": "Longsword",
+  "description": "Longsword fixture entry for large campaign testing.",
+  "type": "weapon",
+  "rarity": "common",
+  "weight": 2.0,
+  "price": 50,
+  "properties": {
+    "damage": "1d8",
+    "damage_type": "slashing"
+  },
+  "effects": []
+}

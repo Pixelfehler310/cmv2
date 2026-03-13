@@ -1,0 +1,12 @@
+{
+  "name": "Explorer Pack",
+  "description": "Explorer Pack fixture entry for large campaign testing.",
+  "type": "gear",
+  "rarity": "common",
+  "weight": 1.0,
+  "price": 1600,
+  "properties": {
+    "bundle": true
+  },
+  "effects": []
+}

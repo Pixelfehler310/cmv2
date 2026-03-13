@@ -1,0 +1,44 @@
+{
+  "name": "Fiora",
+  "player_name": "Player6",
+  "campaign_id": "ironmarch-001",
+  "species_id": "species_tiefling",
+  "class_id": "class_paladin",
+  "background_id": "background_noble",
+  "level": 7,
+  "xp": 6300,
+  "alignment": "Neutral Good",
+  "strength": 16,
+  "dexterity": 10,
+  "constitution": 14,
+  "intelligence": 11,
+  "wisdom": 12,
+  "charisma": 18,
+  "max_hp": 63,
+  "current_hp": 57,
+  "temp_hp": 0,
+  "hit_dice": "7d10",
+  "armor_class": 20,
+  "speed": 30,
+  "initiative": 5,
+  "inventory": [
+    {
+      "id": "fiora_item_1",
+      "item_id": "longsword",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": false
+    }
+  ],
+  "spells": [
+    {
+      "name": "Bless"
+    }
+  ],
+  "spell_slots": {
+    "1": 4,
+    "2": 2
+  },
+  "actions": [],
+  "effects": []
+}

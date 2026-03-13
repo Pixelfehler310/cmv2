@@ -1,0 +1,19 @@
+{
+  "id": "background_soldier",
+  "name": "Soldier",
+  "description": "Soldier background with social and exploration hooks.",
+  "skill_proficiencies": [
+    "Athletics",
+    "Intimidation"
+  ],
+  "tool_proficiencies": [],
+  "equipment": [
+    "Traveler clothes",
+    "Pouch",
+    "10 gp"
+  ],
+  "feature": {
+    "name": "Soldier Feature",
+    "description": "Feature granted by Soldier background."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Ring of Protection",
+  "description": "Ring of Protection fixture entry for large campaign testing.",
+  "type": "wondrous",
+  "rarity": "rare",
+  "weight": 5.0,
+  "price": 1800,
+  "properties": {
+    "ac_bonus": 1,
+    "save_bonus": 1
+  },
+  "effects": []
+}

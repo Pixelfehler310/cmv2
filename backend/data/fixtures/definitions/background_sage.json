@@ -1,0 +1,19 @@
+{
+  "id": "background_sage",
+  "name": "Sage",
+  "description": "Sage background with social and exploration hooks.",
+  "skill_proficiencies": [
+    "Arcana",
+    "History"
+  ],
+  "tool_proficiencies": [],
+  "equipment": [
+    "Traveler clothes",
+    "Pouch",
+    "10 gp"
+  ],
+  "feature": {
+    "name": "Sage Feature",
+    "description": "Feature granted by Sage background."
+  }
+}

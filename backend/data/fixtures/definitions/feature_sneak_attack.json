@@ -1,0 +1,8 @@
+{
+  "id": "feature_sneak_attack",
+  "name": "Sneak Attack",
+  "description": "Sneak Attack rules text.",
+  "source": "Class",
+  "level_required": 1,
+  "effects": []
+}

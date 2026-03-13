@@ -1,0 +1,12 @@
+{
+  "name": "Thieves Tools",
+  "description": "Thieves Tools fixture entry for large campaign testing.",
+  "type": "tool",
+  "rarity": "common",
+  "weight": 6.0,
+  "price": 1450,
+  "properties": {
+    "utility": "lockpicking"
+  },
+  "effects": []
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Crossbow, Light",
+  "description": "Crossbow, Light fixture entry for large campaign testing.",
+  "type": "weapon",
+  "rarity": "common",
+  "weight": 6.0,
+  "price": 650,
+  "properties": {
+    "damage": "1d8",
+    "damage_type": "piercing"
+  },
+  "effects": []
+}

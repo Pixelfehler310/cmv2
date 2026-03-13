@@ -1,0 +1,15 @@
+{
+  "name": "Dimension Door",
+  "description": "Dimension Door spell fixture for integration testing.",
+  "level": 4,
+  "school": "conjuration",
+  "casting_time": "1 action",
+  "range": "120 feet",
+  "components": {
+    "vocal": true,
+    "somatic": true,
+    "material": ""
+  },
+  "duration": "1 minute",
+  "effects": []
+}

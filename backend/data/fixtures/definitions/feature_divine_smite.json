@@ -1,0 +1,8 @@
+{
+  "id": "feature_divine_smite",
+  "name": "Divine Smite",
+  "description": "Divine Smite rules text.",
+  "source": "Class",
+  "level_required": 1,
+  "effects": []
+}

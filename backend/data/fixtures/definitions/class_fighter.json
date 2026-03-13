@@ -1,0 +1,22 @@
+{
+  "id": "class_fighter",
+  "name": "Fighter",
+  "description": "A master of martial combat, skilled with a variety of weapons and armor.",
+  "hit_die": "d10",
+  "proficiencies": {
+    "armor": ["All armor", "Shields"],
+    "weapons": ["Simple weapons", "Martial weapons"],
+    "tools": []
+  },
+  "saving_throws": ["Strength", "Constitution"],
+  "progression": [
+    {
+      "level": 1,
+      "features": ["Fighting Style", "Second Wind"]
+    },
+    {
+      "level": 2,
+      "features": ["Action Surge (one use)"]
+    }
+  ]
+}

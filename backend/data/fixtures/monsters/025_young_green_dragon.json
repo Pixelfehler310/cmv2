@@ -1,0 +1,51 @@
+{
+  "name": "Young Green Dragon",
+  "description": "Young Green Dragon monster fixture used for broad encounter coverage.",
+  "size": "Large",
+  "type": "dragon",
+  "alignment": "unaligned",
+  "armor_class": 18,
+  "hit_points": 136,
+  "hit_dice": "16d10+48",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 13,
+  "dexterity": 10,
+  "constitution": 12,
+  "intelligence": 7,
+  "wisdom": 9,
+  "charisma": 11,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 2
+    }
+  ],
+  "senses": {
+    "passive_perception": 10
+  },
+  "languages": "Common",
+  "challenge_rating": 8,
+  "xp": 3900,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [
+    {
+      "name": "Tail Sweep",
+      "description": "Makes a sweeping tail attack."
+    }
+  ],
+  "inventory": [],
+  "effects": []
+}

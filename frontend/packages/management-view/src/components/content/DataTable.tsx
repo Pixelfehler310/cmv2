@@ -2,7 +2,7 @@ import React from "react";
 import { cn } from "@rpg/ui";
 
 export interface Column<T> {
-  key: Extract<keyof T, string>;
+  key: string;
   label: string;
   render?: (item: T) => React.ReactNode;
 }
@@ -31,7 +31,7 @@ export function DataTable<T extends { id: string | number }>({ columns, data, on
             <tr key={row.id} onClick={() => onRowClick?.(row)} className={cn("group transition-colors", onRowClick ? "cursor-pointer hover:bg-surface-200" : "")}>
               {columns.map((col) => (
                 <td key={`${row.id}-${col.key}`} className="px-6 py-4 text-foreground group-hover:text-primary transition-colors">
-                  {col.render ? col.render(row) : (row[col.key] as any)}
+                  {col.render ? col.render(row) : ((row as any)[col.key])}
                 </td>
               ))}
             </tr>

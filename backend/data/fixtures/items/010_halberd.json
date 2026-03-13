@@ -1,0 +1,13 @@
+{
+  "name": "Halberd",
+  "description": "Halberd fixture entry for large campaign testing.",
+  "type": "weapon",
+  "rarity": "common",
+  "weight": 3.0,
+  "price": 500,
+  "properties": {
+    "damage": "1d10",
+    "damage_type": "slashing"
+  },
+  "effects": []
+}

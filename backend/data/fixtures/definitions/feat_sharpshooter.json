@@ -1,0 +1,7 @@
+{
+  "id": "feat_sharpshooter",
+  "name": "Sharpshooter",
+  "description": "Sharpshooter feat for advanced character builds.",
+  "prerequisites": "None",
+  "effects": []
+}

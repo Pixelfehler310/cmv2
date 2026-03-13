@@ -1,0 +1,46 @@
+{
+  "name": "Hobgoblin",
+  "description": "Hobgoblin monster fixture used for broad encounter coverage.",
+  "size": "Medium",
+  "type": "humanoid",
+  "alignment": "unaligned",
+  "armor_class": 18,
+  "hit_points": 11,
+  "hit_dice": "2d8+2",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 13,
+  "dexterity": 12,
+  "constitution": 12,
+  "intelligence": 13,
+  "wisdom": 9,
+  "charisma": 7,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 4
+    }
+  ],
+  "senses": {
+    "passive_perception": 12
+  },
+  "languages": "Common",
+  "challenge_rating": 0.5,
+  "xp": 100,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

@@ -1,0 +1,46 @@
+{
+  "name": "Zombie",
+  "description": "Zombie monster fixture used for broad encounter coverage.",
+  "size": "Medium",
+  "type": "undead",
+  "alignment": "neutral evil",
+  "armor_class": 8,
+  "hit_points": 22,
+  "hit_dice": "3d8+9",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 13,
+  "dexterity": 13,
+  "constitution": 12,
+  "intelligence": 11,
+  "wisdom": 9,
+  "charisma": 13,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 5
+    }
+  ],
+  "senses": {
+    "passive_perception": 13
+  },
+  "languages": "Common",
+  "challenge_rating": 0.25,
+  "xp": 50,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

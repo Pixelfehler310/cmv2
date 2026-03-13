@@ -1,0 +1,46 @@
+{
+  "name": "Young White Dragon",
+  "description": "Young White Dragon monster fixture used for broad encounter coverage.",
+  "size": "Large",
+  "type": "dragon",
+  "alignment": "unaligned",
+  "armor_class": 17,
+  "hit_points": 133,
+  "hit_dice": "14d10+56",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 12,
+  "dexterity": 14,
+  "constitution": 11,
+  "intelligence": 6,
+  "wisdom": 8,
+  "charisma": 10,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 6
+    }
+  ],
+  "senses": {
+    "passive_perception": 14
+  },
+  "languages": "Common",
+  "challenge_rating": 6,
+  "xp": 2300,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

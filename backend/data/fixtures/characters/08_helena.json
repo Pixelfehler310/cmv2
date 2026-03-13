@@ -1,0 +1,47 @@
+{
+  "name": "Helena",
+  "player_name": "Player8",
+  "campaign_id": "ironmarch-001",
+  "species_id": "species_elf",
+  "class_id": "class_wizard",
+  "background_id": "background_sage",
+  "level": 5,
+  "xp": 4500,
+  "alignment": "Neutral Good",
+  "strength": 8,
+  "dexterity": 14,
+  "constitution": 12,
+  "intelligence": 17,
+  "wisdom": 13,
+  "charisma": 11,
+  "max_hp": 30,
+  "current_hp": 22,
+  "temp_hp": 5,
+  "hit_dice": "5d8",
+  "armor_class": 13,
+  "speed": 30,
+  "initiative": 4,
+  "inventory": [
+    {
+      "id": "helena_item_1",
+      "item_id": "longsword",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false
+    }
+  ],
+  "spells": [
+    {
+      "name": "Magic Missile"
+    },
+    {
+      "name": "Shield"
+    }
+  ],
+  "spell_slots": {
+    "1": 4,
+    "2": 2
+  },
+  "actions": [],
+  "effects": []
+}

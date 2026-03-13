@@ -1,0 +1,19 @@
+{
+  "id": "background_outlander",
+  "name": "Outlander",
+  "description": "Outlander background with social and exploration hooks.",
+  "skill_proficiencies": [
+    "Survival",
+    "Athletics"
+  ],
+  "tool_proficiencies": [],
+  "equipment": [
+    "Traveler clothes",
+    "Pouch",
+    "10 gp"
+  ],
+  "feature": {
+    "name": "Outlander Feature",
+    "description": "Feature granted by Outlander background."
+  }
+}

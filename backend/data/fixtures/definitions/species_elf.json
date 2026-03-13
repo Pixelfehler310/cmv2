@@ -1,0 +1,32 @@
+{
+  "id": "species_elf",
+  "name": "Elf",
+  "description": "Elf ancestry commonly found in the border kingdoms.",
+  "speed": 30,
+  "size": "Medium",
+  "ability_bonuses": {
+    "dexterity": 2
+  },
+  "traits": [
+    {
+      "name": "Darkvision",
+      "description": "Darkvision trait."
+    },
+    {
+      "name": "Keen Senses",
+      "description": "Keen Senses trait."
+    },
+    {
+      "name": "Fey Ancestry",
+      "description": "Fey Ancestry trait."
+    },
+    {
+      "name": "Trance",
+      "description": "Trance trait."
+    }
+  ],
+  "languages": [
+    "Common",
+    "Elvish"
+  ]
+}

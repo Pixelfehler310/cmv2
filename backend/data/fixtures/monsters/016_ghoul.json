@@ -1,0 +1,46 @@
+{
+  "name": "Ghoul",
+  "description": "Ghoul monster fixture used for broad encounter coverage.",
+  "size": "Medium",
+  "type": "undead",
+  "alignment": "neutral evil",
+  "armor_class": 12,
+  "hit_points": 22,
+  "hit_dice": "5d8",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 16,
+  "dexterity": 11,
+  "constitution": 15,
+  "intelligence": 6,
+  "wisdom": 12,
+  "charisma": 9,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 3
+    }
+  ],
+  "senses": {
+    "passive_perception": 11
+  },
+  "languages": "Common",
+  "challenge_rating": 1,
+  "xp": 200,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

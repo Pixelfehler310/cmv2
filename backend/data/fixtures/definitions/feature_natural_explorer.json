@@ -1,0 +1,8 @@
+{
+  "id": "feature_natural_explorer",
+  "name": "Natural Explorer",
+  "description": "Natural Explorer rules text.",
+  "source": "Class",
+  "level_required": 1,
+  "effects": []
+}

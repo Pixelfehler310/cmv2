@@ -1,0 +1,12 @@
+{
+  "name": "Plate Armor",
+  "description": "Plate Armor fixture entry for large campaign testing.",
+  "type": "armor",
+  "rarity": "rare",
+  "weight": 5.0,
+  "price": 1000,
+  "properties": {
+    "ac_bonus": 8
+  },
+  "effects": []
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Superior Healing Potion",
+  "description": "Superior Healing Potion fixture entry for large campaign testing.",
+  "type": "consumable",
+  "rarity": "rare",
+  "weight": 1.0,
+  "price": 1200,
+  "properties": {
+    "healing": "8d4+8"
+  },
+  "effects": []
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Sun Blade",
+  "description": "Sun Blade fixture entry for large campaign testing.",
+  "type": "weapon",
+  "rarity": "rare",
+  "weight": 7.0,
+  "price": 2300,
+  "properties": {
+    "damage": "1d8 radiant"
+  },
+  "effects": []
+}

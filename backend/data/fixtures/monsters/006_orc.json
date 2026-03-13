@@ -1,0 +1,46 @@
+{
+  "name": "Orc",
+  "description": "Orc monster fixture used for broad encounter coverage.",
+  "size": "Medium",
+  "type": "humanoid",
+  "alignment": "unaligned",
+  "armor_class": 13,
+  "hit_points": 15,
+  "hit_dice": "2d8+6",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 12,
+  "dexterity": 11,
+  "constitution": 11,
+  "intelligence": 12,
+  "wisdom": 8,
+  "charisma": 13,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 3
+    }
+  ],
+  "senses": {
+    "passive_perception": 11
+  },
+  "languages": "Common",
+  "challenge_rating": 0.5,
+  "xp": 100,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

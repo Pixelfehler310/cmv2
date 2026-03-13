@@ -1,0 +1,13 @@
+{
+  "name": "Cloak of Protection",
+  "description": "Cloak of Protection fixture entry for large campaign testing.",
+  "type": "wondrous",
+  "rarity": "uncommon",
+  "weight": 6.0,
+  "price": 1850,
+  "properties": {
+    "ac_bonus": 1,
+    "save_bonus": 1
+  },
+  "effects": []
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Potion of Healing",
+  "description": "Potion of Healing fixture entry for large campaign testing.",
+  "type": "consumable",
+  "rarity": "common",
+  "weight": 7.0,
+  "price": 1100,
+  "properties": {
+    "healing": "2d4+2"
+  },
+  "effects": []
+}

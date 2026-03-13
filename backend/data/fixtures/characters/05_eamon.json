@@ -1,0 +1,44 @@
+{
+  "name": "Eamon",
+  "player_name": "Player5",
+  "campaign_id": "ironmarch-001",
+  "species_id": "species_half_orc",
+  "class_id": "class_ranger",
+  "background_id": "background_outlander",
+  "level": 6,
+  "xp": 5400,
+  "alignment": "Neutral Good",
+  "strength": 16,
+  "dexterity": 16,
+  "constitution": 14,
+  "intelligence": 10,
+  "wisdom": 14,
+  "charisma": 8,
+  "max_hp": 57,
+  "current_hp": 52,
+  "temp_hp": 0,
+  "hit_dice": "6d10",
+  "armor_class": 17,
+  "speed": 30,
+  "initiative": 7,
+  "inventory": [
+    {
+      "id": "eamon_item_1",
+      "item_id": "longsword",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": false
+    }
+  ],
+  "spells": [
+    {
+      "name": "Bless"
+    }
+  ],
+  "spell_slots": {
+    "1": 4,
+    "2": 2
+  },
+  "actions": [],
+  "effects": []
+}

@@ -35,6 +35,28 @@ It uses a **Hybrid Architecture** with a Python Backend and React Frontend in a 
 - When writing React components, assume data comes from props/context (View Model).
 - If you change a Backend Model, remind the user to update the Frontend Types.
 
+## Development Workflow
+
+- Prefer container-first development for day-to-day work.
+- Use VS Code tasks from `.vscode/tasks.json` with the `Docker:` prefix to start all services or individual services.
+- The default full-stack path is Docker Compose (`db`, `redis`, `backend`, `frontend`).
+- Existing watch behavior is provided by mounted volumes plus app-level reload (uvicorn `--reload`, Vite HMR).
+- `Run Backend (Dev)` is a legacy hybrid fallback for targeted native backend debugging.
+
+## Agent Verification and Restart Rules
+
+- After implementing code changes, verify behavior using Docker logs before declaring success.
+- For backend changes, check backend logs (`Docker: Logs (Backend)`), and restart backend if needed.
+- For frontend changes, check frontend logs (`Docker: Logs (Frontend)`), and restart frontend if needed.
+- If dependencies, Dockerfiles, or compose configuration changed, rebuild and restart affected services.
+- Prefer targeted restarts of changed services instead of restarting the whole stack.
+
+## Python Environment Awareness
+
+- Container-first remains the default path for Python work.
+- If a task or workflow runs Python natively (outside containers), use the backend virtual environment at `backend/.venv`.
+- For native backend debugging, use the existing `Run Backend (Dev)` task, which manages the venv workflow.
+
 ## Project Structure
 
 - `backend/src/models`: The Source of Truth for data structures.

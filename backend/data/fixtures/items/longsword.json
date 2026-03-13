@@ -1,0 +1,14 @@
+{
+  "name": "Longsword",
+  "description": "A standard longsword.",
+  "type": "weapon",
+  "rarity": "common",
+  "weight": 3.0,
+  "price": 1500,
+  "properties": {
+    "damage": "1d8",
+    "damage_type": "slashing",
+    "versatile": "1d10"
+  },
+  "effects": []
+}

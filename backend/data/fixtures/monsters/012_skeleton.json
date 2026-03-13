@@ -1,0 +1,46 @@
+{
+  "name": "Skeleton",
+  "description": "Skeleton monster fixture used for broad encounter coverage.",
+  "size": "Medium",
+  "type": "undead",
+  "alignment": "neutral evil",
+  "armor_class": 13,
+  "hit_points": 13,
+  "hit_dice": "2d8+4",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 12,
+  "dexterity": 12,
+  "constitution": 11,
+  "intelligence": 10,
+  "wisdom": 8,
+  "charisma": 12,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 4
+    }
+  ],
+  "senses": {
+    "passive_perception": 12
+  },
+  "languages": "Common",
+  "challenge_rating": 0.25,
+  "xp": 50,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

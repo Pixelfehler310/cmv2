@@ -1,0 +1,46 @@
+{
+  "name": "Minotaur",
+  "description": "Minotaur monster fixture used for broad encounter coverage.",
+  "size": "Large",
+  "type": "monstrosity",
+  "alignment": "neutral evil",
+  "armor_class": 14,
+  "hit_points": 76,
+  "hit_dice": "9d10+27",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 13,
+  "dexterity": 14,
+  "constitution": 12,
+  "intelligence": 9,
+  "wisdom": 9,
+  "charisma": 12,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 6
+    }
+  ],
+  "senses": {
+    "passive_perception": 14
+  },
+  "languages": "Common",
+  "challenge_rating": 3,
+  "xp": 700,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

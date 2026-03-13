@@ -1,0 +1,28 @@
+{
+  "id": "species_halfling",
+  "name": "Halfling",
+  "description": "Halfling ancestry commonly found in the border kingdoms.",
+  "speed": 30,
+  "size": "Medium",
+  "ability_bonuses": {
+    "dexterity": 2
+  },
+  "traits": [
+    {
+      "name": "Lucky",
+      "description": "Lucky trait."
+    },
+    {
+      "name": "Brave",
+      "description": "Brave trait."
+    },
+    {
+      "name": "Halfling Nimbleness",
+      "description": "Halfling Nimbleness trait."
+    }
+  ],
+  "languages": [
+    "Common",
+    "Halfling"
+  ]
+}

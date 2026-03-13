@@ -1,0 +1,15 @@
+{
+  "name": "Greater Invisibility",
+  "description": "Greater Invisibility spell fixture for integration testing.",
+  "level": 4,
+  "school": "illusion",
+  "casting_time": "1 action",
+  "range": "120 feet",
+  "components": {
+    "vocal": true,
+    "somatic": true,
+    "material": ""
+  },
+  "duration": "1 minute",
+  "effects": []
+}

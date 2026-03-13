@@ -1,0 +1,40 @@
+{
+  "id": "class_rogue",
+  "name": "Rogue",
+  "description": "Rogue adventurer class.",
+  "hit_die": "d8",
+  "proficiencies": {
+    "armor": [
+      "Light armor",
+      "Medium armor"
+    ],
+    "weapons": [
+      "Simple weapons"
+    ],
+    "tools": []
+  },
+  "saving_throws": [
+    "Dexterity",
+    "Intelligence"
+  ],
+  "progression": [
+    {
+      "level": 1,
+      "features": [
+        "Core Training"
+      ]
+    },
+    {
+      "level": 2,
+      "features": [
+        "Class Technique"
+      ]
+    },
+    {
+      "level": 3,
+      "features": [
+        "Subclass Feature"
+      ]
+    }
+  ]
+}

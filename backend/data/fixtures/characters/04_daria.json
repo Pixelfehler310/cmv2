@@ -1,0 +1,37 @@
+{
+  "name": "Daria",
+  "player_name": "Player4",
+  "campaign_id": "ironmarch-001",
+  "species_id": "species_halfling",
+  "class_id": "class_rogue",
+  "background_id": "background_criminal",
+  "level": 7,
+  "xp": 6300,
+  "alignment": "Neutral Good",
+  "strength": 10,
+  "dexterity": 18,
+  "constitution": 14,
+  "intelligence": 13,
+  "wisdom": 12,
+  "charisma": 14,
+  "max_hp": 49,
+  "current_hp": 45,
+  "temp_hp": 5,
+  "hit_dice": "7d8",
+  "armor_class": 16,
+  "speed": 30,
+  "initiative": 9,
+  "inventory": [
+    {
+      "id": "daria_item_1",
+      "item_id": "longsword",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false
+    }
+  ],
+  "spells": [],
+  "spell_slots": {},
+  "actions": [],
+  "effects": []
+}

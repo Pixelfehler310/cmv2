@@ -1,0 +1,51 @@
+{
+  "name": "Stone Golem",
+  "description": "Stone Golem monster fixture used for broad encounter coverage.",
+  "size": "Large",
+  "type": "construct",
+  "alignment": "unaligned",
+  "armor_class": 17,
+  "hit_points": 178,
+  "hit_dice": "17d10+85",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 14,
+  "dexterity": 11,
+  "constitution": 13,
+  "intelligence": 8,
+  "wisdom": 10,
+  "charisma": 12,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 3
+    }
+  ],
+  "senses": {
+    "passive_perception": 11
+  },
+  "languages": "Common",
+  "challenge_rating": 10,
+  "xp": 5900,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [
+    {
+      "name": "Tail Sweep",
+      "description": "Makes a sweeping tail attack."
+    }
+  ],
+  "inventory": [],
+  "effects": []
+}

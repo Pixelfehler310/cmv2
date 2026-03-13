@@ -1,0 +1,13 @@
+{
+  "name": "Spear",
+  "description": "Spear fixture entry for large campaign testing.",
+  "type": "weapon",
+  "rarity": "common",
+  "weight": 7.0,
+  "price": 300,
+  "properties": {
+    "damage": "1d6",
+    "damage_type": "piercing"
+  },
+  "effects": []
+}

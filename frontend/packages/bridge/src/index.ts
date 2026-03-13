@@ -47,3 +47,4 @@ export interface UserProfile {
 }
 
 export * from "./WsClient";
+export * from "./apiClient";

@@ -1,0 +1,12 @@
+{
+  "name": "Deck of Illusions",
+  "description": "Deck of Illusions fixture entry for large campaign testing.",
+  "type": "wondrous",
+  "rarity": "uncommon",
+  "weight": 3.0,
+  "price": 2500,
+  "properties": {
+    "cards": 34
+  },
+  "effects": []
+}

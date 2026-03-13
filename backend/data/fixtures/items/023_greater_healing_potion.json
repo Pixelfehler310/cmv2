@@ -1,0 +1,12 @@
+{
+  "name": "Greater Healing Potion",
+  "description": "Greater Healing Potion fixture entry for large campaign testing.",
+  "type": "consumable",
+  "rarity": "uncommon",
+  "weight": 8.0,
+  "price": 1150,
+  "properties": {
+    "healing": "4d4+4"
+  },
+  "effects": []
+}

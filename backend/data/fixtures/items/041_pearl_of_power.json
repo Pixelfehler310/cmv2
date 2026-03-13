@@ -1,0 +1,12 @@
+{
+  "name": "Pearl of Power",
+  "description": "Pearl of Power fixture entry for large campaign testing.",
+  "type": "wondrous",
+  "rarity": "uncommon",
+  "weight": 2.0,
+  "price": 2050,
+  "properties": {
+    "restore_slot": 3
+  },
+  "effects": []
+}

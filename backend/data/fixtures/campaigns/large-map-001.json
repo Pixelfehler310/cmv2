@@ -1,0 +1,6 @@
+{
+    "id": "large-map-001",
+    "name": "Large Map Scenario",
+    "description": "Campaign fixture used for large map combat stress testing.",
+    "dm_id": "system_dm"
+}

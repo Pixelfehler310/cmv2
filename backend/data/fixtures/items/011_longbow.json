@@ -1,0 +1,13 @@
+{
+  "name": "Longbow",
+  "description": "Longbow fixture entry for large campaign testing.",
+  "type": "weapon",
+  "rarity": "common",
+  "weight": 4.0,
+  "price": 550,
+  "properties": {
+    "damage": "1d8",
+    "damage_type": "piercing"
+  },
+  "effects": []
+}

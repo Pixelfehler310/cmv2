@@ -1,0 +1,46 @@
+{
+  "name": "Giant Spider",
+  "description": "Giant Spider monster fixture used for broad encounter coverage.",
+  "size": "Large",
+  "type": "beast",
+  "alignment": "unaligned",
+  "armor_class": 14,
+  "hit_points": 26,
+  "hit_dice": "4d10+4",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 15,
+  "dexterity": 10,
+  "constitution": 14,
+  "intelligence": 13,
+  "wisdom": 11,
+  "charisma": 8,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 2
+    }
+  ],
+  "senses": {
+    "passive_perception": 10
+  },
+  "languages": "Common",
+  "challenge_rating": 1,
+  "xp": 200,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

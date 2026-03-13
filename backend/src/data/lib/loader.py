@@ -1,63 +1,177 @@
 import json
-import os
-from typing import List, Type, TypeVar
+import logging
+from pathlib import Path
+from typing import List, Type, TypeVar, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+
 from src.data.lib.item import Item
 from src.data.lib.spell import Spell
 from src.data.lib.monster import Monster
-from src.schemas.item import ItemCreate
-from src.schemas.spell import SpellCreate
-from src.schemas.monster import MonsterCreate
+from src.data.lib.species import Species
+from src.data.lib.class_model import ClassModel
+from src.data.lib.background import Background
+from src.data.lib.feat import Feat
+from src.data.lib.feature import Feature
+from src.campaigns.lib.campaign import Campaign
+from src.campaigns.lib.character import Character
 from src.database import Base
 
-T = TypeVar("T", bound=Base)
+logger = logging.getLogger(__name__)
 
 
 class DataLoader:
     def __init__(self, data_dir: str):
-        self.data_dir = data_dir
+        self.data_dir = Path(data_dir)
 
-    def load_json(self, filename: str) -> List[dict]:
-        file_path = os.path.join(self.data_dir, filename)
-        if not os.path.exists(file_path):
+    def load_json_dir(self, directory: str) -> List[dict]:
+        target_dir = self.data_dir / directory
+        if not target_dir.exists() or not target_dir.is_dir():
+            logger.warning(
+                f"Fixture directory not found or invalid: {target_dir}")
             return []
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
 
-    async def import_items(self, session: AsyncSession, filename: str = "items.json"):
-        data = self.load_json(filename)
+        results = []
+        for file_path in target_dir.glob("*.json"):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        # Support legacy array format if any remains
+                        results.extend(data)
+                    else:
+                        results.append(data)
+            except Exception as e:
+                logger.error(f"Failed to load {file_path}: {e}")
+        logger.info(f"Loaded {len(results)} JSON object(s) from {target_dir}")
+        return results
+
+    async def _import_generic(self, session: AsyncSession, directory: str, model: Type[Base], name_field: str = "name"):
+        summary = {
+            "directory": directory,
+            "model": model.__name__,
+            "discovered": 0,
+            "inserted": 0,
+            "skipped_existing": 0,
+            "failed": 0,
+        }
+        data = self.load_json_dir(directory)
+        summary["discovered"] = len(data)
+
         for item_data in data:
-            # Check if exists
-            stmt = select(Item).where(Item.name == item_data["name"])
+            item_name = item_data.get(name_field, "unknown")
+            if name_field not in item_data:
+                logger.error(
+                    f"Missing required key '{name_field}' for {model.__name__} in directory '{directory}'"
+                )
+                summary["failed"] += 1
+                continue
+
+            stmt = select(model).where(
+                getattr(model, name_field) == item_data[name_field])
             result = await session.execute(stmt)
             existing = result.scalar_one_or_none()
 
-            if not existing:
-                item = Item(**item_data)
-                session.add(item)
+            if existing:
+                summary["skipped_existing"] += 1
+                continue
+
+            try:
+                instance = model(**item_data)
+                session.add(instance)
+                summary["inserted"] += 1
+            except Exception as e:
+                logger.error(
+                    f"Failed to instantiate {model.__name__} from data {item_name}: {e}"
+                )
+                summary["failed"] += 1
         await session.commit()
+        logger.info(
+            f"Import summary for {directory}: discovered={summary['discovered']}, "
+            f"inserted={summary['inserted']}, skipped_existing={summary['skipped_existing']}, failed={summary['failed']}"
+        )
+        return summary
 
-    async def import_spells(self, session: AsyncSession, filename: str = "spells.json"):
-        data = self.load_json(filename)
-        for spell_data in data:
-            stmt = select(Spell).where(Spell.name == spell_data["name"])
-            result = await session.execute(stmt)
-            existing = result.scalar_one_or_none()
+    async def import_items(self, session: AsyncSession):
+        return await self._import_generic(session, "items", Item)
 
-            if not existing:
-                spell = Spell(**spell_data)
-                session.add(spell)
+    async def import_spells(self, session: AsyncSession):
+        return await self._import_generic(session, "spells", Spell)
+
+    async def import_monsters(self, session: AsyncSession):
+        return await self._import_generic(session, "monsters", Monster)
+
+    async def import_definitions(self, session: AsyncSession):
+        target_dir = self.data_dir / "definitions"
+        summary = {
+            "directory": "definitions",
+            "discovered": 0,
+            "inserted": 0,
+            "skipped_existing": 0,
+            "failed": 0,
+            "unknown_prefix": 0,
+        }
+        if not target_dir.exists():
+            logger.warning(
+                f"Definitions fixture directory not found: {target_dir}")
+            return summary
+
+        for file_path in target_dir.glob("*.json"):
+            summary["discovered"] += 1
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+                name = data.get("name")
+                if file_path.name.startswith("species_"):
+                    model = Species
+                elif file_path.name.startswith("class_"):
+                    model = ClassModel
+                elif file_path.name.startswith("background_"):
+                    model = Background
+                elif file_path.name.startswith("feat_"):
+                    model = Feat
+                elif file_path.name.startswith("feature_"):
+                    model = Feature
+                else:
+                    logger.warning(
+                        f"Unknown definition prefix for {file_path.name}")
+                    summary["unknown_prefix"] += 1
+                    continue
+
+                stmt = select(model).where(model.name == name)
+                result = await session.execute(stmt)
+                if not result.scalar_one_or_none():
+                    session.add(model(**data))
+                    summary["inserted"] += 1
+                else:
+                    summary["skipped_existing"] += 1
+            except Exception as e:
+                logger.error(
+                    f"Failed to import definition {file_path.name}: {e}")
+                summary["failed"] += 1
         await session.commit()
+        logger.info(
+            f"Import summary for definitions: discovered={summary['discovered']}, "
+            f"inserted={summary['inserted']}, skipped_existing={summary['skipped_existing']}, "
+            f"failed={summary['failed']}, unknown_prefix={summary['unknown_prefix']}"
+        )
+        return summary
 
-    async def import_monsters(self, session: AsyncSession, filename: str = "monsters.json"):
-        data = self.load_json(filename)
-        for monster_data in data:
-            stmt = select(Monster).where(Monster.name == monster_data["name"])
-            result = await session.execute(stmt)
-            existing = result.scalar_one_or_none()
+    async def import_campaigns(self, session: AsyncSession):
+        return await self._import_generic(session, "campaigns", Campaign)
 
-            if not existing:
-                monster = Monster(**monster_data)
-                session.add(monster)
-        await session.commit()
+    async def import_characters(self, session: AsyncSession):
+        return await self._import_generic(session, "characters", Character)
+
+    async def load_all(self, session: AsyncSession):
+        summary = {
+            "definitions": await self.import_definitions(session),
+            "items": await self.import_items(session),
+            "spells": await self.import_spells(session),
+            "monsters": await self.import_monsters(session),
+            "campaigns": await self.import_campaigns(session),
+            "characters": await self.import_characters(session),
+        }
+        logger.info(f"Completed DataLoader.load_all with summary: {summary}")
+        return summary

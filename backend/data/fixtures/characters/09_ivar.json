@@ -1,0 +1,44 @@
+{
+  "name": "Player9",
+  "player_name": "Player9",
+  "campaign_id": "ironmarch-001",
+  "species_id": "species_dwarf",
+  "class_id": "class_cleric",
+  "background_id": "background_acolyte",
+  "level": 5,
+  "xp": 4500,
+  "alignment": "Neutral Good",
+  "strength": 13,
+  "dexterity": 10,
+  "constitution": 15,
+  "intelligence": 10,
+  "wisdom": 16,
+  "charisma": 12,
+  "max_hp": 43,
+  "current_hp": 34,
+  "temp_hp": 0,
+  "hit_dice": "5d8",
+  "armor_class": 17,
+  "speed": 30,
+  "initiative": 2,
+  "inventory": [
+    {
+      "id": "ivar_item_1",
+      "item_id": "longsword",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false
+    }
+  ],
+  "spells": [
+    {
+      "name": "Bless"
+    }
+  ],
+  "spell_slots": {
+    "1": 4,
+    "2": 2
+  },
+  "actions": [],
+  "effects": []
+}

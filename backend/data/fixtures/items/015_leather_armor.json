@@ -1,0 +1,12 @@
+{
+  "name": "Leather Armor",
+  "description": "Leather Armor fixture entry for large campaign testing.",
+  "type": "armor",
+  "rarity": "common",
+  "weight": 8.0,
+  "price": 750,
+  "properties": {
+    "ac_bonus": 1
+  },
+  "effects": []
+}

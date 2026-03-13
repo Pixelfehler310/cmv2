@@ -1,0 +1,44 @@
+{
+  "name": "Brunna",
+  "player_name": "Player2",
+  "campaign_id": "ironmarch-001",
+  "species_id": "species_dwarf",
+  "class_id": "class_cleric",
+  "background_id": "background_acolyte",
+  "level": 6,
+  "xp": 5400,
+  "alignment": "Neutral Good",
+  "strength": 14,
+  "dexterity": 10,
+  "constitution": 16,
+  "intelligence": 10,
+  "wisdom": 17,
+  "charisma": 12,
+  "max_hp": 52,
+  "current_hp": 50,
+  "temp_hp": 0,
+  "hit_dice": "6d8",
+  "armor_class": 18,
+  "speed": 30,
+  "initiative": 8,
+  "inventory": [
+    {
+      "id": "brunna_item_1",
+      "item_id": "longsword",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false
+    }
+  ],
+  "spells": [
+    {
+      "name": "Bless"
+    }
+  ],
+  "spell_slots": {
+    "1": 4,
+    "2": 2
+  },
+  "actions": [],
+  "effects": []
+}

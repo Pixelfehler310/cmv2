@@ -1,0 +1,47 @@
+{
+  "name": "Aelar",
+  "player_name": "Player1",
+  "campaign_id": "ironmarch-001",
+  "species_id": "species_elf",
+  "class_id": "class_wizard",
+  "background_id": "background_sage",
+  "level": 7,
+  "xp": 6300,
+  "alignment": "Neutral Good",
+  "strength": 8,
+  "dexterity": 14,
+  "constitution": 14,
+  "intelligence": 18,
+  "wisdom": 12,
+  "charisma": 10,
+  "max_hp": 38,
+  "current_hp": 37,
+  "temp_hp": 0,
+  "hit_dice": "7d8",
+  "armor_class": 14,
+  "speed": 30,
+  "initiative": 12,
+  "inventory": [
+    {
+      "id": "aelar_item_1",
+      "item_id": "longsword",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false
+    }
+  ],
+  "spells": [
+    {
+      "name": "Magic Missile"
+    },
+    {
+      "name": "Shield"
+    }
+  ],
+  "spell_slots": {
+    "1": 4,
+    "2": 2
+  },
+  "actions": [],
+  "effects": []
+}

@@ -1,0 +1,28 @@
+{
+  "id": "species_dwarf",
+  "name": "Dwarf",
+  "description": "Dwarf ancestry commonly found in the border kingdoms.",
+  "speed": 30,
+  "size": "Medium",
+  "ability_bonuses": {
+    "constitution": 2
+  },
+  "traits": [
+    {
+      "name": "Darkvision",
+      "description": "Darkvision trait."
+    },
+    {
+      "name": "Dwarven Resilience",
+      "description": "Dwarven Resilience trait."
+    },
+    {
+      "name": "Stonecunning",
+      "description": "Stonecunning trait."
+    }
+  ],
+  "languages": [
+    "Common",
+    "Dwarvish"
+  ]
+}

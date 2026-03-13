@@ -1,0 +1,12 @@
+{
+  "name": "Scholar Pack",
+  "description": "Scholar Pack fixture entry for large campaign testing.",
+  "type": "gear",
+  "rarity": "common",
+  "weight": 2.0,
+  "price": 1650,
+  "properties": {
+    "bundle": true
+  },
+  "effects": []
+}

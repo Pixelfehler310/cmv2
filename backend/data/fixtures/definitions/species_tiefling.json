@@ -1,0 +1,29 @@
+{
+  "id": "species_tiefling",
+  "name": "Tiefling",
+  "description": "Tiefling ancestry commonly found in the border kingdoms.",
+  "speed": 30,
+  "size": "Medium",
+  "ability_bonuses": {
+    "charisma": 2,
+    "intelligence": 1
+  },
+  "traits": [
+    {
+      "name": "Darkvision",
+      "description": "Darkvision trait."
+    },
+    {
+      "name": "Hellish Resistance",
+      "description": "Hellish Resistance trait."
+    },
+    {
+      "name": "Infernal Legacy",
+      "description": "Infernal Legacy trait."
+    }
+  ],
+  "languages": [
+    "Common",
+    "Infernal"
+  ]
+}

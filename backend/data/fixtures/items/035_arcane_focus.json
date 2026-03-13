@@ -1,0 +1,12 @@
+{
+  "name": "Arcane Focus",
+  "description": "Arcane Focus fixture entry for large campaign testing.",
+  "type": "focus",
+  "rarity": "common",
+  "weight": 4.0,
+  "price": 1750,
+  "properties": {
+    "spell_focus": true
+  },
+  "effects": []
+}

@@ -1,0 +1,15 @@
+{
+  "name": "Ice Storm",
+  "description": "Ice Storm spell fixture for integration testing.",
+  "level": 4,
+  "school": "evocation",
+  "casting_time": "1 action",
+  "range": "120 feet",
+  "components": {
+    "vocal": true,
+    "somatic": true,
+    "material": ""
+  },
+  "duration": "1 minute",
+  "effects": []
+}

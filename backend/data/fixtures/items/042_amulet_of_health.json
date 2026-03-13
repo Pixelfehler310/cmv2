@@ -1,0 +1,12 @@
+{
+  "name": "Amulet of Health",
+  "description": "Amulet of Health fixture entry for large campaign testing.",
+  "type": "wondrous",
+  "rarity": "rare",
+  "weight": 3.0,
+  "price": 2100,
+  "properties": {
+    "set_constitution": 19
+  },
+  "effects": []
+}

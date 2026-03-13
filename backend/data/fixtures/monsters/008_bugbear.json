@@ -1,0 +1,46 @@
+{
+  "name": "Bugbear",
+  "description": "Bugbear monster fixture used for broad encounter coverage.",
+  "size": "Medium",
+  "type": "humanoid",
+  "alignment": "unaligned",
+  "armor_class": 16,
+  "hit_points": 27,
+  "hit_dice": "5d8+5",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 14,
+  "dexterity": 13,
+  "constitution": 13,
+  "intelligence": 6,
+  "wisdom": 10,
+  "charisma": 8,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 5
+    }
+  ],
+  "senses": {
+    "passive_perception": 13
+  },
+  "languages": "Common",
+  "challenge_rating": 1,
+  "xp": 200,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

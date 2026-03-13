@@ -1,0 +1,13 @@
+{
+  "name": "Battleaxe",
+  "description": "Battleaxe fixture entry for large campaign testing.",
+  "type": "weapon",
+  "rarity": "common",
+  "weight": 5.0,
+  "price": 200,
+  "properties": {
+    "damage": "1d8",
+    "damage_type": "slashing"
+  },
+  "effects": []
+}

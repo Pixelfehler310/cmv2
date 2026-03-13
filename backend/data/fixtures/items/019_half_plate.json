@@ -1,0 +1,12 @@
+{
+  "name": "Half Plate",
+  "description": "Half Plate fixture entry for large campaign testing.",
+  "type": "armor",
+  "rarity": "uncommon",
+  "weight": 4.0,
+  "price": 950,
+  "properties": {
+    "ac_bonus": 5
+  },
+  "effects": []
+}

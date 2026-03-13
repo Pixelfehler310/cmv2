@@ -1,0 +1,8 @@
+{
+  "id": "feature_darkvision",
+  "name": "Darkvision",
+  "description": "Darkvision rules text.",
+  "source": "Species",
+  "level_required": 1,
+  "effects": []
+}

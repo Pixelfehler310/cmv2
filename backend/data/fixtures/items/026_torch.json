@@ -1,0 +1,12 @@
+{
+  "name": "Torch",
+  "description": "Torch fixture entry for large campaign testing.",
+  "type": "gear",
+  "rarity": "common",
+  "weight": 3.0,
+  "price": 1300,
+  "properties": {
+    "burn_time": "1 hour"
+  },
+  "effects": []
+}

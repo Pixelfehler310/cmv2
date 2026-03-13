@@ -1,0 +1,15 @@
+{
+  "name": "Fly",
+  "description": "Fly spell fixture for integration testing.",
+  "level": 3,
+  "school": "transmutation",
+  "casting_time": "1 action",
+  "range": "120 feet",
+  "components": {
+    "vocal": true,
+    "somatic": true,
+    "material": ""
+  },
+  "duration": "1 minute",
+  "effects": []
+}

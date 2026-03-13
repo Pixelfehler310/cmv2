@@ -1,0 +1,46 @@
+{
+  "name": "Basilisk",
+  "description": "Basilisk monster fixture used for broad encounter coverage.",
+  "size": "Medium",
+  "type": "monstrosity",
+  "alignment": "neutral evil",
+  "armor_class": 15,
+  "hit_points": 52,
+  "hit_dice": "8d8+16",
+  "speed": {
+    "walk": 30
+  },
+  "strength": 12,
+  "dexterity": 13,
+  "constitution": 11,
+  "intelligence": 8,
+  "wisdom": 8,
+  "charisma": 11,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 5
+    }
+  ],
+  "senses": {
+    "passive_perception": 13
+  },
+  "languages": "Common",
+  "challenge_rating": 3,
+  "xp": 700,
+  "special_abilities": [
+    {
+      "name": "Battle Ready",
+      "description": "This creature is trained for combat."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Basic Attack",
+      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+    }
+  ],
+  "legendary_actions": [],
+  "inventory": [],
+  "effects": []
+}

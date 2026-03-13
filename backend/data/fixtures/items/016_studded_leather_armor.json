@@ -1,0 +1,12 @@
+{
+  "name": "Studded Leather Armor",
+  "description": "Studded Leather Armor fixture entry for large campaign testing.",
+  "type": "armor",
+  "rarity": "common",
+  "weight": 1.0,
+  "price": 800,
+  "properties": {
+    "ac_bonus": 2
+  },
+  "effects": []
+}
