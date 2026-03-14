@@ -6,6 +6,7 @@ This document defines the build order, test strategy, and acceptance criteria fo
 
 - Conceptual Architecture: `docs/architecture/frontend/`
 - Detailed Specifications: `docs/frontend/reference/`
+- Current Snapshot + Next Steps: `docs/architecture/frontend/14_dm_stage_implementation_status_and_next_steps.md`
 
 **Strategy:** Component-Driven Development (CDD). Build UI components in isolation (Storybook or isolated routes) before wiring them to state. Heavily leverage `@civic/design-system` for rapid scaffolding.
 

@@ -141,6 +141,13 @@ async def websocket_endpoint(
     )
 
     ctx = session_manager.register_connection(campaign_id, connected_user)
+    logger.info(
+        "Registered WS connection campaign=%s user=%s role=%s game_system=%s",
+        campaign_id,
+        user_id,
+        user_role.value,
+        ctx.game_system,
+    )
 
     # --- System handler ---
     handler = _get_handler(ctx.game_system)
@@ -157,9 +164,25 @@ async def websocket_endpoint(
     try:
         connect_events = await handler.on_connect(ctx, session_manager)
         for event in connect_events:
+            logger.debug(
+                "Sending on_connect event type=%s campaign=%s user=%s",
+                event.type,
+                campaign_id,
+                user_id,
+            )
             await session_manager.send_to_user(campaign_id, user_id, event)
+            logger.debug(
+                "Sent on_connect event type=%s campaign=%s user=%s",
+                event.type,
+                campaign_id,
+                user_id,
+            )
     except Exception:
-        logger.exception("Error in on_connect for %s", campaign_id)
+        logger.exception(
+            "Error in on_connect campaign=%s user=%s",
+            campaign_id,
+            user_id,
+        )
 
     # --- Message loop ---
     try:

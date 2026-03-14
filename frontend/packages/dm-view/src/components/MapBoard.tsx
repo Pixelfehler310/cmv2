@@ -9,6 +9,7 @@ interface MapBoardProps {
 export const MapBoard: React.FC<MapBoardProps> = ({ selectedCombatantId, onSelectCombatant }) => {
   const { gameState, moveToken } = useCombatStore();
   const [draggedTokenId, setDraggedTokenId] = useState<string | null>(null);
+  const GRID_SIZE = 50;
 
   if (!gameState) {
     return <div style={styles.mapContainer}>Waiting for map data...</div>;
@@ -23,13 +24,12 @@ export const MapBoard: React.FC<MapBoardProps> = ({ selectedCombatantId, onSelec
     e.preventDefault();
     if (!draggedTokenId) return;
 
-    // Very naive grid calculation for MVP
+    // Snap drops to grid coordinates for deterministic server payloads.
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / 50);
-    const y = Math.floor((e.clientY - rect.top) / 50);
+    const x = Math.max(0, Math.floor((e.clientX - rect.left) / GRID_SIZE));
+    const y = Math.max(0, Math.floor((e.clientY - rect.top) / GRID_SIZE));
 
-    // In a real implementation we might pass a path, but for now we just pass the endpoint
-    // as a 1-step path
+    // The store applies optimistic position and reconciles against server updates.
     moveToken(draggedTokenId, [[x, y]]);
     setDraggedTokenId(null);
   };
@@ -39,7 +39,7 @@ export const MapBoard: React.FC<MapBoardProps> = ({ selectedCombatantId, onSelec
   };
 
   return (
-    <div style={styles.mapContainer} onDrop={handleDrop} onDragOver={handleDragOver}>
+    <div style={styles.mapContainer} onDrop={handleDrop} onDragOver={handleDragOver} onClick={() => onSelectCombatant(null)}>
       {/* Grid Background */}
       <div style={styles.gridLayer} />
 
@@ -62,8 +62,8 @@ export const MapBoard: React.FC<MapBoardProps> = ({ selectedCombatantId, onSelec
           }}
           style={{
             ...styles.token,
-            left: `${token.x * 50}px`,
-            top: `${token.y * 50}px`,
+            left: `${token.x * GRID_SIZE}px`,
+            top: `${token.y * GRID_SIZE}px`,
             border: selectedCombatantId === token.id ? "3px solid #00ff00" : "3px solid #888",
           }}
         >

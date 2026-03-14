@@ -164,6 +164,52 @@ class TestRollDice:
 
 
 # ---------------------------------------------------------------------------
+# Chat Tests
+# ---------------------------------------------------------------------------
+
+class TestChat:
+
+    @pytest.mark.anyio
+    async def test_chat_message_broadcasts_sanitized_payload(self, handler, dm_ctx, mgr):
+        envelope = WsEnvelope(
+            type="chat_message",
+            payload={"message": "  Hold the line!  "},
+        )
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "chat_message"
+        assert events[0].payload["sender_id"] == "dm_user"
+        assert events[0].payload["sender_name"] == "DM"
+        assert events[0].payload["sender_role"] == "dm"
+        assert events[0].payload["message"] == "Hold the line!"
+
+    @pytest.mark.anyio
+    async def test_chat_message_empty_text_returns_error(self, handler, dm_ctx, mgr):
+        envelope = WsEnvelope(
+            type="chat_message",
+            payload={"message": "   "},
+        )
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "error"
+        assert events[0].payload["code"] == "invalid_message"
+
+    @pytest.mark.anyio
+    async def test_player_can_send_chat_message(self, handler, player_ctx, mgr):
+        envelope = WsEnvelope(
+            type="chat_message",
+            payload={"message": "Ready."},
+        )
+        events = await handler.handle(envelope, player_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "chat_message"
+        assert events[0].payload["sender_role"] == "player"
+
+
+# ---------------------------------------------------------------------------
 # Combat Tests
 # ---------------------------------------------------------------------------
 
@@ -208,6 +254,179 @@ class TestCombat:
         events = await handler.handle(WsEnvelope(type="end_combat"), dm_ctx, mgr)
         assert len(events) == 1
         assert events[0].type == "combat_ended"
+
+
+# ---------------------------------------------------------------------------
+# Movement Tests
+# ---------------------------------------------------------------------------
+
+class TestMovement:
+
+    @pytest.mark.anyio
+    async def test_move_token_updates_actor_and_map_token(self, handler, dm_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="move_token",
+            payload={"actor_id": "goblin_1", "path": [{"x": 12, "y": 14}]},
+        )
+
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "actor_moved"
+        assert events[0].payload["actor_id"] == "goblin_1"
+        assert events[0].payload["position"] == {"x": 12, "y": 14}
+
+        goblin = next(
+            c for c in combat_encounter.combatants if c.id == "goblin_1")
+        assert goblin.position.x == 12
+        assert goblin.position.y == 14
+
+        goblin_token = next(
+            t for t in combat_encounter.map.tokens if t.actor_id == "goblin_1")
+        assert goblin_token.position.x == 12
+        assert goblin_token.position.y == 14
+
+    @pytest.mark.anyio
+    async def test_move_token_invalid_target_returns_error(self, handler, dm_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="move_token",
+            payload={"actor_id": "missing_actor", "path": [{"x": 2, "y": 2}]},
+        )
+
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "error"
+        assert events[0].payload["code"] == "invalid_target"
+
+    @pytest.mark.anyio
+    async def test_player_can_send_move_token(self, handler, player_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="move_token",
+            payload={"actor_id": "fighter_1", "path": [{"x": 8, "y": 8}]},
+        )
+
+        events = await handler.handle(envelope, player_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "actor_moved"
+
+
+# ---------------------------------------------------------------------------
+# Actor Spawn Tests
+# ---------------------------------------------------------------------------
+
+class TestAddActor:
+
+    @pytest.mark.anyio
+    async def test_add_actor_adds_combatant_and_token(self, handler, dm_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="add_actor",
+            payload={
+                "definition_slug": "orc-warrior",
+                "name": "Orc Brute",
+                "position": {"x": 9, "y": 10},
+            },
+        )
+
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "actor_added"
+        assert events[0].payload["actor"]["definition_slug"] == "orc-warrior"
+        assert events[0].payload["actor"]["name"] == "Orc Brute"
+        assert events[0].payload["actor"]["position"] == {
+            "x": 9, "y": 10, "elevation": 0}
+
+        added_actor_id = events[0].payload["actor"]["id"]
+        added_actor = next(
+            c for c in combat_encounter.combatants if c.id == added_actor_id)
+        assert added_actor.position.x == 9
+        assert added_actor.position.y == 10
+
+        added_token = next(
+            t for t in combat_encounter.map.tokens if t.actor_id == added_actor_id)
+        assert added_token.position.x == 9
+        assert added_token.position.y == 10
+
+    @pytest.mark.anyio
+    async def test_add_actor_invalid_position_returns_error(self, handler, dm_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="add_actor",
+            payload={
+                "definition_slug": "goblin",
+                "position": {"x": 999, "y": 1},
+            },
+        )
+
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "error"
+        assert events[0].payload["code"] == "invalid_action"
+
+    @pytest.mark.anyio
+    async def test_player_cannot_add_actor(self, handler, player_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="add_actor",
+            payload={"definition_slug": "goblin",
+                     "position": {"x": 1, "y": 1}},
+        )
+
+        events = await handler.handle(envelope, player_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "error"
+        assert events[0].payload["code"] == "unauthorized"
+
+
+# ---------------------------------------------------------------------------
+# Actor Removal Tests
+# ---------------------------------------------------------------------------
+
+class TestRemoveActor:
+
+    @pytest.mark.anyio
+    async def test_remove_actor_removes_combatant_and_token(self, handler, dm_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="remove_actor",
+            payload={"actor_id": "goblin_1"},
+        )
+
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "actor_removed"
+        assert events[0].payload["actor_id"] == "goblin_1"
+
+        assert all(c.id != "goblin_1" for c in combat_encounter.combatants)
+        assert all(t.actor_id != "goblin_1" for t in combat_encounter.map.tokens)
+
+    @pytest.mark.anyio
+    async def test_remove_actor_invalid_target_returns_error(self, handler, dm_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="remove_actor",
+            payload={"actor_id": "missing_actor"},
+        )
+
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "error"
+        assert events[0].payload["code"] == "invalid_target"
+
+    @pytest.mark.anyio
+    async def test_player_cannot_remove_actor(self, handler, player_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="remove_actor",
+            payload={"actor_id": "goblin_1"},
+        )
+
+        events = await handler.handle(envelope, player_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "error"
+        assert events[0].payload["code"] == "unauthorized"
 
 
 # ---------------------------------------------------------------------------

@@ -19,10 +19,10 @@ export class WsClient {
     this.url = baseUrl;
   }
 
-  connect(campaignId: string, token: string) {
+  connect(campaignId: string, token: string, role: "player" | "dm" | "spectator" = "player") {
     this.isIntentionalClose = false;
     // Connects to the main ws_dispatcher.py route: /ws/{campaign_id}
-    const wsUrl = `${this.url}/ws/${campaignId}?token=${token}`;
+    const wsUrl = `${this.url}/ws/${campaignId}?token=${token}&role=${role}`;
 
     console.info(`[WsClient] Connecting to WebSocket: ${wsUrl}`);
     this.ws = new WebSocket(wsUrl);
@@ -37,7 +37,7 @@ export class WsClient {
       console.info("[WsClient] WS Disconnected");
       this.state.isConnected = false;
       if (!this.isIntentionalClose) {
-        this.scheduleReconnect(campaignId, token);
+        this.scheduleReconnect(campaignId, token, role);
       }
     };
 
@@ -76,10 +76,10 @@ export class WsClient {
     return () => this.handlers.delete(handler);
   }
 
-  private scheduleReconnect(campaignId: string, token: string) {
+  private scheduleReconnect(campaignId: string, token: string, role: "player" | "dm" | "spectator") {
     setTimeout(() => {
       console.info("[WsClient] Reconnecting...");
-      this.connect(campaignId, token);
+      this.connect(campaignId, token, role);
       this.reconnectInterval = Math.min(this.reconnectInterval * 2, this.maxReconnectInterval);
     }, this.reconnectInterval);
   }

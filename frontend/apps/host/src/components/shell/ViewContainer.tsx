@@ -18,7 +18,7 @@ interface ViewContainerProps {
 
 export const ViewContainer = ({ viewType, bridge, campaignId }: ViewContainerProps) => {
   useEffect(() => {
-    logger.info(`ViewContainer rendering view: ${viewType} for campaign: ${campaignId}`);
+    logger.info("ViewContainer rendering view: " + viewType + " for campaign: " + campaignId);
   }, [viewType, campaignId]);
 
   const renderView = () => {
@@ -26,7 +26,7 @@ export const ViewContainer = ({ viewType, bridge, campaignId }: ViewContainerPro
       case "player":
         return <PlayerView bridge={bridge} campaignId={campaignId} />;
       case "dm":
-        return <DMView />;
+        return <DMView bridge={bridge} campaignId={campaignId} />;
       case "campaign_creator":
         return <div>Campaign Creator</div>;
       default:

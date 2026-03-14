@@ -1,12 +1,13 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useCombatStore } from "@rpg/shared";
 
-// In a real app, campaignId would come from the router URL parameter.
-const HARDCODED_CAMPAIGN_ID = "test_123";
+type DmCommandDeckProps = {
+  selectedCombatantId: string;
+  onRemoveSelected?: () => void;
+};
 
-// @ts-ignore
-export const DmCommandDeck = ({ selectedCombatantId }) => {
-  const { gameState, endTurn } = useCombatStore();
+export const DmCommandDeck: React.FC<DmCommandDeckProps> = ({ selectedCombatantId, onRemoveSelected }) => {
+  const { gameState, endTurn, applyDamage, removeActor } = useCombatStore();
 
   if (!gameState) {
     return null;
@@ -31,8 +32,13 @@ export const DmCommandDeck = ({ selectedCombatantId }) => {
 
   const { public_name, hp_current, hp_max, action_used, bonus_action_used, movement_remaining } = selectedCombatant;
 
-  const handleAction = (actionType: string) => {
-    useCombatStore.getState().dispatchAction(actionType, { target_id: selectedCombatantId });
+  const handleDamage = (amount: number) => {
+    applyDamage(selectedCombatantId, amount, "slashing");
+  };
+
+  const handleRemove = () => {
+    removeActor(selectedCombatantId);
+    onRemoveSelected?.();
   };
 
   return (
@@ -57,17 +63,17 @@ export const DmCommandDeck = ({ selectedCombatantId }) => {
       </div>
 
       <div style={styles.actionGrid}>
-        <button style={{ ...styles.attackBtn, opacity: action_used ? 0.3 : 1 }} disabled={action_used} onClick={() => handleAction("ATTACK")}>
-          ⚔️ Basic Attack
+        <button style={{ ...styles.attackBtn, opacity: action_used ? 0.3 : 1 }} disabled={action_used} onClick={() => handleDamage(5)}>
+          ⚔️ Apply 5 Damage
         </button>
-        <button style={{ ...styles.castBtn, opacity: action_used ? 0.3 : 1 }} disabled={action_used} onClick={() => handleAction("CAST_SPELL")}>
-          ✨ Cast Spell
+        <button style={{ ...styles.castBtn, opacity: action_used ? 0.3 : 1 }} disabled={action_used} onClick={() => handleDamage(10)}>
+          ✨ Apply 10 Damage
         </button>
-        <button style={styles.btn} onClick={() => handleAction("DASH")}>
-          Dash
+        <button style={styles.btn} onClick={() => endTurn()}>
+          End Turn
         </button>
-        <button style={styles.btn} onClick={() => handleAction("DISENGAGE")}>
-          Disengage
+        <button style={styles.removeBtn} onClick={handleRemove}>
+          Remove Token
         </button>
       </div>
     </div>
@@ -135,6 +141,14 @@ const styles = {
   castBtn: {
     padding: "10px 15px",
     backgroundColor: "#00008b",
+    color: "#fff",
+    border: "none",
+    borderRadius: "4px",
+    cursor: "pointer",
+  },
+  removeBtn: {
+    padding: "10px 15px",
+    backgroundColor: "#5a2020",
     color: "#fff",
     border: "none",
     borderRadius: "4px",

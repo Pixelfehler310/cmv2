@@ -10,6 +10,7 @@ Per architecture doc 09 § 7.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Optional
 
 from src.core.ws_dispatcher import ISystemHandler
@@ -20,7 +21,11 @@ from src.core.sessions.manager import SessionManager
 from .permissions import check_permission, PermissionDenied
 from .state_filter import filter_state_for_role
 from .event_types import (
+    AddActorPayload,
+    ChatMessagePayload,
     EndTurnPayload,
+    MoveTokenPayload,
+    RemoveActorPayload,
     ApplyDamagePayload,
     ApplyHealingPayload,
     ApplyConditionPayload,
@@ -29,9 +34,10 @@ from .event_types import (
 )
 
 from .schemas.encounter import EncounterState
+from .schemas.encounter import MapToken
 from .schemas.instances import ActorInstance, ConditionInstance
 from .schemas.enums import ConditionType, DamageType, ActorType
-from .schemas.common import AbilityScores, SpeedBlock
+from .schemas.common import AbilityScores, SpeedBlock, Position
 
 from .engine.combat_state import (
     start_combat,
@@ -58,7 +64,7 @@ def get_or_create_encounter(campaign_id: str) -> EncounterState:
     if campaign_id not in _encounters:
         from .schemas.instances import ActorInstance
         from .schemas.encounter import MapState, MapToken
-        
+
         arannis = ActorInstance(
             id="hero_1",
             name="Arannis",
@@ -155,6 +161,18 @@ class Dnd5eWsHandler(ISystemHandler):
         if event_type == "roll_dice":
             return self._handle_roll_dice(envelope, ctx)
 
+        if event_type == "chat_message":
+            return self._handle_chat_message(envelope, ctx)
+
+        if event_type == "move_token":
+            return self._handle_move_token(encounter, envelope)
+
+        if event_type == "add_actor":
+            return self._handle_add_actor(encounter, envelope)
+
+        if event_type == "remove_actor":
+            return self._handle_remove_actor(encounter, envelope)
+
         if event_type == "end_turn":
             return self._handle_end_turn(encounter, envelope)
 
@@ -239,6 +257,31 @@ class Dnd5eWsHandler(ISystemHandler):
             )
         ]
 
+    def _handle_chat_message(
+        self, envelope: WsEnvelope, ctx: SessionContext
+    ) -> list[WsOutbound]:
+        try:
+            payload = ChatMessagePayload.model_validate(envelope.payload)
+        except Exception:
+            return [self._error("Invalid chat_message payload", WsErrorCode.INVALID_MESSAGE, ctx)]
+
+        message = payload.message.strip()
+        if not message:
+            return [self._error("chat_message cannot be empty", WsErrorCode.INVALID_MESSAGE, ctx)]
+
+        return [
+            WsOutbound(
+                type="chat_message",
+                payload={
+                    "sender_id": ctx.user_id,
+                    "sender_name": ctx.display_name,
+                    "sender_role": ctx.role.value,
+                    "message": message,
+                },
+                visibility=Visibility.ALL,
+            )
+        ]
+
     def _handle_end_turn(
         self, encounter: EncounterState, envelope: WsEnvelope
     ) -> list[WsOutbound]:
@@ -256,6 +299,154 @@ class Dnd5eWsHandler(ISystemHandler):
                     "active_actor_id": active_id,
                     "round": encounter.round_number,
                 },
+                visibility=Visibility.ALL,
+            )
+        ]
+
+    def _handle_move_token(
+        self, encounter: EncounterState, envelope: WsEnvelope
+    ) -> list[WsOutbound]:
+        try:
+            payload = MoveTokenPayload.model_validate(envelope.payload)
+        except Exception:
+            return [self._error_raw("Invalid move_token payload", WsErrorCode.INVALID_MESSAGE)]
+
+        if not payload.path:
+            return [self._error_raw("move_token path cannot be empty", WsErrorCode.INVALID_MESSAGE)]
+
+        actor = self._find_actor(encounter, payload.actor_id)
+        if actor is None:
+            return [self._error_raw(f"Actor {payload.actor_id} not found", WsErrorCode.INVALID_TARGET)]
+
+        validated_path: list[dict[str, int]] = []
+        for step in payload.path:
+            try:
+                pos = Position.model_validate(step)
+            except Exception:
+                return [self._error_raw("move_token path contains invalid coordinates", WsErrorCode.INVALID_MESSAGE)]
+
+            if pos.x < 0 or pos.y < 0 or pos.x >= encounter.map.width or pos.y >= encounter.map.height:
+                return [self._error_raw("move_token target is out of map bounds", WsErrorCode.INVALID_ACTION)]
+
+            validated_path.append({"x": pos.x, "y": pos.y})
+
+        final_step = validated_path[-1]
+        actor.position = Position(x=final_step["x"], y=final_step["y"])
+
+        token = self._find_map_token(encounter, payload.actor_id)
+        if token is None:
+            token = MapToken(actor_id=payload.actor_id,
+                             position=actor.position)
+            encounter.map.tokens.append(token)
+        else:
+            token.position = actor.position
+
+        return [
+            WsOutbound(
+                type="actor_moved",
+                payload={
+                    "actor_id": payload.actor_id,
+                    "path": validated_path,
+                    "position": final_step,
+                },
+                visibility=Visibility.ALL,
+            )
+        ]
+
+    def _handle_add_actor(
+        self, encounter: EncounterState, envelope: WsEnvelope
+    ) -> list[WsOutbound]:
+        try:
+            payload = AddActorPayload.model_validate(envelope.payload)
+        except Exception:
+            return [self._error_raw("Invalid add_actor payload", WsErrorCode.INVALID_MESSAGE)]
+
+        definition_slug = payload.definition_slug.strip()
+        if not definition_slug:
+            return [self._error_raw("add_actor definition_slug cannot be empty", WsErrorCode.INVALID_MESSAGE)]
+
+        if payload.position is not None:
+            try:
+                position = Position.model_validate(payload.position)
+            except Exception:
+                return [self._error_raw("Invalid add_actor position", WsErrorCode.INVALID_MESSAGE)]
+        else:
+            position = Position()
+
+        if (
+            position.x < 0
+            or position.y < 0
+            or position.x >= encounter.map.width
+            or position.y >= encounter.map.height
+        ):
+            return [self._error_raw("add_actor target is out of map bounds", WsErrorCode.INVALID_ACTION)]
+
+        actor_id = self._next_actor_id(encounter, definition_slug)
+        actor_name = (payload.name or "").strip(
+        ) or self._display_name_from_slug(definition_slug)
+
+        actor = ActorInstance(
+            id=actor_id,
+            definition_slug=definition_slug,
+            name=actor_name,
+            actor_type=ActorType.MONSTER,
+            current_hp=1,
+            max_hp=1,
+            armor_class=10,
+            abilities=AbilityScores(),
+            speed=SpeedBlock(),
+            position=Position(x=position.x, y=position.y),
+        )
+        encounter.combatants.append(actor)
+
+        token = MapToken(actor_id=actor.id, position=Position(
+            x=position.x, y=position.y))
+        encounter.map.tokens.append(token)
+
+        return [
+            WsOutbound(
+                type="actor_added",
+                payload={
+                    "actor": {
+                        "id": actor.id,
+                        "definition_slug": actor.definition_slug,
+                        "name": actor.name,
+                        "actor_type": actor.actor_type.value,
+                        "position": token.position.model_dump(mode="json"),
+                    },
+                    "token": token.model_dump(mode="json"),
+                },
+                visibility=Visibility.ALL,
+            )
+        ]
+
+    def _handle_remove_actor(
+        self, encounter: EncounterState, envelope: WsEnvelope
+    ) -> list[WsOutbound]:
+        try:
+            payload = RemoveActorPayload.model_validate(envelope.payload)
+        except Exception:
+            return [self._error_raw("Invalid remove_actor payload", WsErrorCode.INVALID_MESSAGE)]
+
+        actor = self._find_actor(encounter, payload.actor_id)
+        if actor is None:
+            return [self._error_raw(f"Actor {payload.actor_id} not found", WsErrorCode.INVALID_TARGET)]
+
+        encounter.combatants = [
+            c for c in encounter.combatants if c.id != payload.actor_id]
+        encounter.map.tokens = [
+            t for t in encounter.map.tokens if t.actor_id != payload.actor_id]
+
+        if not encounter.combatants:
+            encounter.active_index = 0
+            encounter.turn_phase = "post_combat"
+        elif encounter.active_index >= len(encounter.combatants):
+            encounter.active_index = 0
+
+        return [
+            WsOutbound(
+                type="actor_removed",
+                payload={"actor_id": payload.actor_id},
                 visibility=Visibility.ALL,
             )
         ]
@@ -322,7 +513,8 @@ class Dnd5eWsHandler(ISystemHandler):
         except ValueError:
             damage_type = DamageType.SLASHING
 
-        result = apply_damage(actor, amount=payload.amount, damage_type=damage_type)
+        result = apply_damage(actor, amount=payload.amount,
+                              damage_type=damage_type)
 
         # apply_damage returns a result but doesn't mutate the actor
         actor.current_hp = result.remaining_hp
@@ -458,6 +650,33 @@ class Dnd5eWsHandler(ISystemHandler):
             if actor.id == actor_id:
                 return actor
         return None
+
+    @staticmethod
+    def _find_map_token(encounter: EncounterState, actor_id: str) -> Optional[MapToken]:
+        for token in encounter.map.tokens:
+            if token.actor_id == actor_id:
+                return token
+        return None
+
+    @staticmethod
+    def _display_name_from_slug(definition_slug: str) -> str:
+        cleaned = re.sub(r"[_-]+", " ", definition_slug).strip()
+        if not cleaned:
+            return "Monster"
+        return " ".join(part.capitalize() for part in cleaned.split())
+
+    @staticmethod
+    def _next_actor_id(encounter: EncounterState, definition_slug: str) -> str:
+        slug_base = re.sub(r"[^a-z0-9]+", "_",
+                           definition_slug.lower()).strip("_")
+        if not slug_base:
+            slug_base = "actor"
+
+        existing_ids = {actor.id for actor in encounter.combatants}
+        index = 1
+        while f"{slug_base}_{index}" in existing_ids:
+            index += 1
+        return f"{slug_base}_{index}"
 
     @staticmethod
     def _error(message: str, code: WsErrorCode, ctx: SessionContext) -> WsOutbound:

@@ -3,10 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ViewContainer } from "../components/shell/ViewContainer";
 import { AuthService } from "../lib/auth";
 import { WsClient } from "@rpg/bridge";
-import { useGameStateStore, GameStateStore } from "@rpg/shared";
 import { ReactHostBridge } from "../lib/bridge";
 import { QueryClient } from "@tanstack/react-query";
 import { IHostBridge } from "@rpg/bridge";
+import { useCombatStore } from "@rpg/shared";
 import { config } from "../config";
 import { logger } from "../lib/logger";
 
@@ -21,10 +21,13 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
   const { id } = useParams();
   const [bridge, setBridge] = useState<IHostBridge | null>(null);
   const [user, setUser] = useState<any>(null); // Should be UserProfile
-  const [role, setRole] = useState<string>("PLAYER");
+  const [role, setRole] = useState<string>(config.useMocks ? "PLAYER" : "DM");
   const [connection, setConnection] = useState(ws.state);
 
   useEffect(() => {
+    let currentStoreRole: "dm" | "observer" = config.useMocks ? "observer" : "dm";
+    let unsubscribeBridgeRecv: (() => void) | null = null;
+
     const initBridge = async () => {
       logger.info("SessionRoute: initBridge called");
       try {
@@ -34,6 +37,7 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
           const mockBridge = new MockHostBridge();
           setBridge(mockBridge);
           setConnection({ isConnected: true, latency: 0 });
+          useCombatStore.getState().setConnectionStatus(true, "observer");
           logger.info("SessionRoute: MockHostBridge initialized");
         } else {
           // Initialize Real Bridge
@@ -41,22 +45,17 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
           const newBridge = new ReactHostBridge(ws, queryClient, auth);
           setBridge(newBridge);
 
+          useCombatStore
+            .getState()
+            .setActionDispatcher((type, payload) => newBridge.actions.dispatch(type, payload));
+          unsubscribeBridgeRecv = newBridge.events.on("ws:recv", (data) => {
+            useCombatStore.getState().ingestEnvelope(data);
+          });
+
           // Connect WS
           const token = auth.getToken();
           if (id && token) {
-            ws.connect(id, token);
-            ws.onMessage((data) => {
-              const patchState = useGameStateStore.getState().patchState;
-              if (data.type === "state_sync") {
-                logger.info("Received initial state_sync payload:", data.payload);
-                patchState(data.payload);
-              } else if (data.type === "state_update") {
-                logger.info("Received state_update payload:", data.payload);
-                patchState(data.payload);
-              } else {
-                logger.info("Received WS message:", data);
-              }
-            });
+            ws.connect(id, token, "dm");
           }
         }
       } catch (error) {
@@ -70,7 +69,9 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
     let interval: NodeJS.Timeout;
     if (!config.useMocks) {
       interval = setInterval(() => {
-        setConnection({ ...ws.state });
+        const nextConnection = { ...ws.state };
+        setConnection(nextConnection);
+        useCombatStore.getState().setConnectionStatus(nextConnection.isConnected, currentStoreRole);
       }, 1000);
     }
 
@@ -78,7 +79,7 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
     const loadUserAndRole = async () => {
       const u = await auth.getUser();
       if (u) {
-        let currentRole = "PLAYER"; // Default
+        let currentRole = config.useMocks ? "PLAYER" : "DM";
 
         if (config.useMocks && id) {
           try {
@@ -97,6 +98,7 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
 
         logger.info(`SessionRoute: User loaded: ${JSON.stringify(u)}`);
         logger.info(`SessionRoute: Role determined: ${currentRole}`);
+        currentStoreRole = currentRole.toLowerCase() === "dm" ? "dm" : "observer";
         setUser(u);
         setRole(currentRole);
       } else {
@@ -112,10 +114,15 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
     loadUserAndRole();
 
     return () => {
+      if (unsubscribeBridgeRecv) {
+        unsubscribeBridgeRecv();
+      }
       if (!config.useMocks) {
-        ws.disconnect();
         clearInterval(interval);
       }
+      useCombatStore.getState().setActionDispatcher(null);
+      useCombatStore.getState().setConnectionStatus(false);
+      ws.disconnect();
     };
   }, [id, auth, ws, queryClient, navigate]);
 

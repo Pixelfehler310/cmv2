@@ -36,13 +36,20 @@ export class ReactHostBridge implements IHostBridge {
     this.events = new EventEmitter();
     this.auth = authService;
 
+    this.ws.onMessage((data) => {
+      this.events.emit("ws:recv", data);
+    });
+
     this.actions = {
       dispatch: async (type: string, payload: any): Promise<ActionResult> => {
         try {
+          this.events.emit("ws:send", { type, payload });
           // Optimistic updates could go here
           await this.ws.sendAction(type, payload);
+          this.events.emit("ws:send_result", { success: true, type, payload });
           return { success: true };
         } catch (e: any) {
+          this.events.emit("ws:error", { type, payload, error: e?.message ?? "Unknown websocket error" });
           return { success: false, error: e.message };
         }
       },

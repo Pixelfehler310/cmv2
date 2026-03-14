@@ -10,6 +10,112 @@ interface StageRouteProps {
   auth: AuthService;
 }
 
+function applyStageDelta(prev: any, data: any): any {
+  if (!prev) {
+    return prev;
+  }
+
+  if (data.type === "actor_moved") {
+    const actorId = data.payload?.actor_id;
+    const position = data.payload?.position;
+    if (!actorId || !position) {
+      return prev;
+    }
+
+    return {
+      ...prev,
+      combatants: (prev.combatants ?? []).map((c: any) =>
+        c.id === actorId
+          ? {
+              ...c,
+              position: { ...c.position, ...position },
+              x: position.x ?? c.x,
+              y: position.y ?? c.y,
+            }
+          : c,
+      ),
+      map: {
+        ...prev.map,
+        tokens: (() => {
+          const tokens = prev.map?.tokens ?? [];
+          const exists = tokens.some((t: any) => t.actor_id === actorId);
+          if (exists) {
+            return tokens.map((t: any) => (t.actor_id === actorId ? { ...t, position: { ...t.position, ...position } } : t));
+          }
+          return [...tokens, { actor_id: actorId, position }];
+        })(),
+      },
+    };
+  }
+
+  if (data.type === "actor_added") {
+    const actor = data.payload?.actor;
+    const token = data.payload?.token;
+    if (!actor?.id) {
+      return prev;
+    }
+
+    return {
+      ...prev,
+      combatants: (prev.combatants ?? []).some((c: any) => c.id === actor.id) ? prev.combatants : [...(prev.combatants ?? []), actor],
+      map: {
+        ...prev.map,
+        tokens: token ? ((prev.map?.tokens ?? []).some((t: any) => t.actor_id === token.actor_id) ? prev.map.tokens : [...(prev.map?.tokens ?? []), token]) : (prev.map?.tokens ?? []),
+      },
+    };
+  }
+
+  if (data.type === "actor_removed") {
+    const actorId = data.payload?.actor_id;
+    if (!actorId) {
+      return prev;
+    }
+
+    return {
+      ...prev,
+      combatants: (prev.combatants ?? []).filter((c: any) => c.id !== actorId),
+      map: {
+        ...prev.map,
+        tokens: (prev.map?.tokens ?? []).filter((t: any) => t.actor_id !== actorId),
+      },
+    };
+  }
+
+  if (data.type === "actor_damaged" || data.type === "actor_healed" || data.type === "actor_died") {
+    const actorId = data.payload?.actor_id;
+    if (!actorId) {
+      return prev;
+    }
+
+    return {
+      ...prev,
+      combatants: (prev.combatants ?? []).map((c: any) =>
+        c.id === actorId
+          ? {
+              ...c,
+              current_hp: data.type === "actor_died" ? 0 : (data.payload?.new_hp ?? c.current_hp),
+              hp_current: data.type === "actor_died" ? 0 : (data.payload?.new_hp ?? c.hp_current),
+            }
+          : c,
+      ),
+    };
+  }
+
+  if (data.type === "turn_advanced") {
+    const activeActorId = data.payload?.active_actor_id;
+    const combatants = prev.combatants ?? [];
+    const nextActiveIndex = combatants.findIndex((c: any) => c.id === activeActorId);
+
+    return {
+      ...prev,
+      round_number: data.payload?.round ?? prev.round_number,
+      active_index: nextActiveIndex >= 0 ? nextActiveIndex : prev.active_index,
+    };
+  }
+
+  return prev;
+}
+
 export const StageRoute = ({ auth }: StageRouteProps) => {
   const { id } = useParams();
   const [localState, setLocalState] = useState<any>(null);
@@ -27,14 +133,17 @@ export const StageRoute = ({ auth }: StageRouteProps) => {
     const token = auth.getToken();
 
     if (id && token) {
-      stageWs.connect(id, token);
+      stageWs.connect(id, token, "spectator");
 
       stageWs.onMessage((data) => {
         if (data.type === "state_sync" || data.type === "state_update") {
           logger.info("[StageRoute] Received state payload:", data.payload);
           // Only update local state, not the Zustand store, so it doesn't leak into DM view
           setLocalState((prev: any) => ({ ...prev, ...data.payload }));
+          return;
         }
+
+        setLocalState((prev: any) => applyStageDelta(prev, data));
       });
     }
 

@@ -107,10 +107,13 @@ class SessionManager:
             if self._should_receive(user, event):
                 try:
                     await user.ws.send_json(payload)
-                except Exception:
+                except Exception as exc:
                     logger.warning(
-                        "Failed to send to user %s in room %s",
-                        user.user_id, campaign_id,
+                        "Failed to send event type=%s to user=%s in campaign=%s: %s",
+                        event.type,
+                        user.user_id,
+                        campaign_id,
+                        exc,
                     )
 
     async def send_to_user(
@@ -122,17 +125,33 @@ class SessionManager:
         """Send an event to a specific user in a room."""
         room = self._rooms.get(campaign_id)
         if room is None:
+            logger.debug(
+                "send_to_user skipped: missing room campaign=%s user=%s",
+                campaign_id,
+                user_id,
+            )
             return
 
         user = room.users.get(user_id)
         if user is None:
+            logger.debug(
+                "send_to_user skipped: missing user campaign=%s user=%s",
+                campaign_id,
+                user_id,
+            )
             return
 
         payload = event.model_dump(mode="json", exclude={"visibility", "target_user_id"})
         try:
             await user.ws.send_json(payload)
-        except Exception:
-            logger.warning("Failed to send to user %s", user_id)
+        except Exception as exc:
+            logger.warning(
+                "Failed to send event type=%s to user=%s in campaign=%s: %s",
+                event.type,
+                user_id,
+                campaign_id,
+                exc,
+            )
 
     # ------------------------------------------------------------------
     # Visibility logic
