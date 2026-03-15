@@ -17,7 +17,7 @@ export const AppNavbar = ({ user, connection, onLogout }: AppNavbarProps) => {
         <div className="w-8 h-8 rounded-lg outline-none gradient-vtt flex items-center justify-center shadow-sm">
           <span className="text-xl text-white">🎲</span>
         </div>
-        <span className="bg-clip-text text-transparent gradient-vtt font-bold">Civic VTT</span>
+        <span className="text-vtt-600 font-bold">Civic VTT</span>
       </div>
 
       {/* Center: Navigation Links */}

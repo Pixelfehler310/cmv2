@@ -1,6 +1,6 @@
 import { IJsonModel } from "flexlayout-react";
 
-const LAYOUT_VERSION = "v1";
+const LAYOUT_VERSION = "v2";
 
 const baseGlobalConfig: IJsonModel["global"] = {
   tabEnableClose: false,
@@ -22,7 +22,10 @@ const desktopLayout: IJsonModel = {
       type: "border",
       location: "right",
       size: 420,
-      children: [{ type: "tab", name: "Action Deck", component: "action-deck" }],
+      children: [
+        { type: "tab", name: "Action Deck", component: "action-deck" },
+        { type: "tab", name: "Command Log", component: "command-log" },
+      ],
     },
     {
       type: "border",
@@ -57,7 +60,10 @@ const tabletLayout: IJsonModel = {
       type: "border",
       location: "right",
       size: 300,
-      children: [{ type: "tab", name: "Action Deck", component: "action-deck" }],
+      children: [
+        { type: "tab", name: "Action Deck", component: "action-deck" },
+        { type: "tab", name: "Command Log", component: "command-log" },
+      ],
     },
     {
       type: "border",
@@ -78,6 +84,7 @@ const mobileLayout: IJsonModel = {
       children: [
         { type: "tab", name: "Command Deck", component: "command-deck" },
         { type: "tab", name: "Action Deck", component: "action-deck" },
+        { type: "tab", name: "Command Log", component: "command-log" },
         { type: "tab", name: "Initiative", component: "initiative" },
       ],
     },

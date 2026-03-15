@@ -1,6 +1,6 @@
----
-name: "Campaign World & Lore Master"
+name: "lore_master"
 description: "Dedicated to narrative and world-building data to ensure technical structures support the creative nuances of the campaign."
+
 ---
 
 # Campaign World & Lore Master

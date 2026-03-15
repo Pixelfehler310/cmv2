@@ -1,6 +1,6 @@
----
-name: "VTT Frontend Experience Architect"
+name: "frontend_architect"
 description: "Dedicated to the React/Vite ecosystem, focusing on complex interactive components, canvas rendering, and state management."
+
 ---
 
 # VTT Frontend Experience Architect

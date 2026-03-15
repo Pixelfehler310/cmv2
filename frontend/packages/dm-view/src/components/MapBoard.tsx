@@ -12,7 +12,7 @@ export const MapBoard: React.FC<MapBoardProps> = ({ selectedCombatantId, onSelec
   const GRID_SIZE = 50;
 
   if (!gameState) {
-    return <div style={styles.mapContainer}>Waiting for map data...</div>;
+    return <div className="h-full w-full p-4 text-sm text-on-muted">Waiting for map data...</div>;
   }
 
   const handleDragStart = (e: React.DragEvent, tokenId: string) => {
@@ -39,15 +39,26 @@ export const MapBoard: React.FC<MapBoardProps> = ({ selectedCombatantId, onSelec
   };
 
   return (
-    <div style={styles.mapContainer} onDrop={handleDrop} onDragOver={handleDragOver} onClick={() => onSelectCombatant(null)}>
+    <div
+      className="relative h-full w-full overflow-hidden rounded-xl border border-[var(--border-default)] bg-surface-2"
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onClick={() => onSelectCombatant(null)}
+    >
       {/* Grid Background */}
-      <div style={styles.gridLayer} />
+      <div
+        className="absolute inset-0 opacity-60"
+        style={{
+          backgroundImage: "linear-gradient(var(--border-subtle) 1px, transparent 1px), linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px)",
+          backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
+        }}
+      />
 
       {/* Fog Reveal Tools Header */}
-      <div style={styles.toolbar}>
-        <button style={styles.toolBtn}>🖌️ Reveal Fog</button>
-        <button style={styles.toolBtn}>⬛ Hide Fog</button>
-        <button style={styles.toolBtn}>📏 Measure</button>
+      <div className="absolute left-3 top-3 z-10 flex gap-2 rounded-xl border border-[var(--border-subtle)] bg-surface-1/90 p-2 shadow-sm backdrop-blur-sm">
+        <button className="btn btn-ghost btn-sm px-3! py-1! text-xs">Reveal Fog</button>
+        <button className="btn btn-ghost btn-sm px-3! py-1! text-xs">Hide Fog</button>
+        <button className="btn btn-ghost btn-sm px-3! py-1! text-xs">Measure</button>
       </div>
 
       {/* Tokens */}
@@ -60,11 +71,15 @@ export const MapBoard: React.FC<MapBoardProps> = ({ selectedCombatantId, onSelec
             e.stopPropagation();
             onSelectCombatant(token.id);
           }}
+          className={[
+            "absolute z-5 flex h-10 w-10 select-none items-center justify-center rounded-full border-2",
+            "cursor-grab bg-surface-1 text-sm font-semibold text-on-surface",
+            selectedCombatantId === token.id ? "border-[var(--color-primary)]" : "border-[var(--border-default)]",
+          ].join(" ")}
           style={{
-            ...styles.token,
             left: `${token.x * GRID_SIZE}px`,
             top: `${token.y * GRID_SIZE}px`,
-            border: selectedCombatantId === token.id ? "3px solid #00ff00" : "3px solid #888",
+            transition: "left 0.2s, top 0.2s",
           }}
         >
           {token.public_name[0]}
@@ -72,59 +87,4 @@ export const MapBoard: React.FC<MapBoardProps> = ({ selectedCombatantId, onSelec
       ))}
     </div>
   );
-};
-
-const styles = {
-  mapContainer: {
-    position: "relative" as const,
-    flexGrow: 1,
-    height: "100%",
-    backgroundColor: "#222",
-    overflow: "hidden",
-  },
-  gridLayer: {
-    position: "absolute" as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundImage: "linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)",
-    backgroundSize: "50px 50px",
-    opacity: 0.5,
-  },
-  toolbar: {
-    position: "absolute" as const,
-    top: 10,
-    left: 10,
-    display: "flex",
-    gap: "10px",
-    zIndex: 10,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    padding: "5px",
-    borderRadius: "6px",
-  },
-  toolBtn: {
-    backgroundColor: "#444",
-    color: "#fff",
-    border: "none",
-    padding: "8px 12px",
-    borderRadius: "4px",
-    cursor: "pointer",
-  },
-  token: {
-    position: "absolute" as const,
-    width: "40px",
-    height: "40px",
-    borderRadius: "50%",
-    backgroundColor: "#555",
-    color: "#fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "grab",
-    userSelect: "none" as const,
-    zIndex: 5,
-    margin: "5px", // To center 40px inside 50px grid
-    transition: "left 0.2s, top 0.2s",
-  },
 };

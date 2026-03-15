@@ -8,15 +8,28 @@ interface ActionDeckProps {
   campaignId: string;
 }
 
-export const ActionDeck = ({ bridge, selectedCombatantId, campaignId }: ActionDeckProps) => {
-  const { dispatchAction, dispatchRawEnvelope, endTurn, applyDamage, removeActor, moveToken, clearCommandLog, commandLog } = useCombatStore();
+export const ActionDeck = ({
+  bridge,
+  selectedCombatantId,
+  campaignId,
+}: ActionDeckProps) => {
+  const {
+    dispatchAction,
+    dispatchRawEnvelope,
+    endTurn,
+    applyDamage,
+    removeActor,
+    moveToken,
+  } = useCombatStore();
   const [manualActorId, setManualActorId] = useState("");
   const [damageAmount, setDamageAmount] = useState(5);
   const [healingAmount, setHealingAmount] = useState(5);
   const [moveX, setMoveX] = useState(0);
   const [moveY, setMoveY] = useState(0);
   const [rawType, setRawType] = useState("end_turn");
-  const [rawPayloadText, setRawPayloadText] = useState('{\n  "actor_id": ""\n}');
+  const [rawPayloadText, setRawPayloadText] = useState(
+    '{\n  "actor_id": ""\n}',
+  );
   const [rawParseError, setRawParseError] = useState<string | null>(null);
 
   const activeActorId = useMemo(() => {
@@ -39,7 +52,10 @@ export const ActionDeck = ({ bridge, selectedCombatantId, campaignId }: ActionDe
     if (!activeActorId) {
       return;
     }
-    dispatchAction("apply_healing", { actor_id: activeActorId, amount: Math.max(0, healingAmount) });
+    dispatchAction("apply_healing", {
+      actor_id: activeActorId,
+      amount: Math.max(0, healingAmount),
+    });
   };
 
   const runRemoveActor = () => {
@@ -63,7 +79,8 @@ export const ActionDeck = ({ bridge, selectedCombatantId, campaignId }: ActionDe
     try {
       parsedPayload = rawPayloadText.trim() ? JSON.parse(rawPayloadText) : {};
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Invalid JSON payload";
+      const message =
+        error instanceof Error ? error.message : "Invalid JSON payload";
       setRawParseError(message);
       return;
     }
@@ -75,32 +92,21 @@ export const ActionDeck = ({ bridge, selectedCombatantId, campaignId }: ActionDe
     }
   };
 
-  const renderPayloadPreview = (payload: unknown): string => {
-    try {
-      const serialized = JSON.stringify(payload);
-      if (!serialized) {
-        return "null";
-      }
-      return serialized.length > 140 ? serialized.slice(0, 140) + "..." : serialized;
-    } catch {
-      return "[unserializable payload]";
-    }
-  };
-
   return (
     <div className="m-4 rounded-md border border-slate-700 bg-slate-900/95 p-4 text-slate-100 shadow-lg">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-bold uppercase tracking-wide text-cyan-300">DM Command Test Console</h3>
-        <span className="text-[10px] text-slate-400">campaign: {campaignId}</span>
-      </div>
-
-      <div className="mb-3 rounded border border-slate-700 bg-slate-950/60 p-2 text-xs">
-        <div>Selected from map: {selectedCombatantId ?? "none"}</div>
-        <div className="mt-1">Bridge passed: {bridge ? "yes" : "no"}</div>
+        <h3 className="text-sm font-bold uppercase tracking-wide text-cyan-300">
+          DM Command Test Console
+        </h3>
+        <span className="text-[10px] text-slate-400">
+          campaign: {campaignId}
+        </span>
       </div>
 
       <div className="mb-4 space-y-2">
-        <label className="block text-xs font-semibold text-slate-300">Target Actor ID (optional override)</label>
+        <label className="block text-xs font-semibold text-slate-300">
+          Target Actor ID (optional override)
+        </label>
         <input
           type="text"
           value={manualActorId}
@@ -108,13 +114,21 @@ export const ActionDeck = ({ bridge, selectedCombatantId, campaignId }: ActionDe
           placeholder="uses selected token when empty"
           className="w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-slate-100"
         />
-        <div className="text-[11px] text-slate-400">Effective target: {activeActorId || "none"}</div>
+        <div className="text-[11px] text-slate-400">
+          Effective target: {activeActorId || "none"}
+        </div>
       </div>
 
       <div className="mb-4 rounded border border-slate-700 bg-slate-950/40 p-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">Typed Commands</div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
+          Typed Commands
+        </div>
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={runEndTurn} className="rounded bg-indigo-600 px-2 py-1 text-xs font-medium hover:bg-indigo-500">
+          <button
+            type="button"
+            onClick={runEndTurn}
+            className="rounded bg-indigo-600 px-2 py-1 text-xs font-medium hover:bg-indigo-500"
+          >
             end_turn
           </button>
           <button
@@ -197,7 +211,9 @@ export const ActionDeck = ({ bridge, selectedCombatantId, campaignId }: ActionDe
       </div>
 
       <div className="mb-4 rounded border border-slate-700 bg-slate-950/40 p-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">Raw Envelope</div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
+          Raw Envelope
+        </div>
         <label className="mb-2 block text-[11px] text-slate-300">
           type
           <input
@@ -216,7 +232,11 @@ export const ActionDeck = ({ bridge, selectedCombatantId, campaignId }: ActionDe
             className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 font-mono text-xs"
           />
         </label>
-        {rawParseError && <div className="mt-2 text-xs text-rose-300">JSON parse error: {rawParseError}</div>}
+        {rawParseError && (
+          <div className="mt-2 text-xs text-rose-300">
+            JSON parse error: {rawParseError}
+          </div>
+        )}
         <button
           type="button"
           onClick={() => {
@@ -226,30 +246,6 @@ export const ActionDeck = ({ bridge, selectedCombatantId, campaignId }: ActionDe
         >
           Send Raw Envelope
         </button>
-      </div>
-
-      <div className="rounded border border-slate-700 bg-slate-950/40 p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">Command Log</div>
-          <button type="button" onClick={clearCommandLog} className="rounded bg-slate-700 px-2 py-1 text-[11px] hover:bg-slate-600">
-            Clear Logs
-          </button>
-        </div>
-        <div className="max-h-48 space-y-1 overflow-y-auto rounded border border-slate-800 bg-black/40 p-2 font-mono text-[11px]">
-          {commandLog.length === 0 && <div className="text-slate-500">No log entries yet.</div>}
-          {commandLog.map((entry, index) => (
-            <div key={entry.timestamp + "-" + entry.type + "-" + index} className="rounded border border-slate-800 bg-slate-900/70 p-1">
-              <div className="flex items-center justify-between gap-2 text-slate-300">
-                <span>
-                  [{entry.direction}] {entry.type}
-                </span>
-                <span className="text-[10px] text-slate-500">{entry.timestamp}</span>
-              </div>
-              <div className="mt-1 break-all text-slate-400">{renderPayloadPreview(entry.payload)}</div>
-              {entry.message && <div className="mt-1 text-rose-300">{entry.message}</div>}
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

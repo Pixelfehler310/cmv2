@@ -1,6 +1,6 @@
----
-name: "VTT Security & Session Integrity"
+name: "security_auditor"
 description: "Protects the game state from manipulation by ensuring input validation and secure permission boundaries."
+
 ---
 
 # VTT Security & Session Integrity

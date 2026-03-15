@@ -3,7 +3,12 @@ import { IHostBridge } from "@rpg/bridge";
 import { Layout, Model, TabNode } from "flexlayout-react";
 import "flexlayout-react/style/dark.css";
 import { useCombatStore } from "@rpg/shared";
-import { clearDmLayout, getDefaultDmLayout, loadDmLayout, saveDmLayout } from "./layout";
+import {
+  clearDmLayout,
+  getDefaultDmLayout,
+  loadDmLayout,
+  saveDmLayout,
+} from "./layout";
 import { getDmPanelDefinition } from "./panelRegistry";
 
 interface DmWorkspaceProps {
@@ -18,9 +23,14 @@ const getViewportWidth = (): number => {
   return window.innerWidth;
 };
 
-export const DmWorkspace: React.FC<DmWorkspaceProps> = ({ bridge, campaignId }) => {
+export const DmWorkspace: React.FC<DmWorkspaceProps> = ({
+  bridge,
+  campaignId,
+}) => {
   const { isConnected } = useCombatStore();
-  const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null);
+  const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(
+    null,
+  );
   const [model, setModel] = useState<Model>(() => {
     const defaultLayout = getDefaultDmLayout(getViewportWidth());
     const initialLayout = loadDmLayout(campaignId, defaultLayout);
@@ -45,11 +55,19 @@ export const DmWorkspace: React.FC<DmWorkspaceProps> = ({ bridge, campaignId }) 
     const panel = getDmPanelDefinition(componentId);
 
     if (!panel) {
-      return <div className="p-3 text-sm text-slate-300">Unknown DM panel: {componentId}</div>;
+      return (
+        <div className="p-3 text-sm text-slate-300">
+          Unknown DM panel: {componentId}
+        </div>
+      );
     }
 
     return (
-      <section className="h-full w-full overflow-hidden" role="region" aria-label={panel.ariaLabel}>
+      <section
+        className="h-full w-full min-h-0 overflow-hidden bg-surface-1"
+        role="region"
+        aria-label={panel.ariaLabel}
+      >
         {panel.render({
           bridge,
           campaignId,
@@ -62,21 +80,65 @@ export const DmWorkspace: React.FC<DmWorkspaceProps> = ({ bridge, campaignId }) 
   };
 
   if (!isConnected) {
-    return <div className="p-5 text-white">Waiting for Host connection for campaign {campaignId}...</div>;
+    return (
+      <div className="p-5 text-on-canvas">
+        Waiting for Host connection for campaign {campaignId}...
+      </div>
+    );
   }
 
-  return (
-    <div className="relative h-full w-full bg-black text-white" aria-label="DM docked workspace">
-      <div className="absolute right-3 top-3 z-50">
-        <button
-          type="button"
-          onClick={resetLayout}
-          className="rounded border border-slate-600 bg-slate-900/90 px-3 py-1 text-xs font-medium text-slate-100 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400"
-        >
-          Reset Layout
-        </button>
-      </div>
+  const flexLayoutThemeVars = {
+    "--color-text": "var(--on-canvas)",
+    "--color-background": "var(--bg-surface-1)",
+    "--color-base": "var(--bg-canvas)",
+    "--color-1": "var(--bg-surface-1)",
+    "--color-2": "var(--bg-surface-2)",
+    "--color-3": "var(--bg-surface-2)",
+    "--color-4": "var(--bg-surface-3)",
+    "--color-5": "var(--bg-muted)",
+    "--color-6": "var(--bg-subtle)",
+    "--font-family": "var(--font-sans)",
+    "--color-overflow": "var(--on-muted)",
+    "--color-icon": "var(--on-muted)",
+    "--color-tabset-background": "var(--bg-surface-1)",
+    "--color-tabset-background-selected": "var(--bg-surface-1)",
+    "--color-tabset-background-maximized": "var(--bg-surface-2)",
+    "--color-tabset-divider-line": "var(--border-subtle)",
+    "--color-tabset-header-background": "var(--bg-surface-2)",
+    "--color-tabset-header": "var(--on-surface)",
+    "--color-border-background": "var(--bg-surface-1)",
+    "--color-border-divider-line": "var(--border-subtle)",
+    "--color-tab-selected": "var(--on-surface)",
+    "--color-tab-selected-background": "var(--bg-surface-3)",
+    "--color-tab-unselected": "var(--on-muted)",
+    "--color-tab-unselected-background": "transparent",
+    "--color-tab-textbox": "var(--on-surface)",
+    "--color-tab-textbox-background": "var(--bg-inset)",
+    "--color-border-tab-selected": "var(--on-surface)",
+    "--color-border-tab-selected-background": "var(--bg-surface-3)",
+    "--color-border-tab-unselected": "var(--on-muted)",
+    "--color-border-tab-unselected-background": "var(--bg-surface-2)",
+    "--color-splitter": "var(--bg-surface-2)",
+    "--color-splitter-hover": "var(--bg-surface-3)",
+    "--color-splitter-drag": "var(--color-primary)",
+    "--color-drag-rect-border": "var(--border-default)",
+    "--color-drag-rect-background": "var(--bg-surface-1)",
+    "--color-drag-rect": "var(--on-surface)",
+    "--color-popup-border": "var(--border-default)",
+    "--color-popup-unselected": "var(--on-surface)",
+    "--color-popup-unselected-background": "var(--bg-surface-1)",
+    "--color-popup-selected": "var(--on-surface)",
+    "--color-popup-selected-background": "var(--bg-surface-3)",
+    "--color-edge-marker": "var(--color-primary)",
+    "--color-edge-icon": "var(--on-primary)",
+  } as React.CSSProperties;
 
+  return (
+    <div
+      className="dm-workspace relative h-full w-full bg-canvas text-on-canvas"
+      style={flexLayoutThemeVars}
+      aria-label="DM docked workspace"
+    >
       <Layout
         model={model}
         factory={factory}

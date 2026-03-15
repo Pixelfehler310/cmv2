@@ -1,6 +1,6 @@
----
-name: "Documentation & Architecture Blueprinting"
+name: "documentation_architect"
 description: "Establishes strict standards for creating and maintaining phase plans, ADRs, and feature specifications in Markdown."
+
 ---
 
 # Documentation & Architecture Blueprinting (Planning Skill)

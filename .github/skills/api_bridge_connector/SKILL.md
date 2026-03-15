@@ -1,6 +1,6 @@
----
-name: "Real-time State & API Bridge"
+name: "api_bridge_connector"
 description: "Manages boundaries between backend and frontend: WebSockets, typed API client generation, and schema alignment."
+
 ---
 
 # Real-time State & API Bridge

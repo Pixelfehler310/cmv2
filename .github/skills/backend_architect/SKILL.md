@@ -1,6 +1,6 @@
----
-name: "RPG Engine Backend Architect"
+name: "backend_architect"
 description: "Specializes in Python/FastAPI backend, focusing on TDD for complex game mechanics like action economy and effect engines."
+
 ---
 
 # RPG Engine Backend Architect

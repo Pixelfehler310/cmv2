@@ -5,9 +5,19 @@ export interface StageCartographerProps {
   mapUrl?: string;
 }
 
-export const StageCartographer: React.FC<StageCartographerProps> = ({ tokens, mapUrl }) => {
+export const StageCartographer: React.FC<StageCartographerProps> = ({
+  tokens,
+  mapUrl,
+}) => {
   return (
-    <div className="w-full h-full relative bg-gray-900 border border-gray-800" style={{ backgroundImage: mapUrl ? `url(${mapUrl})` : "none", backgroundSize: "cover", backgroundPosition: "center" }}>
+    <div
+      className="w-full h-full relative bg-gray-900 border border-gray-800"
+      style={{
+        backgroundImage: mapUrl ? `url(${mapUrl})` : "none",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
       {tokens.map((token) => (
         <div
           key={token.id}
@@ -19,7 +29,9 @@ export const StageCartographer: React.FC<StageCartographerProps> = ({ tokens, ma
           }}
           title={token.name}
         >
-          <span className="text-xs text-white uppercase font-bold truncate px-1 drop-shadow-md">{token.name?.substring(0, 3)}</span>
+          <span className="text-xs text-white uppercase font-bold truncate px-1 drop-shadow-md">
+            {token.name?.substring(0, 3)}
+          </span>
         </div>
       ))}
     </div>
