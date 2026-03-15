@@ -1,207 +1,111 @@
 import { create } from "zustand";
+import type {
+  ActionDeniedPayload,
+  ActionFeedbackViewModel,
+  ActorAddedPayload,
+  ActorMovedPayload,
+  CombatantViewModel,
+  EncounterStateWire,
+  GameStateViewModel,
+  HpChangedPayload,
+  TurnAdvancedPayload,
+  WsInboundEnvelope,
+} from "@rpg/types";
+import { normalizeActionDeniedReasonCode } from "@rpg/types";
+import { mapActorWireToCombatant, mapEncounterWireToGameState } from "../adapters/encounterAdapter";
+import { parseWsOutboundEnvelope } from "../adapters/wsEnvelopeAdapter";
 
-// --- Type Definitions based on Backend JSON Serialization ---
-export interface CombatantState {
-  id: string;
-  public_name: string;
-  x: number;
-  y: number;
-  size?: string;
-  action_used?: boolean;
-  bonus_action_used?: boolean;
-  movement_remaining?: number;
-
-  // DM Only
-  hp_current?: number;
-  hp_max?: number;
-
-  // Stage View (Observer) Only
-  hp_percent?: number;
-}
-
-export interface GameState {
-  round: number;
-  combatants: CombatantState[];
-  activeIndex?: number;
-}
+export type CombatantState = CombatantViewModel;
+export type GameState = GameStateViewModel;
 
 export interface CombatLogEntry {
   timestamp: string;
   direction: "SEND" | "RECV" | "ERROR";
   type: string;
-  payload: any;
+  payload: unknown;
   message?: string;
 }
 
-export type CombatActionDispatcher = (actionType: string, payload: any) => Promise<any>;
+export type CombatActionDispatcher = (commandOrType: WsInboundEnvelope | string, payload?: Record<string, unknown>) => Promise<unknown>;
 
 export interface CombatStore {
-  // State
   gameState: GameState | null;
   isConnected: boolean;
   role: "dm" | "observer" | null;
   errorMessage: string | null;
+  actionFeedback: ActionFeedbackViewModel | null;
   commandLog: CombatLogEntry[];
   actionDispatcher: CombatActionDispatcher | null;
 
-  // Actions
   connect: (campaignId: string, role: "dm" | "observer") => void;
   disconnect: () => void;
   setConnectionStatus: (isConnected: boolean, role?: "dm" | "observer") => void;
   setActionDispatcher: (dispatcher: CombatActionDispatcher | null) => void;
-  ingestEnvelope: (message: any) => void;
+  ingestEnvelope: (message: unknown) => void;
   clearCommandLog: () => void;
-  dispatchRawEnvelope: (type: string, payload: any) => Promise<any>;
+  clearActionFeedback: () => void;
+  dispatchRawEnvelope: (type: string, payload: Record<string, unknown>) => Promise<unknown>;
+  dispatchCommand: (command: WsInboundEnvelope) => Promise<unknown>;
 
-  // DM Intents
-  dispatchIntent: (action: string, payload: any) => void;
+  dispatchIntent: (action: string, payload: Record<string, unknown>) => void;
+  requestAction: (actorId: string, actionType: string, actionName: string, payload?: Record<string, unknown>) => void;
   moveToken: (targetId: string, path: [number, number][]) => void;
   removeActor: (actorId: string) => void;
   endTurn: () => void;
   applyDamage: (targetId: string, amount: number, damageType: string) => void;
-  dispatchAction: (actionType: string, payload: any) => void;
+  dispatchAction: (actionType: string, payload: Record<string, unknown>) => void;
 }
 
-type BackendToken = {
-  actor_id: string;
-  position?: { x: number; y: number };
-  size?: string;
-};
-
-type BackendActor = {
-  id: string;
-  name?: string;
-  actor_type?: string;
-  position?: { x: number; y: number };
-  current_hp?: number;
-  max_hp?: number;
-  health_descriptor?: string;
-};
-
-type BackendEncounter = {
-  round_number?: number;
-  active_index?: number;
-  combatants?: BackendActor[];
-  map?: {
-    tokens?: BackendToken[];
-  };
-};
-
-const DEFAULT_HP_PERCENT_BY_DESCRIPTOR: Record<string, number> = {
-  healthy: 1,
-  "lightly wounded": 0.8,
-  bloodied: 0.5,
-  "badly wounded": 0.3,
-  "near death": 0.1,
-  dead: 0,
-};
-
-function toUiSize(rawSize?: string): string {
-  if (!rawSize) {
-    return "Medium";
-  }
-  const lowered = rawSize.toLowerCase();
-  return lowered.charAt(0).toUpperCase() + lowered.slice(1);
-}
-
-function mapBackendEncounterToGameState(encounter: BackendEncounter): GameState {
-  const tokenByActorId = new Map<string, BackendToken>();
-  for (const token of encounter.map?.tokens ?? []) {
-    if (token?.actor_id) {
-      tokenByActorId.set(token.actor_id, token);
-    }
-  }
-
-  const combatants: CombatantState[] = (encounter.combatants ?? []).map((actor) => {
-    const token = tokenByActorId.get(actor.id);
-    const pos = token?.position ?? actor.position ?? { x: 0, y: 0 };
-    const hpDescriptor = actor.health_descriptor?.toLowerCase();
-    const hpPercent = hpDescriptor ? DEFAULT_HP_PERCENT_BY_DESCRIPTOR[hpDescriptor] : undefined;
-
-    return {
-      id: actor.id,
-      public_name: actor.name ?? actor.id,
-      x: pos.x ?? 0,
-      y: pos.y ?? 0,
-      size: toUiSize(token?.size),
-      hp_current: actor.current_hp,
-      hp_max: actor.max_hp,
-      hp_percent: hpPercent,
-      action_used: false,
-      bonus_action_used: false,
-      movement_remaining: 30,
-    };
-  });
-
-  return {
-    round: encounter.round_number ?? 0,
-    activeIndex: encounter.active_index ?? 0,
-    combatants,
-  };
-}
-
-function applyActorMove(state: GameState, payload: any): GameState {
-  const movedTo = payload?.position;
-  if (!payload?.actor_id || !movedTo) {
+function applyActorMove(state: GameState, payload: ActorMovedPayload): GameState {
+  const movedTo = payload.position;
+  if (!payload.actor_id || !movedTo) {
     return state;
   }
 
   return {
     ...state,
-    combatants: state.combatants.map((c) =>
-      c.id === payload.actor_id
+    combatants: state.combatants.map((combatant) =>
+      combatant.id === payload.actor_id
         ? {
-            ...c,
-            x: movedTo.x ?? c.x,
-            y: movedTo.y ?? c.y,
+            ...combatant,
+            x: movedTo.x ?? combatant.x,
+            y: movedTo.y ?? combatant.y,
           }
-        : c,
+        : combatant,
     ),
   };
 }
 
-function applyActorAdded(state: GameState, payload: any): GameState {
-  const actor = payload?.actor;
-  const token = payload?.token;
+function applyActorAdded(state: GameState, payload: ActorAddedPayload): GameState {
+  const actor = payload.actor;
   if (!actor?.id) {
     return state;
   }
 
-  const existing = state.combatants.some((c) => c.id === actor.id);
-  if (existing) {
+  const exists = state.combatants.some((combatant) => combatant.id === actor.id);
+  if (exists) {
     return state;
   }
 
-  const pos = token?.position ?? actor.position ?? { x: 0, y: 0 };
+  const combatant = mapActorWireToCombatant(
+    {
+      map: { tokens: payload.token ? [payload.token] : [] },
+      turn_budgets: {},
+    },
+    actor,
+  );
 
   return {
     ...state,
-    combatants: [
-      ...state.combatants,
-      {
-        id: actor.id,
-        public_name: actor.name ?? actor.id,
-        x: pos.x ?? 0,
-        y: pos.y ?? 0,
-        size: toUiSize(token?.size),
-        hp_current: actor.current_hp,
-        hp_max: actor.max_hp,
-        hp_percent: undefined,
-        action_used: false,
-        bonus_action_used: false,
-        movement_remaining: 30,
-      },
-    ],
+    combatants: [...state.combatants, combatant],
   };
 }
 
 function applyActorRemoved(state: GameState, actorId: string): GameState {
-  const nextCombatants = state.combatants.filter((c) => c.id !== actorId);
-  let nextActiveIndex = state.activeIndex ?? 0;
+  const nextCombatants = state.combatants.filter((combatant) => combatant.id !== actorId);
+  let nextActiveIndex = state.activeIndex;
 
-  if (nextCombatants.length === 0) {
-    nextActiveIndex = 0;
-  } else if (nextActiveIndex >= nextCombatants.length) {
+  if (nextCombatants.length === 0 || nextActiveIndex >= nextCombatants.length) {
     nextActiveIndex = 0;
   }
 
@@ -215,14 +119,14 @@ function applyActorRemoved(state: GameState, actorId: string): GameState {
 function applyHpUpdate(state: GameState, actorId: string, newHp: number): GameState {
   return {
     ...state,
-    combatants: state.combatants.map((c) =>
-      c.id === actorId
+    combatants: state.combatants.map((combatant) =>
+      combatant.id === actorId
         ? {
-            ...c,
+            ...combatant,
             hp_current: newHp,
-            hp_percent: typeof c.hp_max === "number" && c.hp_max > 0 ? Math.max(0, Math.min(1, newHp / c.hp_max)) : c.hp_percent,
+            hp_percent: typeof combatant.hp_max === "number" && combatant.hp_max > 0 ? Math.max(0, Math.min(1, newHp / combatant.hp_max)) : combatant.hp_percent,
           }
-        : c,
+        : combatant,
     ),
   };
 }
@@ -234,21 +138,21 @@ function applyActorDeath(state: GameState, actorId: string): GameState {
 function setCombatantPosition(state: GameState, actorId: string, x: number, y: number): GameState {
   return {
     ...state,
-    combatants: state.combatants.map((c) =>
-      c.id === actorId
+    combatants: state.combatants.map((combatant) =>
+      combatant.id === actorId
         ? {
-            ...c,
+            ...combatant,
             x,
             y,
           }
-        : c,
+        : combatant,
     ),
   };
 }
 
 const COMMAND_LOG_LIMIT = 200;
 
-function createLogEntry(direction: "SEND" | "RECV" | "ERROR", type: string, payload: any, message?: string): CombatLogEntry {
+function createLogEntry(direction: "SEND" | "RECV" | "ERROR", type: string, payload: unknown, message?: string): CombatLogEntry {
   return {
     timestamp: new Date().toISOString(),
     direction,
@@ -263,6 +167,7 @@ function appendLogEntry(commandLog: CombatLogEntry[], entry: CombatLogEntry): Co
   if (next.length <= COMMAND_LOG_LIMIT) {
     return next;
   }
+
   return next.slice(next.length - COMMAND_LOG_LIMIT);
 }
 
@@ -271,6 +176,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   isConnected: false,
   role: null,
   errorMessage: null,
+  actionFeedback: null,
   commandLog: [],
   actionDispatcher: null,
 
@@ -288,6 +194,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       role: null,
       gameState: null,
       actionDispatcher: null,
+      actionFeedback: null,
     });
   },
 
@@ -302,22 +209,15 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     set({ actionDispatcher: dispatcher });
   },
 
-  ingestEnvelope: (message: any) => {
-    let envelope = message;
-    if (typeof message === "string") {
-      try {
-        envelope = JSON.parse(message);
-      } catch (error) {
-        const parseMessage = error instanceof Error ? error.message : "Failed to parse envelope";
-        set((current) => ({
-          errorMessage: parseMessage,
-          commandLog: appendLogEntry(current.commandLog, createLogEntry("ERROR", "invalid_envelope", message, parseMessage)),
-        }));
-        return;
-      }
-    }
+  ingestEnvelope: (message: unknown) => {
+    const envelope = parseWsOutboundEnvelope(message);
 
     if (!envelope?.type) {
+      const parseMessage = "Failed to parse envelope";
+      set((current) => ({
+        errorMessage: parseMessage,
+        commandLog: appendLogEntry(current.commandLog, createLogEntry("ERROR", "invalid_envelope", message, parseMessage)),
+      }));
       return;
     }
 
@@ -326,64 +226,91 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     }));
 
     if (envelope.type === "error") {
-      const nextErrorMessage = envelope.payload?.message ?? "WebSocket error";
-      const errorCode = envelope.payload?.code ?? "unknown";
+      const payload = envelope.payload as { message?: string; code?: string };
+      const nextErrorMessage = payload.message ?? "WebSocket error";
+      const errorCode = payload.code ?? "unknown";
       set({ errorMessage: `${nextErrorMessage} (${errorCode})` });
       return;
     }
 
     if (envelope.type === "state_sync") {
-      set({ gameState: mapBackendEncounterToGameState(envelope.payload) });
+      const payload = envelope.payload as EncounterStateWire;
+      set({ gameState: mapEncounterWireToGameState(payload) });
       return;
     }
 
     if (envelope.type === "actor_moved") {
+      const payload = envelope.payload as ActorMovedPayload;
       set((current) => ({
-        gameState: current.gameState ? applyActorMove(current.gameState, envelope.payload) : current.gameState,
+        gameState: current.gameState ? applyActorMove(current.gameState, payload) : current.gameState,
       }));
       return;
     }
 
     if (envelope.type === "actor_added") {
+      const payload = envelope.payload as ActorAddedPayload;
       set((current) => ({
-        gameState: current.gameState ? applyActorAdded(current.gameState, envelope.payload) : current.gameState,
+        gameState: current.gameState ? applyActorAdded(current.gameState, payload) : current.gameState,
       }));
       return;
     }
 
     if (envelope.type === "actor_removed") {
+      const payload = envelope.payload as { actor_id?: string };
       set((current) => ({
-        gameState: current.gameState && envelope.payload?.actor_id ? applyActorRemoved(current.gameState, envelope.payload.actor_id) : current.gameState,
+        gameState: current.gameState && payload.actor_id ? applyActorRemoved(current.gameState, payload.actor_id) : current.gameState,
       }));
       return;
     }
 
     if (envelope.type === "actor_damaged" || envelope.type === "actor_healed") {
+      const payload = envelope.payload as HpChangedPayload;
       set((current) => ({
-        gameState: current.gameState && envelope.payload?.actor_id ? applyHpUpdate(current.gameState, envelope.payload.actor_id, envelope.payload.new_hp) : current.gameState,
+        gameState: current.gameState && payload.actor_id && typeof payload.new_hp === "number" ? applyHpUpdate(current.gameState, payload.actor_id, payload.new_hp) : current.gameState,
       }));
       return;
     }
 
     if (envelope.type === "actor_died") {
+      const payload = envelope.payload as { actor_id?: string };
       set((current) => ({
-        gameState: current.gameState && envelope.payload?.actor_id ? applyActorDeath(current.gameState, envelope.payload.actor_id) : current.gameState,
+        gameState: current.gameState && payload.actor_id ? applyActorDeath(current.gameState, payload.actor_id) : current.gameState,
       }));
       return;
     }
 
+    if (envelope.type === "action_authorized") {
+      set({ actionFeedback: null });
+      return;
+    }
+
+    if (envelope.type === "action_denied") {
+      const payload = envelope.payload as ActionDeniedPayload;
+      set({
+        actionFeedback: {
+          actorId: payload.actor_id,
+          actionType: payload.action_type,
+          reasonCode: normalizeActionDeniedReasonCode(payload.reason_code),
+          message: payload.message,
+          at: new Date().toISOString(),
+        },
+      });
+      return;
+    }
+
     if (envelope.type === "turn_advanced") {
+      const payload = envelope.payload as TurnAdvancedPayload;
       set((current) => {
         if (!current.gameState) {
           return { gameState: current.gameState };
         }
 
-        const nextActiveIndex = current.gameState.combatants.findIndex((c) => c.id === envelope.payload?.active_actor_id);
+        const nextActiveIndex = current.gameState.combatants.findIndex((combatant) => combatant.id === payload.active_actor_id);
 
         return {
           gameState: {
             ...current.gameState,
-            round: envelope.payload?.round ?? current.gameState.round,
+            round: payload.round ?? current.gameState.round,
             activeIndex: nextActiveIndex >= 0 ? nextActiveIndex : current.gameState.activeIndex,
           },
         };
@@ -395,30 +322,40 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     set({ commandLog: [] });
   },
 
-  dispatchRawEnvelope: async (type: string, payload: any) => {
+  clearActionFeedback: () => {
+    set({ actionFeedback: null });
+  },
+
+  dispatchRawEnvelope: async (type: string, payload: Record<string, unknown>) => {
+    return get().dispatchCommand({ type, payload });
+  },
+
+  dispatchCommand: async (command: WsInboundEnvelope) => {
     const { actionDispatcher } = get();
 
     set((current) => ({
-      commandLog: appendLogEntry(current.commandLog, createLogEntry("SEND", type, payload)),
+      commandLog: appendLogEntry(current.commandLog, createLogEntry("SEND", command.type, command.payload)),
     }));
 
     if (!actionDispatcher) {
       const message = "No action dispatcher configured.";
       set((current) => ({
         errorMessage: message,
-        commandLog: appendLogEntry(current.commandLog, createLogEntry("ERROR", type, payload, message)),
+        commandLog: appendLogEntry(current.commandLog, createLogEntry("ERROR", command.type, command.payload, message)),
       }));
       throw new Error(message);
     }
 
     try {
-      const result = await actionDispatcher(type, payload);
+      const result = await actionDispatcher(command);
+      const isFailureResult = typeof result === "object" && result !== null && "success" in result && (result as { success?: unknown }).success === false;
 
-      if (result && typeof result === "object" && "success" in result && result.success === false) {
-        const message = typeof result.error === "string" ? result.error : "Command dispatch failed";
+      if (isFailureResult) {
+        const errorFromResult = (result as { error?: unknown }).error;
+        const message = typeof errorFromResult === "string" ? errorFromResult : "Command dispatch failed";
         set((current) => ({
           errorMessage: message,
-          commandLog: appendLogEntry(current.commandLog, createLogEntry("ERROR", type, payload, message)),
+          commandLog: appendLogEntry(current.commandLog, createLogEntry("ERROR", command.type, command.payload, message)),
         }));
 
         const handledError = new Error(message) as Error & { alreadyLogged?: boolean };
@@ -435,15 +372,13 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       const message = error instanceof Error ? error.message : "Failed to dispatch action";
       set((current) => ({
         errorMessage: message,
-        commandLog: appendLogEntry(current.commandLog, createLogEntry("ERROR", type, payload, message)),
+        commandLog: appendLogEntry(current.commandLog, createLogEntry("ERROR", command.type, command.payload, message)),
       }));
       throw error;
     }
   },
 
-  // --- Intent Dispatchers (Only DM should call these ideally) ---
-
-  dispatchIntent: (action: string, payload: any) => {
+  dispatchIntent: (action: string, payload: Record<string, unknown>) => {
     const { role } = get();
     if (role !== "dm") {
       const message = "Only the DM can dispatch command actions.";
@@ -454,7 +389,19 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       return;
     }
 
-    void get().dispatchRawEnvelope(action, payload);
+    void get().dispatchCommand({ type: action, payload });
+  },
+
+  requestAction: (actorId: string, actionType: string, actionName: string, payload: Record<string, unknown> = {}) => {
+    void get().dispatchCommand({
+      type: "request_action",
+      payload: {
+        actor_id: actorId,
+        action_type: actionType,
+        action_name: actionName,
+        payload,
+      },
+    });
   },
 
   moveToken: (targetId: string, path: [number, number][]) => {
@@ -480,8 +427,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
 
   endTurn: () => {
     const state = get().gameState;
-    const activeActor = state && typeof state.activeIndex === "number" ? state.combatants[state.activeIndex] : undefined;
-
+    const activeActor = state ? state.combatants[state.activeIndex] : undefined;
     get().dispatchIntent("end_turn", { actor_id: activeActor?.id ?? "" });
   },
 
@@ -489,7 +435,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     get().dispatchIntent("apply_damage", { actor_id: targetId, amount, damage_type: damageType });
   },
 
-  dispatchAction: (actionType: string, payload: any) => {
+  dispatchAction: (actionType: string, payload: Record<string, unknown>) => {
     get().dispatchIntent(actionType, payload);
   },
 }));

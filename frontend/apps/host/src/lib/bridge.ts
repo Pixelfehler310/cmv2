@@ -1,18 +1,19 @@
 import { IHostBridge, IEventBus, IActionDispatcher, IAuthService, IConnectionState, ActionResult } from "@rpg/bridge";
 import { WsClient } from "@rpg/bridge";
 import { QueryClient } from "@tanstack/react-query";
+import type { WsInboundEnvelope, WsOutboundEnvelope } from "@rpg/types";
 
 class EventEmitter implements IEventBus {
-  private listeners: Map<string, Set<(payload: any) => void>> = new Map();
+  private listeners: Map<string, Set<(payload: unknown) => void>> = new Map();
 
-  emit(event: string, payload: any): void {
+  emit(event: string, payload: unknown): void {
     const handlers = this.listeners.get(event);
     if (handlers) {
       handlers.forEach((h) => h(payload));
     }
   }
 
-  on(event: string, handler: (payload: any) => void): () => void {
+  on(event: string, handler: (payload: unknown) => void): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
@@ -36,21 +37,24 @@ export class ReactHostBridge implements IHostBridge {
     this.events = new EventEmitter();
     this.auth = authService;
 
-    this.ws.onMessage((data) => {
+    this.ws.onMessage((data: WsOutboundEnvelope) => {
       this.events.emit("ws:recv", data);
     });
 
     this.actions = {
-      dispatch: async (type: string, payload: any): Promise<ActionResult> => {
+      dispatch: async (commandOrType: WsInboundEnvelope | string, payload?: Record<string, unknown>): Promise<ActionResult> => {
+        const envelope: WsInboundEnvelope = typeof commandOrType === "string" ? { type: commandOrType, payload: payload ?? {} } : commandOrType;
+
         try {
-          this.events.emit("ws:send", { type, payload });
+          this.events.emit("ws:send", envelope);
           // Optimistic updates could go here
-          await this.ws.sendAction(type, payload);
-          this.events.emit("ws:send_result", { success: true, type, payload });
+          await this.ws.sendAction(envelope);
+          this.events.emit("ws:send_result", { success: true, ...envelope });
           return { success: true };
-        } catch (e: any) {
-          this.events.emit("ws:error", { type, payload, error: e?.message ?? "Unknown websocket error" });
-          return { success: false, error: e.message };
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : "Unknown websocket error";
+          this.events.emit("ws:error", { ...envelope, error: message });
+          return { success: false, error: message };
         }
       },
     };

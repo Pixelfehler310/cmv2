@@ -14,6 +14,7 @@
         "@rpg/management-view": "workspace:*",
         "@rpg/player-view": "workspace:*",
         "@rpg/shared": "workspace:*",
+        "@rpg/types": "workspace:*",
         "@rpg/ui": "workspace:*",
         "@tanstack/react-query": "^5.0.0",
         "clsx": "^2.0.0",

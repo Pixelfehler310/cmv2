@@ -1,3 +1,4 @@
+import type { WsInboundEnvelope } from "@rpg/types";
 import { IHostBridge, IEventBus, IActionDispatcher, ActionResult, IAuthService, IConnectionState, UserProfile } from "@rpg/bridge";
 import { characterFull } from "./character_full";
 import { campaignState } from "./campaign_state";
@@ -5,15 +6,15 @@ import { chatHistory } from "./chat_history";
 import { campaigns } from "./campaigns";
 
 class MockEventBus implements IEventBus {
-  private listeners: { [key: string]: ((payload: any) => void)[] } = {};
+  private listeners: { [key: string]: ((payload: unknown) => void)[] } = {};
 
-  emit(event: string, payload: any): void {
+  emit(event: string, payload: unknown): void {
     if (this.listeners[event]) {
       this.listeners[event].forEach((handler) => handler(payload));
     }
   }
 
-  on(event: string, handler: (payload: any) => void): () => void {
+  on(event: string, handler: (payload: unknown) => void): () => void {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
     }
@@ -25,8 +26,13 @@ class MockEventBus implements IEventBus {
 }
 
 class MockActionDispatcher implements IActionDispatcher {
-  async dispatch(actionType: string, payload: any): Promise<ActionResult> {
-    console.log(`[MockBridge] Dispatching action: ${actionType}`, payload);
+  async dispatch(command: WsInboundEnvelope): Promise<ActionResult>;
+  async dispatch(actionType: string, payload: Record<string, unknown>): Promise<ActionResult>;
+  async dispatch(commandOrType: WsInboundEnvelope | string, payload?: Record<string, unknown>): Promise<ActionResult> {
+    const actionType = typeof commandOrType === "string" ? commandOrType : commandOrType.type;
+    const actionPayload = typeof commandOrType === "string" ? payload : commandOrType.payload;
+
+    console.log(`[MockBridge] Dispatching action: ${actionType}`, actionPayload);
 
     // Simulate latency
     await new Promise((resolve) => setTimeout(resolve, 200));

@@ -1,3 +1,5 @@
+import type { WsInboundEnvelope, WsOutboundEnvelope } from "@rpg/types";
+
 export interface IHostBridge {
   // 1. Communication
   events: IEventBus;
@@ -13,19 +15,22 @@ export interface IHostBridge {
 }
 
 export interface IEventBus {
-  emit(event: string, payload: any): void;
-  on(event: string, handler: (payload: any) => void): () => void; // Returns unsubscribe function
+  emit(event: string, payload: unknown): void;
+  on(event: string, handler: (payload: unknown) => void): () => void; // Returns unsubscribe function
 }
 
 export interface IActionDispatcher {
+  dispatch(command: WsInboundEnvelope): Promise<ActionResult>;
   dispatch(actionType: string, payload: any): Promise<ActionResult>;
 }
 
 export interface ActionResult {
   success: boolean;
   error?: string;
-  data?: any;
+  data?: unknown;
 }
+
+export type { WsInboundEnvelope, WsOutboundEnvelope };
 
 export interface IAuthService {
   getUser(): Promise<UserProfile | null>;

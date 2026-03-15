@@ -1,6 +1,7 @@
 import { IConnectionState } from "./index";
+import type { WsInboundEnvelope, WsOutboundEnvelope } from "@rpg/types";
 
-type MessageHandler = (data: any) => void;
+type MessageHandler = (data: WsOutboundEnvelope) => void;
 
 export class WsClient {
   private ws: WebSocket | null = null;
@@ -47,7 +48,7 @@ export class WsClient {
 
     this.ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data) as WsOutboundEnvelope;
         this.handlers.forEach((handler) => handler(data));
       } catch (e) {
         console.error("[WsClient] Failed to parse WS message", e);
@@ -61,9 +62,13 @@ export class WsClient {
     this.ws = null;
   }
 
-  sendAction(type: string, payload: any) {
+  sendAction(command: WsInboundEnvelope): Promise<{ success: true }>;
+  sendAction(type: string, payload: Record<string, unknown>): Promise<{ success: true }>;
+  sendAction(typeOrCommand: string | WsInboundEnvelope, payload?: Record<string, unknown>) {
+    const envelope: WsInboundEnvelope = typeof typeOrCommand === "string" ? { type: typeOrCommand, payload: payload ?? {} } : typeOrCommand;
+
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type, payload }));
+      this.ws.send(JSON.stringify(envelope));
       return Promise.resolve({ success: true });
     } else {
       console.warn("[WsClient] Attempted to send action while WebSocket is not connected");

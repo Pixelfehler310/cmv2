@@ -1,5 +1,5 @@
 {
-    "name": "@rpg/shared",
+    "name": "@rpg/types",
     "version": "0.0.1",
     "type": "module",
     "main": "./src/index.ts",
@@ -13,9 +13,5 @@
     },
     "devDependencies": {
         "typescript": "^5.0.0"
-    },
-    "dependencies": {
-        "@rpg/types": "workspace:*",
-        "zustand": "^4.4.0"
     }
 }

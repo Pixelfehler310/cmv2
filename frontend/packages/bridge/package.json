@@ -7,6 +7,9 @@
         "build": "tsc",
         "dev": "echo '@rpg/bridge ready'"
     },
+    "dependencies": {
+        "@rpg/types": "workspace:*"
+    },
     "devDependencies": {
         "typescript": "^5.0.0"
     }
