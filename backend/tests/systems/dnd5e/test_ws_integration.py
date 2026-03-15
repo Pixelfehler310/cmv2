@@ -73,6 +73,7 @@ def combat_encounter():
             ActorInstance(
                 id="fighter_1",
                 name="Theron",
+                owner_user_id="player_1",
                 actor_type=ActorType.PLAYER_CHARACTER,
                 current_hp=45,
                 max_hp=45,
@@ -83,6 +84,7 @@ def combat_encounter():
             ActorInstance(
                 id="goblin_1",
                 name="Goblin",
+                owner_user_id="player_2",
                 actor_type=ActorType.MONSTER,
                 current_hp=7,
                 max_hp=7,
@@ -155,6 +157,44 @@ class TestPermissions:
         assert len(events) == 1
         assert events[0].type in {
             "action_authorized", "action_denied", "error"}
+
+    @pytest.mark.anyio
+    async def test_dm_can_impersonate_player_for_request_action(self, handler, dm_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="request_action",
+            request_id="req_dm_impersonated_denied",
+            payload={
+                "actor_id": "goblin_1",
+                "action_type": "action",
+                "action_name": "attack",
+                "acting_as_user_id": "player_1",
+            },
+        )
+
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "action_denied"
+        assert events[0].payload["reason_code"] == "unauthorized"
+
+    @pytest.mark.anyio
+    async def test_player_cannot_spoof_ownership_via_acting_as_user_id(self, handler, player_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="request_action",
+            request_id="req_player_spoof_denied",
+            payload={
+                "actor_id": "goblin_1",
+                "action_type": "action",
+                "action_name": "attack",
+                "acting_as_user_id": "player_2",
+            },
+        )
+
+        events = await handler.handle(envelope, player_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "action_denied"
+        assert events[0].payload["reason_code"] == "unauthorized"
 
     @pytest.mark.anyio
     async def test_command_requires_request_id(self, handler, dm_ctx, mgr, combat_encounter):
@@ -359,6 +399,24 @@ class TestMovement:
 
         assert len(events) == 1
         assert events[0].type == "actor_moved"
+
+    @pytest.mark.anyio
+    async def test_dm_can_impersonate_player_for_move_token(self, handler, dm_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="move_token",
+            request_id="req_move_impersonated_denied",
+            payload={
+                "actor_id": "goblin_1",
+                "path": [{"x": 8, "y": 8}],
+                "acting_as_user_id": "player_1",
+            },
+        )
+
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "unauthorized"
 
 
 # ---------------------------------------------------------------------------

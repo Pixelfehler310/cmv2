@@ -3,6 +3,7 @@ export interface RequestActionCommandPayload {
   action_type: string;
   action_name: string;
   payload: Record<string, unknown>;
+  acting_as_user_id?: string;
 }
 
 export interface ActionCommandPayload {
@@ -15,6 +16,7 @@ export interface ActionCommandPayload {
 export interface MoveTokenCommandPayload {
   actor_id: string;
   path: Array<{ x: number; y: number }>;
+  acting_as_user_id?: string;
 }
 
 export interface EndTurnCommandPayload {

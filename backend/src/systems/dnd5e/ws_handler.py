@@ -131,6 +131,24 @@ def clear_encounters() -> None:
 class Dnd5eWsHandler(ISystemHandler):
     """D&D 5e WebSocket event handler."""
 
+    @staticmethod
+    def _resolve_impersonated_ctx(ctx: SessionContext, acting_as_user_id: Optional[str]) -> SessionContext:
+        """Allow DMs to simulate player-level auth checks for debug tooling."""
+        if ctx.role != UserRole.DM:
+            return ctx
+
+        candidate = (acting_as_user_id or "").strip()
+        if not candidate:
+            return ctx
+
+        return SessionContext(
+            campaign_id=ctx.campaign_id,
+            user_id=candidate,
+            display_name=ctx.display_name,
+            role=UserRole.PLAYER,
+            game_system=ctx.game_system,
+        )
+
     async def on_connect(
         self, ctx: SessionContext, mgr: SessionManager
     ) -> list[WsOutbound]:
@@ -397,6 +415,7 @@ class Dnd5eWsHandler(ISystemHandler):
             action_name=payload.action_name,
             request_id=envelope.request_id,
             ctx=ctx,
+            response_ctx=ctx,
             raw_payload=payload.model_dump(mode="json"),
         )
 
@@ -413,6 +432,9 @@ class Dnd5eWsHandler(ISystemHandler):
         except Exception:
             return [self._error("Invalid request_action payload", WsErrorCode.INVALID_MESSAGE, ctx)]
 
+        effective_ctx = self._resolve_impersonated_ctx(
+            ctx, payload.acting_as_user_id)
+
         return await self._authorize_and_log_action(
             encounter,
             encounter_session,
@@ -421,7 +443,8 @@ class Dnd5eWsHandler(ISystemHandler):
             action_type=payload.action_type,
             action_name=payload.action_name,
             request_id=envelope.request_id,
-            ctx=ctx,
+            ctx=effective_ctx,
+            response_ctx=ctx,
             raw_payload=payload.model_dump(mode="json"),
         )
 
@@ -435,6 +458,7 @@ class Dnd5eWsHandler(ISystemHandler):
         action_name: str,
         request_id: str | None,
         ctx: SessionContext,
+        response_ctx: SessionContext,
         raw_payload: dict,
     ) -> list[WsOutbound]:
         if encounter_session is None:
@@ -473,7 +497,7 @@ class Dnd5eWsHandler(ISystemHandler):
                     "action",
                     auth.message or "Action denied",
                     auth.reason_code or "invalid_action",
-                    ctx,
+                    response_ctx,
                     request_id,
                     actor_id=actor_id,
                     action_type=action_type,
@@ -554,6 +578,9 @@ class Dnd5eWsHandler(ISystemHandler):
         except Exception:
             return [self._error_raw("Invalid move_token payload", WsErrorCode.INVALID_MESSAGE)]
 
+        effective_ctx = self._resolve_impersonated_ctx(
+            ctx, payload.acting_as_user_id)
+
         if not payload.path:
             return [self._error_raw("move_token path cannot be empty", WsErrorCode.INVALID_MESSAGE)]
 
@@ -565,7 +592,7 @@ class Dnd5eWsHandler(ISystemHandler):
             auth = await service.apply_movement(
                 encounter_session,
                 encounter,
-                ctx,
+                effective_ctx,
                 payload.actor_id,
                 payload.path,
                 envelope.request_id,

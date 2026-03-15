@@ -8,28 +8,17 @@ interface ActionDeckProps {
   campaignId: string;
 }
 
-export const ActionDeck = ({
-  bridge,
-  selectedCombatantId,
-  campaignId,
-}: ActionDeckProps) => {
-  const {
-    dispatchAction,
-    dispatchRawEnvelope,
-    endTurn,
-    applyDamage,
-    removeActor,
-    moveToken,
-  } = useCombatStore();
+export const ActionDeck = ({ bridge, selectedCombatantId, campaignId }: ActionDeckProps) => {
+  const { dispatchAction, dispatchRawEnvelope, endTurn, applyDamage, removeActor, moveToken, requestAction, actingAsUserId } = useCombatStore();
   const [manualActorId, setManualActorId] = useState("");
   const [damageAmount, setDamageAmount] = useState(5);
   const [healingAmount, setHealingAmount] = useState(5);
   const [moveX, setMoveX] = useState(0);
   const [moveY, setMoveY] = useState(0);
   const [rawType, setRawType] = useState("end_turn");
-  const [rawPayloadText, setRawPayloadText] = useState(
-    '{\n  "actor_id": ""\n}',
-  );
+  const [requestActionType, setRequestActionType] = useState("action");
+  const [requestActionName, setRequestActionName] = useState("attack");
+  const [rawPayloadText, setRawPayloadText] = useState('{\n  "actor_id": ""\n}');
   const [rawParseError, setRawParseError] = useState<string | null>(null);
 
   const activeActorId = useMemo(() => {
@@ -79,8 +68,7 @@ export const ActionDeck = ({
     try {
       parsedPayload = rawPayloadText.trim() ? JSON.parse(rawPayloadText) : {};
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Invalid JSON payload";
+      const message = error instanceof Error ? error.message : "Invalid JSON payload";
       setRawParseError(message);
       return;
     }
@@ -92,21 +80,26 @@ export const ActionDeck = ({
     }
   };
 
+  const runRequestAction = () => {
+    if (!activeActorId) {
+      return;
+    }
+
+    requestAction(activeActorId, requestActionType.trim() || "action", requestActionName.trim());
+  };
+
   return (
     <div className="m-4 rounded-md border border-slate-700 bg-slate-900/95 p-4 text-slate-100 shadow-lg">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-bold uppercase tracking-wide text-cyan-300">
-          DM Command Test Console
-        </h3>
-        <span className="text-[10px] text-slate-400">
-          campaign: {campaignId}
-        </span>
+        <h3 className="text-sm font-bold uppercase tracking-wide text-cyan-300">DM Command Test Console</h3>
+        <div className="text-right text-[10px] text-slate-400">
+          <div>campaign: {campaignId}</div>
+          <div>auth mode: {actingAsUserId ? `player:${actingAsUserId}` : "dm"}</div>
+        </div>
       </div>
 
       <div className="mb-4 space-y-2">
-        <label className="block text-xs font-semibold text-slate-300">
-          Target Actor ID (optional override)
-        </label>
+        <label className="block text-xs font-semibold text-slate-300">Target Actor ID (optional override)</label>
         <input
           type="text"
           value={manualActorId}
@@ -114,21 +107,45 @@ export const ActionDeck = ({
           placeholder="uses selected token when empty"
           className="w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs text-slate-100"
         />
-        <div className="text-[11px] text-slate-400">
-          Effective target: {activeActorId || "none"}
-        </div>
+        <div className="text-[11px] text-slate-400">Effective target: {activeActorId || "none"}</div>
       </div>
 
       <div className="mb-4 rounded border border-slate-700 bg-slate-950/40 p-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
-          Typed Commands
-        </div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">Player Authorization Probe</div>
         <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={runEndTurn}
-            className="rounded bg-indigo-600 px-2 py-1 text-xs font-medium hover:bg-indigo-500"
-          >
+          <label className="text-[11px] text-slate-300">
+            action_type
+            <input
+              type="text"
+              value={requestActionType}
+              onChange={(e) => setRequestActionType(e.target.value)}
+              className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs"
+            />
+          </label>
+          <label className="text-[11px] text-slate-300">
+            action_name
+            <input
+              type="text"
+              value={requestActionName}
+              onChange={(e) => setRequestActionName(e.target.value)}
+              className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs"
+            />
+          </label>
+        </div>
+        <button
+          type="button"
+          onClick={runRequestAction}
+          disabled={!activeActorId}
+          className="mt-3 rounded bg-violet-700 px-2 py-1 text-xs font-medium hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          request_action {actingAsUserId ? "(as selected player)" : "(as DM)"}
+        </button>
+      </div>
+
+      <div className="mb-4 rounded border border-slate-700 bg-slate-950/40 p-3">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">Typed Commands</div>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={runEndTurn} className="rounded bg-indigo-600 px-2 py-1 text-xs font-medium hover:bg-indigo-500">
             end_turn
           </button>
           <button
@@ -183,21 +200,11 @@ export const ActionDeck = ({
         <div className="mt-3 grid grid-cols-3 gap-2">
           <label className="text-[11px] text-slate-300">
             x
-            <input
-              type="number"
-              value={moveX}
-              onChange={(e) => setMoveX(Number(e.target.value))}
-              className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs"
-            />
+            <input type="number" value={moveX} onChange={(e) => setMoveX(Number(e.target.value))} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs" />
           </label>
           <label className="text-[11px] text-slate-300">
             y
-            <input
-              type="number"
-              value={moveY}
-              onChange={(e) => setMoveY(Number(e.target.value))}
-              className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs"
-            />
+            <input type="number" value={moveY} onChange={(e) => setMoveY(Number(e.target.value))} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs" />
           </label>
           <button
             type="button"
@@ -211,17 +218,10 @@ export const ActionDeck = ({
       </div>
 
       <div className="mb-4 rounded border border-slate-700 bg-slate-950/40 p-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
-          Raw Envelope
-        </div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-300">Raw Envelope</div>
         <label className="mb-2 block text-[11px] text-slate-300">
           type
-          <input
-            type="text"
-            value={rawType}
-            onChange={(e) => setRawType(e.target.value)}
-            className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs"
-          />
+          <input type="text" value={rawType} onChange={(e) => setRawType(e.target.value)} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-xs" />
         </label>
         <label className="block text-[11px] text-slate-300">
           payload (json)
@@ -232,11 +232,7 @@ export const ActionDeck = ({
             className="mt-1 w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 font-mono text-xs"
           />
         </label>
-        {rawParseError && (
-          <div className="mt-2 text-xs text-rose-300">
-            JSON parse error: {rawParseError}
-          </div>
-        )}
+        {rawParseError && <div className="mt-2 text-xs text-rose-300">JSON parse error: {rawParseError}</div>}
         <button
           type="button"
           onClick={() => {

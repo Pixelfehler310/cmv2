@@ -30,12 +30,14 @@ class RequestActionPayload(BaseModel):
     action_type: str = "action"
     action_name: str = ""
     payload: dict = Field(default_factory=dict)
+    acting_as_user_id: Optional[str] = None
 
 
 class MoveTokenPayload(BaseModel):
     """Payload for `move_token` event."""
     actor_id: str
     path: List[dict] = Field(default_factory=list)  # [{x, y}, ...]
+    acting_as_user_id: Optional[str] = None
 
 
 class RollDicePayload(BaseModel):

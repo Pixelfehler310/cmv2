@@ -70,6 +70,16 @@ Outcome:
 
 - Movement and turn changes are enforced consistently across runtime modes.
 
+Phase 1 handoff constraints from implemented Phase 0:
+
+- Command events now require `request_id`; Phase 1 command additions/changes must preserve this gate.
+- Denial taxonomy is now explicit:
+  - `action_denied` for action-family denial outcomes
+  - `command_denied` for non-action command denial outcomes
+- Dispatcher observability now emits `WS inbound` and `WS outbound` lines with campaign, event, and `request_id` correlation.
+- Verified runtime smoke (container): `start_combat` (`smoke3_req_1`) and `end_turn` (`smoke3_req_2`) produced correlated outbound responses and matching log traces.
+- If log verbosity needs reduction after Phase 1, keep correlation fields but move dispatcher trace lines from warning-level back to info-level after central logging config is aligned.
+
 Tasks:
 
 1. Refactor movement auth so turn/ownership/budget checks run in all modes.

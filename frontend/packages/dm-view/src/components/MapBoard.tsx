@@ -7,7 +7,7 @@ interface MapBoardProps {
 }
 
 export const MapBoard: React.FC<MapBoardProps> = ({ selectedCombatantId, onSelectCombatant }) => {
-  const { gameState, moveToken } = useCombatStore();
+  const { gameState, moveToken, actingAsUserId } = useCombatStore();
   const [draggedTokenId, setDraggedTokenId] = useState<string | null>(null);
   const GRID_SIZE = 50;
 
@@ -40,7 +40,7 @@ export const MapBoard: React.FC<MapBoardProps> = ({ selectedCombatantId, onSelec
 
   return (
     <div
-      className="relative h-full w-full overflow-hidden rounded-xl border border-[var(--border-default)] bg-surface-2"
+      className="relative h-full w-full overflow-hidden rounded-xl border border-(--border-default) bg-surface-2"
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onClick={() => onSelectCombatant(null)}
@@ -55,10 +55,14 @@ export const MapBoard: React.FC<MapBoardProps> = ({ selectedCombatantId, onSelec
       />
 
       {/* Fog Reveal Tools Header */}
-      <div className="absolute left-3 top-3 z-10 flex gap-2 rounded-xl border border-[var(--border-subtle)] bg-surface-1/90 p-2 shadow-sm backdrop-blur-sm">
+      <div className="absolute left-3 top-3 z-10 flex gap-2 rounded-xl border border-(--border-subtle) bg-surface-1/90 p-2 shadow-sm backdrop-blur-sm">
         <button className="btn btn-ghost btn-sm px-3! py-1! text-xs">Reveal Fog</button>
         <button className="btn btn-ghost btn-sm px-3! py-1! text-xs">Hide Fog</button>
         <button className="btn btn-ghost btn-sm px-3! py-1! text-xs">Measure</button>
+      </div>
+
+      <div className="absolute right-3 top-3 z-10 rounded-md border border-(--border-subtle) bg-surface-1/90 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-on-muted shadow-sm backdrop-blur-sm">
+        {actingAsUserId ? `Play as ${actingAsUserId}` : "Play as DM"}
       </div>
 
       {/* Tokens */}
@@ -74,7 +78,7 @@ export const MapBoard: React.FC<MapBoardProps> = ({ selectedCombatantId, onSelec
           className={[
             "absolute z-5 flex h-10 w-10 select-none items-center justify-center rounded-full border-2",
             "cursor-grab bg-surface-1 text-sm font-semibold text-on-surface",
-            selectedCombatantId === token.id ? "border-[var(--color-primary)]" : "border-[var(--border-default)]",
+            selectedCombatantId === token.id ? "border-(--color-primary)" : "border-(--border-default)",
           ].join(" ")}
           style={{
             left: `${token.x * GRID_SIZE}px`,

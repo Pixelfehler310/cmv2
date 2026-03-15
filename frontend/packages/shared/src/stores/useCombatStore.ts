@@ -32,6 +32,7 @@ export interface CombatStore {
   gameState: GameState | null;
   isConnected: boolean;
   role: "dm" | "observer" | null;
+  actingAsUserId: string | null;
   errorMessage: string | null;
   actionFeedback: ActionFeedbackViewModel | null;
   commandLog: CombatLogEntry[];
@@ -40,6 +41,7 @@ export interface CombatStore {
   connect: (campaignId: string, role: "dm" | "observer") => void;
   disconnect: () => void;
   setConnectionStatus: (isConnected: boolean, role?: "dm" | "observer") => void;
+  setActingAsUserId: (userId: string | null) => void;
   setActionDispatcher: (dispatcher: CombatActionDispatcher | null) => void;
   ingestEnvelope: (message: unknown) => void;
   clearCommandLog: () => void;
@@ -175,6 +177,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   gameState: null,
   isConnected: false,
   role: null,
+  actingAsUserId: null,
   errorMessage: null,
   actionFeedback: null,
   commandLog: [],
@@ -192,6 +195,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
     set({
       isConnected: false,
       role: null,
+      actingAsUserId: null,
       gameState: null,
       actionDispatcher: null,
       actionFeedback: null,
@@ -203,6 +207,10 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       isConnected,
       role: role ?? current.role,
     }));
+  },
+
+  setActingAsUserId: (userId: string | null) => {
+    set({ actingAsUserId: userId && userId.trim() ? userId.trim() : null });
   },
 
   setActionDispatcher: (dispatcher: CombatActionDispatcher | null) => {
@@ -393,6 +401,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   },
 
   requestAction: (actorId: string, actionType: string, actionName: string, payload: Record<string, unknown> = {}) => {
+    const { actingAsUserId } = get();
     void get().dispatchCommand({
       type: "request_action",
       payload: {
@@ -400,11 +409,13 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
         action_type: actionType,
         action_name: actionName,
         payload,
+        ...(actingAsUserId ? { acting_as_user_id: actingAsUserId } : {}),
       },
     });
   },
 
   moveToken: (targetId: string, path: [number, number][]) => {
+    const { actingAsUserId } = get();
     const normalizedPath = path.map(([x, y]) => ({ x, y }));
 
     if (normalizedPath.length > 0) {
@@ -412,6 +423,18 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       set((current) => ({
         gameState: current.gameState ? setCombatantPosition(current.gameState, targetId, finalStep.x, finalStep.y) : current.gameState,
       }));
+    }
+
+    if (actingAsUserId) {
+      void get().dispatchCommand({
+        type: "move_token",
+        payload: {
+          actor_id: targetId,
+          path: normalizedPath,
+          acting_as_user_id: actingAsUserId,
+        },
+      });
+      return;
     }
 
     get().dispatchIntent("move_token", { actor_id: targetId, path: normalizedPath });

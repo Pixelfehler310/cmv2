@@ -1,14 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { IHostBridge } from "@rpg/bridge";
 import { Layout, Model, TabNode } from "flexlayout-react";
 import "flexlayout-react/style/dark.css";
 import { useCombatStore } from "@rpg/shared";
-import {
-  clearDmLayout,
-  getDefaultDmLayout,
-  loadDmLayout,
-  saveDmLayout,
-} from "./layout";
+import { clearDmLayout, getDefaultDmLayout, loadDmLayout, saveDmLayout } from "./layout";
 import { getDmPanelDefinition } from "./panelRegistry";
 
 interface DmWorkspaceProps {
@@ -23,14 +18,9 @@ const getViewportWidth = (): number => {
   return window.innerWidth;
 };
 
-export const DmWorkspace: React.FC<DmWorkspaceProps> = ({
-  bridge,
-  campaignId,
-}) => {
-  const { isConnected } = useCombatStore();
-  const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(
-    null,
-  );
+export const DmWorkspace: React.FC<DmWorkspaceProps> = ({ bridge, campaignId }) => {
+  const { isConnected, gameState, actingAsUserId, setActingAsUserId } = useCombatStore();
+  const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null);
   const [model, setModel] = useState<Model>(() => {
     const defaultLayout = getDefaultDmLayout(getViewportWidth());
     const initialLayout = loadDmLayout(campaignId, defaultLayout);
@@ -42,7 +32,16 @@ export const DmWorkspace: React.FC<DmWorkspaceProps> = ({
     const nextLayout = loadDmLayout(campaignId, defaultLayout);
     setModel(Model.fromJson(nextLayout));
     setSelectedCombatantId(null);
-  }, [campaignId]);
+    setActingAsUserId(null);
+  }, [campaignId, setActingAsUserId]);
+
+  const playableUserIds = useMemo(() => {
+    if (!gameState) {
+      return [];
+    }
+
+    return Array.from(new Set(gameState.combatants.map((combatant) => (combatant.owner_user_id ?? "").trim()).filter((ownerId) => ownerId.length > 0))).sort((a, b) => a.localeCompare(b));
+  }, [gameState]);
 
   const resetLayout = () => {
     clearDmLayout(campaignId);
@@ -55,19 +54,11 @@ export const DmWorkspace: React.FC<DmWorkspaceProps> = ({
     const panel = getDmPanelDefinition(componentId);
 
     if (!panel) {
-      return (
-        <div className="p-3 text-sm text-slate-300">
-          Unknown DM panel: {componentId}
-        </div>
-      );
+      return <div className="p-3 text-sm text-slate-300">Unknown DM panel: {componentId}</div>;
     }
 
     return (
-      <section
-        className="h-full w-full min-h-0 overflow-hidden bg-surface-1"
-        role="region"
-        aria-label={panel.ariaLabel}
-      >
+      <section className="h-full w-full min-h-0 overflow-hidden bg-surface-1" role="region" aria-label={panel.ariaLabel}>
         {panel.render({
           bridge,
           campaignId,
@@ -80,11 +71,7 @@ export const DmWorkspace: React.FC<DmWorkspaceProps> = ({
   };
 
   if (!isConnected) {
-    return (
-      <div className="p-5 text-on-canvas">
-        Waiting for Host connection for campaign {campaignId}...
-      </div>
-    );
+    return <div className="p-5 text-on-canvas">Waiting for Host connection for campaign {campaignId}...</div>;
   }
 
   const flexLayoutThemeVars = {
@@ -134,11 +121,28 @@ export const DmWorkspace: React.FC<DmWorkspaceProps> = ({
   } as React.CSSProperties;
 
   return (
-    <div
-      className="dm-workspace relative h-full w-full bg-canvas text-on-canvas"
-      style={flexLayoutThemeVars}
-      aria-label="DM docked workspace"
-    >
+    <div className="dm-workspace relative h-full w-full bg-canvas text-on-canvas" style={flexLayoutThemeVars} aria-label="DM docked workspace">
+      <div className="absolute right-3 top-3 z-20 flex items-center gap-2 rounded-lg border border-(--border-default) bg-surface-2/95 px-3 py-2 text-xs shadow-sm backdrop-blur">
+        <label htmlFor="dm-play-as-select" className="font-semibold text-on-muted">
+          Play as
+        </label>
+        <select
+          id="dm-play-as-select"
+          value={actingAsUserId ?? ""}
+          onChange={(event) => {
+            const selected = event.target.value.trim();
+            setActingAsUserId(selected || null);
+          }}
+          className="rounded border border-(--border-subtle) bg-surface-1 px-2 py-1 text-xs text-on-surface"
+        >
+          <option value="">DM (no impersonation)</option>
+          {playableUserIds.map((userId) => (
+            <option key={userId} value={userId}>
+              {userId}
+            </option>
+          ))}
+        </select>
+      </div>
       <Layout
         model={model}
         factory={factory}

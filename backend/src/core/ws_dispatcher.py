@@ -24,6 +24,7 @@ from .sessions.models import ConnectedUser, SessionContext, UserRole
 from .sessions.manager import SessionManager
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 router = APIRouter()
 
@@ -218,7 +219,7 @@ async def websocket_endpoint(
                 await session_manager.send_to_user(campaign_id, user_id, error_event)
                 continue
 
-            logger.info(
+            logger.warning(
                 "WS inbound campaign=%s user=%s event=%s request_id=%s",
                 campaign_id,
                 user_id,
@@ -259,7 +260,7 @@ async def websocket_endpoint(
                 await session_manager.broadcast(campaign_id, event)
 
             if results:
-                logger.info(
+                logger.warning(
                     "WS outbound campaign=%s user=%s event=%s request_id=%s terminal=%s count=%s",
                     campaign_id,
                     user_id,
