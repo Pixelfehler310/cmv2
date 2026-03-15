@@ -119,6 +119,7 @@ class ActorInstance(BaseModel):
     """A live creature or character on the battlefield."""
 
     id: str
+    owner_user_id: Optional[str] = None
     definition_slug: str = ""
     name: str = ""
     actor_type: ActorType = ActorType.MONSTER
@@ -137,7 +138,8 @@ class ActorInstance(BaseModel):
     inventory: List[ItemInstance] = Field(default_factory=list)
     spellcasting: Optional[SpellcastingState] = None
     resources: ResourcePool = Field(default_factory=ResourcePool)
-    concentration: ConcentrationState = Field(default_factory=ConcentrationState)
+    concentration: ConcentrationState = Field(
+        default_factory=ConcentrationState)
     exhaustion_level: int = 0
 
     # Proficiencies (populated by CharacterBuilder for PCs)

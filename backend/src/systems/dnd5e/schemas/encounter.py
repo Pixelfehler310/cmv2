@@ -47,5 +47,6 @@ class EncounterState(BaseModel):
     turn_phase: str = "pre_combat"  # pre_combat, active, post_combat
     active_index: int = 0
     combatants: List[ActorInstance] = Field(default_factory=list)
+    turn_budgets: dict[str, dict] = Field(default_factory=dict)
     global_effects: List[EffectInstance] = Field(default_factory=list)
     map: MapState = Field(default_factory=MapState)

@@ -74,17 +74,18 @@ class TestAllUserEvents:
 
 class TestDmOrOwnerEvents:
 
-    @pytest.mark.parametrize("event_type", ["move_token", "toggle_equip"])
+    @pytest.mark.parametrize("event_type", ["move_token", "request_action", "toggle_equip"])
     def test_dm_can_send(self, event_type: str):
         check_permission(event_type, _ctx(UserRole.DM))  # no exception
 
-    @pytest.mark.parametrize("event_type", ["move_token", "toggle_equip"])
+    @pytest.mark.parametrize("event_type", ["move_token", "request_action", "toggle_equip"])
     def test_player_can_send(self, event_type: str):
         check_permission(event_type, _ctx(UserRole.PLAYER))  # no exception
 
-    @pytest.mark.parametrize("event_type", ["move_token", "toggle_equip"])
+    @pytest.mark.parametrize("event_type", ["move_token", "request_action", "toggle_equip"])
     def test_spectator_cannot_send(self, event_type: str):
         # Spectators aren't explicitly in DM_OR_OWNER or ALL, so they fall through
         # The current implementation allows unknown events through for forward compat
         # This test documents the behavior
-        check_permission(event_type, _ctx(UserRole.SPECTATOR))  # no exception (falls through)
+        check_permission(event_type, _ctx(UserRole.SPECTATOR)
+                         )  # no exception (falls through)

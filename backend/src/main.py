@@ -7,6 +7,7 @@ from .campaigns.routers import campaigns, characters
 from .identity.router import router as identity_router
 from .core.ws_dispatcher import router as ws_dispatcher_router, register_system_handler
 from .systems.dnd5e.ws_handler import Dnd5eWsHandler
+from .systems.dnd5e.encounter_router import router as dnd5e_encounter_router
 from .database import engine, Base
 import logging
 from pathlib import Path
@@ -85,6 +86,7 @@ app.include_router(campaigns.router)
 app.include_router(characters.router)
 app.include_router(identity_router)
 app.include_router(ws_dispatcher_router)
+app.include_router(dnd5e_encounter_router)
 
 # Dev routes
 if settings.LOAD_MOCK_DATA:

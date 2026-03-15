@@ -35,6 +35,7 @@ _DM_ONLY_EVENTS: set[str] = {
 # Events DM or the actor owner can send
 _DM_OR_OWNER_EVENTS: set[str] = {
     "move_token",
+    "request_action",
     "toggle_equip",
 }
 
@@ -53,6 +54,7 @@ _ALL_USER_EVENTS: set[str] = {
 
 class PermissionDenied(Exception):
     """Raised when a user attempts an action they're not allowed to perform."""
+
     def __init__(self, message: str, code: WsErrorCode = WsErrorCode.UNAUTHORIZED):
         super().__init__(message)
         self.code = code

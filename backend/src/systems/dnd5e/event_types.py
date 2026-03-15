@@ -20,7 +20,16 @@ class ActionPayload(BaseModel):
     """Payload for `action` event — attack, spell, ability."""
     actor_id: str
     action_name: str
+    action_type: str = "action"
     target_ids: List[str] = Field(default_factory=list)
+
+
+class RequestActionPayload(BaseModel):
+    """Payload for `request_action` event from player clients."""
+    actor_id: str
+    action_type: str = "action"
+    action_name: str = ""
+    payload: dict = Field(default_factory=dict)
 
 
 class MoveTokenPayload(BaseModel):
@@ -88,6 +97,7 @@ class AddActorPayload(BaseModel):
     definition_slug: str
     name: Optional[str] = None
     position: Optional[dict] = None
+    owner_user_id: Optional[str] = None
 
 
 class RemoveActorPayload(BaseModel):
@@ -120,6 +130,21 @@ class TurnAdvancedPayload(BaseModel):
     """Payload for `turn_advanced` event."""
     active_actor_id: str
     round: int
+
+
+class ActionAuthorizedPayload(BaseModel):
+    """Payload for `action_authorized` event."""
+    actor_id: str
+    action_type: str
+    action_name: str = ""
+
+
+class ActionDeniedPayload(BaseModel):
+    """Payload for `action_denied` event."""
+    actor_id: str
+    action_type: str
+    reason_code: str
+    message: str
 
 
 class ActorDamagedPayload(BaseModel):

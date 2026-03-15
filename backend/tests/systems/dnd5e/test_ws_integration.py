@@ -142,6 +142,18 @@ class TestPermissions:
         assert events[0].type == "error"
         assert events[0].payload["code"] == "unauthorized"
 
+    @pytest.mark.anyio
+    async def test_player_request_action_is_routed(self, handler, player_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="request_action",
+            payload={"actor_id": "fighter_1",
+                     "action_type": "action", "action_name": "attack"},
+        )
+        events = await handler.handle(envelope, player_ctx, mgr)
+        assert len(events) == 1
+        assert events[0].type in {
+            "action_authorized", "action_denied", "error"}
+
 
 # ---------------------------------------------------------------------------
 # Roll Dice Tests

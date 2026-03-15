@@ -13,6 +13,7 @@ import logging
 import re
 from typing import Optional
 
+from src.database import AsyncSessionLocal
 from src.core.ws_dispatcher import ISystemHandler
 from src.core.ws_protocol import WsEnvelope, WsOutbound, WsErrorCode, Visibility
 from src.core.sessions.models import SessionContext, UserRole
@@ -21,10 +22,12 @@ from src.core.sessions.manager import SessionManager
 from .permissions import check_permission, PermissionDenied
 from .state_filter import filter_state_for_role
 from .event_types import (
+    ActionPayload,
     AddActorPayload,
     ChatMessagePayload,
     EndTurnPayload,
     MoveTokenPayload,
+    RequestActionPayload,
     RemoveActorPayload,
     ApplyDamagePayload,
     ApplyHealingPayload,
@@ -43,11 +46,11 @@ from .engine.combat_state import (
     start_combat,
     next_turn,
     get_active_combatant,
-    get_turn_budget,
 )
 from .engine.initiative import InitiativeEntry
 from .engine.dice import DiceService
 from .engine.damage import apply_damage
+from .services.combat_service import CombatService
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +118,7 @@ class Dnd5eWsHandler(ISystemHandler):
         self, ctx: SessionContext, mgr: SessionManager
     ) -> list[WsOutbound]:
         """Send initial state_sync on connection."""
-        encounter = get_or_create_encounter(ctx.campaign_id)
+        encounter = await self._load_encounter(ctx.campaign_id)
         state_data = filter_state_for_role(encounter, ctx)
 
         return [
@@ -150,49 +153,91 @@ class Dnd5eWsHandler(ISystemHandler):
 
         # --- Dispatch ---
         event_type = envelope.type
-        encounter = get_or_create_encounter(ctx.campaign_id)
 
-        if event_type == "ping":
-            return self._handle_ping(ctx)
+        async with AsyncSessionLocal() as db:
+            service = CombatService(db)
+            encounter = await self._load_encounter(ctx.campaign_id, service)
+            if ctx.campaign_id in _encounters:
+                encounter_session = None
+            else:
+                try:
+                    encounter_session = await service._load_session(ctx.campaign_id)
+                except Exception:
+                    logger.exception(
+                        "Falling back to in-memory encounter session for campaign=%s", ctx.campaign_id)
+                    encounter_session = None
 
-        if event_type == "request_sync":
-            return self._handle_request_sync(encounter, ctx)
+            if event_type == "ping":
+                return self._handle_ping(ctx)
 
-        if event_type == "roll_dice":
-            return self._handle_roll_dice(envelope, ctx)
+            if event_type == "request_sync":
+                return self._handle_request_sync(encounter, ctx)
 
-        if event_type == "chat_message":
-            return self._handle_chat_message(envelope, ctx)
+            if event_type == "roll_dice":
+                return self._handle_roll_dice(envelope, ctx)
 
-        if event_type == "move_token":
-            return self._handle_move_token(encounter, envelope)
+            if event_type == "chat_message":
+                return self._handle_chat_message(envelope, ctx)
 
-        if event_type == "add_actor":
-            return self._handle_add_actor(encounter, envelope)
+            if event_type == "action":
+                return await self._handle_action(encounter, encounter_session, service, envelope, ctx)
 
-        if event_type == "remove_actor":
-            return self._handle_remove_actor(encounter, envelope)
+            if event_type == "request_action":
+                return await self._handle_request_action(encounter, encounter_session, service, envelope, ctx)
 
-        if event_type == "end_turn":
-            return self._handle_end_turn(encounter, envelope)
+            if event_type == "move_token":
+                events = await self._handle_move_token(encounter, encounter_session, service, envelope, ctx)
+                if encounter_session is not None and not self._is_error_only(events):
+                    await service.save_full_state(encounter_session, encounter)
+                return events
 
-        if event_type == "start_combat":
-            return self._handle_start_combat(encounter)
+            if event_type == "add_actor":
+                events = self._handle_add_actor(encounter, envelope)
+                if encounter_session is not None and not self._is_error_only(events):
+                    await service.save_full_state(encounter_session, encounter)
+                return events
 
-        if event_type == "end_combat":
-            return self._handle_end_combat(encounter)
+            if event_type == "remove_actor":
+                events = self._handle_remove_actor(encounter, envelope)
+                if encounter_session is not None and not self._is_error_only(events):
+                    await service.save_full_state(encounter_session, encounter)
+                return events
 
-        if event_type == "apply_damage":
-            return self._handle_apply_damage(encounter, envelope)
+            if event_type == "end_turn":
+                return await self._handle_end_turn(encounter, encounter_session, service, envelope)
 
-        if event_type == "apply_healing":
-            return self._handle_apply_healing(encounter, envelope)
+            if event_type == "start_combat":
+                return await self._handle_start_combat(encounter, encounter_session, service)
 
-        if event_type == "apply_condition":
-            return self._handle_apply_condition(encounter, envelope)
+            if event_type == "end_combat":
+                events = self._handle_end_combat(encounter)
+                if encounter_session is not None:
+                    await service.save_full_state(encounter_session, encounter)
+                return events
 
-        if event_type == "remove_condition":
-            return self._handle_remove_condition(encounter, envelope)
+            if event_type == "apply_damage":
+                events = self._handle_apply_damage(encounter, envelope)
+                if encounter_session is not None and not self._is_error_only(events):
+                    await service.save_full_state(encounter_session, encounter)
+                return events
+
+            if event_type == "apply_healing":
+                events = self._handle_apply_healing(encounter, envelope)
+                if encounter_session is not None and not self._is_error_only(events):
+                    await service.save_full_state(encounter_session, encounter)
+                return events
+
+            if event_type == "apply_condition":
+                events = self._handle_apply_condition(encounter, envelope)
+                if encounter_session is not None and not self._is_error_only(events):
+                    await service.save_full_state(encounter_session, encounter)
+                return events
+
+            if event_type == "remove_condition":
+                events = self._handle_remove_condition(encounter, envelope)
+                if encounter_session is not None and not self._is_error_only(events):
+                    await service.save_full_state(encounter_session, encounter)
+                return events
 
         # Unknown event
         return [
@@ -282,15 +327,153 @@ class Dnd5eWsHandler(ISystemHandler):
             )
         ]
 
-    def _handle_end_turn(
-        self, encounter: EncounterState, envelope: WsEnvelope
+    async def _handle_action(
+        self,
+        encounter: EncounterState,
+        encounter_session,
+        service: CombatService,
+        envelope: WsEnvelope,
+        ctx: SessionContext,
+    ) -> list[WsOutbound]:
+        try:
+            payload = ActionPayload.model_validate(envelope.payload)
+        except Exception:
+            return [self._error("Invalid action payload", WsErrorCode.INVALID_MESSAGE, ctx)]
+
+        return await self._authorize_and_log_action(
+            encounter,
+            encounter_session,
+            service,
+            actor_id=payload.actor_id,
+            action_type=payload.action_type,
+            action_name=payload.action_name,
+            request_id=envelope.request_id,
+            ctx=ctx,
+            raw_payload=payload.model_dump(mode="json"),
+        )
+
+    async def _handle_request_action(
+        self,
+        encounter: EncounterState,
+        encounter_session,
+        service: CombatService,
+        envelope: WsEnvelope,
+        ctx: SessionContext,
+    ) -> list[WsOutbound]:
+        try:
+            payload = RequestActionPayload.model_validate(envelope.payload)
+        except Exception:
+            return [self._error("Invalid request_action payload", WsErrorCode.INVALID_MESSAGE, ctx)]
+
+        return await self._authorize_and_log_action(
+            encounter,
+            encounter_session,
+            service,
+            actor_id=payload.actor_id,
+            action_type=payload.action_type,
+            action_name=payload.action_name,
+            request_id=envelope.request_id,
+            ctx=ctx,
+            raw_payload=payload.model_dump(mode="json"),
+        )
+
+    async def _authorize_and_log_action(
+        self,
+        encounter: EncounterState,
+        encounter_session,
+        service: CombatService,
+        actor_id: str,
+        action_type: str,
+        action_name: str,
+        request_id: str | None,
+        ctx: SessionContext,
+        raw_payload: dict,
+    ) -> list[WsOutbound]:
+        if encounter_session is None:
+            return [
+                WsOutbound(
+                    type="action_authorized",
+                    payload={
+                        "actor_id": actor_id,
+                        "action_type": action_type,
+                        "action_name": action_name,
+                    },
+                    visibility=Visibility.ALL,
+                )
+            ]
+
+        auth = await service.check_can_act(
+            encounter_session,
+            encounter,
+            actor_id=actor_id,
+            action_type=action_type,
+            ctx=ctx,
+        )
+        if not auth.allowed:
+            await service.log_action_attempt(
+                encounter_session,
+                request_id=request_id,
+                actor_id=actor_id,
+                action_type=action_type,
+                action_state="denied",
+                payload=raw_payload,
+                checks=auth.checks or {},
+                denial_reason=auth.reason_code,
+            )
+            return [
+                WsOutbound(
+                    type="action_denied",
+                    payload={
+                        "actor_id": actor_id,
+                        "action_type": action_type,
+                        "reason_code": auth.reason_code or "invalid_action",
+                        "message": auth.message or "Action denied",
+                    },
+                    visibility=Visibility.ACTOR_OWNER,
+                    target_user_id=ctx.user_id,
+                )
+            ]
+
+        await service.consume_budget(encounter_session, encounter, actor_id, action_type)
+        await service.log_action_attempt(
+            encounter_session,
+            request_id=request_id,
+            actor_id=actor_id,
+            action_type=action_type,
+            action_state="authorized",
+            payload=raw_payload,
+            checks=auth.checks or {},
+            denial_reason=None,
+        )
+        await service.save_full_state(encounter_session, encounter)
+        return [
+            WsOutbound(
+                type="action_authorized",
+                payload={
+                    "actor_id": actor_id,
+                    "action_type": action_type,
+                    "action_name": action_name,
+                },
+                visibility=Visibility.ALL,
+            )
+        ]
+
+    async def _handle_end_turn(
+        self,
+        encounter: EncounterState,
+        encounter_session,
+        service: CombatService,
+        envelope: WsEnvelope,
     ) -> list[WsOutbound]:
         if encounter.turn_phase != "active":
             return []
 
-        next_turn(encounter)
-        active = get_active_combatant(encounter)
-        active_id = active.id if active else ""
+        if encounter_session is None:
+            next_turn(encounter)
+            active = get_active_combatant(encounter)
+            active_id = active.id if active else ""
+        else:
+            active_id, _ = await service.advance_turn(encounter_session, encounter)
 
         return [
             WsOutbound(
@@ -303,8 +486,13 @@ class Dnd5eWsHandler(ISystemHandler):
             )
         ]
 
-    def _handle_move_token(
-        self, encounter: EncounterState, envelope: WsEnvelope
+    async def _handle_move_token(
+        self,
+        encounter: EncounterState,
+        encounter_session,
+        service: CombatService,
+        envelope: WsEnvelope,
+        ctx: SessionContext,
     ) -> list[WsOutbound]:
         try:
             payload = MoveTokenPayload.model_validate(envelope.payload)
@@ -317,6 +505,19 @@ class Dnd5eWsHandler(ISystemHandler):
         actor = self._find_actor(encounter, payload.actor_id)
         if actor is None:
             return [self._error_raw(f"Actor {payload.actor_id} not found", WsErrorCode.INVALID_TARGET)]
+
+        if encounter_session is not None:
+            auth = await service.apply_movement(
+                encounter_session,
+                encounter,
+                ctx,
+                payload.actor_id,
+                payload.path,
+            )
+            if not auth.allowed:
+                code = WsErrorCode(
+                    auth.reason_code) if auth.reason_code in WsErrorCode._value2member_map_ else WsErrorCode.INVALID_ACTION
+                return [self._error(auth.message or "Movement denied", code, ctx)]
 
         validated_path: list[dict[str, int]] = []
         for step in payload.path:
@@ -387,6 +588,7 @@ class Dnd5eWsHandler(ISystemHandler):
 
         actor = ActorInstance(
             id=actor_id,
+            owner_user_id=payload.owner_user_id,
             definition_slug=definition_slug,
             name=actor_name,
             actor_type=ActorType.MONSTER,
@@ -409,6 +611,7 @@ class Dnd5eWsHandler(ISystemHandler):
                 payload={
                     "actor": {
                         "id": actor.id,
+                        "owner_user_id": actor.owner_user_id,
                         "definition_slug": actor.definition_slug,
                         "name": actor.name,
                         "actor_type": actor.actor_type.value,
@@ -451,29 +654,36 @@ class Dnd5eWsHandler(ISystemHandler):
             )
         ]
 
-    def _handle_start_combat(self, encounter: EncounterState) -> list[WsOutbound]:
+    async def _handle_start_combat(
+        self,
+        encounter: EncounterState,
+        encounter_session,
+        service: CombatService,
+    ) -> list[WsOutbound]:
         if not encounter.combatants:
             return [self._error_raw("No combatants to start combat", WsErrorCode.INVALID_ACTION)]
 
-        # Roll initiative for all combatants
-        initiatives = []
-        for actor in encounter.combatants:
-            roll = DiceService.roll("1d20")
-            dex_mod = (actor.abilities.dexterity - 10) // 2
-            initiatives.append(
-                InitiativeEntry(
-                    actor_id=actor.id,
-                    roll=roll.total + dex_mod,
-                    dex_score=actor.abilities.dexterity,
+        if encounter_session is None:
+            initiatives = []
+            for actor in encounter.combatants:
+                roll = DiceService.roll("1d20")
+                dex_mod = (actor.abilities.dexterity - 10) // 2
+                initiatives.append(
+                    InitiativeEntry(
+                        actor_id=actor.id,
+                        roll=roll.total + dex_mod,
+                        dex_score=actor.abilities.dexterity,
+                    )
                 )
-            )
 
-        start_combat(encounter, initiatives)
+            start_combat(encounter, initiatives)
 
-        order = [
-            {"actor_id": a.id, "name": a.name}
-            for a in encounter.combatants
-        ]
+            order = [
+                {"actor_id": a.id, "name": a.name}
+                for a in encounter.combatants
+            ]
+        else:
+            order = await service.start_combat(encounter_session, encounter)
 
         return [
             WsOutbound(
@@ -694,3 +904,34 @@ class Dnd5eWsHandler(ISystemHandler):
             payload={"message": message, "code": code.value},
             visibility=Visibility.ALL,
         )
+
+    async def _load_encounter(
+        self,
+        campaign_id: str,
+        service: CombatService | None = None,
+    ) -> EncounterState:
+        if campaign_id in _encounters:
+            return _encounters[campaign_id]
+
+        if service is not None:
+            try:
+                _, encounter = await service.load_or_create_encounter_state(campaign_id)
+                return encounter
+            except Exception:
+                logger.exception(
+                    "Falling back to in-memory encounter loading for campaign=%s", campaign_id)
+                return get_or_create_encounter(campaign_id)
+
+        try:
+            async with AsyncSessionLocal() as db:
+                local_service = CombatService(db)
+                _, encounter = await local_service.load_or_create_encounter_state(campaign_id)
+                return encounter
+        except Exception:
+            logger.exception(
+                "Falling back to in-memory encounter loading for campaign=%s", campaign_id)
+            return get_or_create_encounter(campaign_id)
+
+    @staticmethod
+    def _is_error_only(events: list[WsOutbound]) -> bool:
+        return bool(events) and all(event.type in {"error", "action_denied"} for event in events)
