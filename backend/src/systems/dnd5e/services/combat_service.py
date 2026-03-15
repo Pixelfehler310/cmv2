@@ -89,6 +89,7 @@ class CombatService:
         ctx: SessionContext,
         actor_id: str,
         path: list[dict[str, int]],
+        request_id: str | None,
     ) -> AuthorizationResult:
         actor = self._find_actor(encounter, actor_id)
         if actor is None:
@@ -98,7 +99,7 @@ class CombatService:
         if not checks.allowed:
             await self.log_action_attempt(
                 encounter_session,
-                request_id=None,
+                request_id=request_id,
                 actor_id=actor_id,
                 action_type="move",
                 action_state="denied",
@@ -117,7 +118,7 @@ class CombatService:
             checks_data["movement_required"] = distance
             await self.log_action_attempt(
                 encounter_session,
-                request_id=None,
+                request_id=request_id,
                 actor_id=actor_id,
                 action_type="move",
                 action_state="denied",
@@ -136,7 +137,7 @@ class CombatService:
         await self.db.flush()
         await self.log_action_attempt(
             encounter_session,
-            request_id=None,
+            request_id=request_id,
             actor_id=actor_id,
             action_type="move",
             action_state="authorized",

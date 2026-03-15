@@ -54,6 +54,23 @@ from .services.combat_service import CombatService
 
 logger = logging.getLogger(__name__)
 
+COMMAND_EVENT_TYPES = {
+    "action",
+    "request_action",
+    "move_token",
+    "add_actor",
+    "remove_actor",
+    "start_combat",
+    "end_combat",
+    "end_turn",
+    "apply_damage",
+    "apply_healing",
+    "apply_condition",
+    "remove_condition",
+}
+
+ACTION_EVENT_TYPES = {"action", "request_action"}
+
 
 # ---------------------------------------------------------------------------
 # In-memory encounter storage (MVP — single-process, no DB yet)
@@ -136,23 +153,48 @@ class Dnd5eWsHandler(ISystemHandler):
     async def handle(
         self, envelope: WsEnvelope, ctx: SessionContext, mgr: SessionManager
     ) -> list[WsOutbound]:
-        """Route an inbound event to the appropriate engine function."""
+        """Route inbound events through permission, validation, execution, and terminal publish.
+
+        Lifecycle:
+        1) envelope accepted
+        2) role permission gate
+        3) command request_id gate (for command-like events)
+        4) payload/domain validation and authorization
+        5) state mutation + optional persistence
+        6) terminal outbound event(s): success, denied, or error
+        """
+
+        event_type = envelope.type
 
         # --- Permission check ---
         try:
-            check_permission(envelope.type, ctx)
+            check_permission(event_type, ctx)
         except PermissionDenied as e:
+            return self._attach_request_id(
+                [
+                    self._denied(
+                        event_type,
+                        str(e),
+                        e.code.value,
+                        ctx,
+                        envelope.request_id,
+                    )
+                ],
+                envelope.request_id,
+            )
+
+        if event_type in COMMAND_EVENT_TYPES and not envelope.request_id:
             return [
-                WsOutbound(
-                    type="error",
-                    payload={"message": str(e), "code": e.code.value},
-                    visibility=Visibility.ALL,
-                    target_user_id=ctx.user_id,
+                self._error(
+                    "request_id is required for command events",
+                    WsErrorCode.INVALID_MESSAGE,
+                    ctx,
+                    envelope.request_id,
                 )
             ]
 
         # --- Dispatch ---
-        event_type = envelope.type
+        results: list[WsOutbound] | None = None
 
         async with AsyncSessionLocal() as db:
             service = CombatService(db)
@@ -168,89 +210,95 @@ class Dnd5eWsHandler(ISystemHandler):
                     encounter_session = None
 
             if event_type == "ping":
-                return self._handle_ping(ctx)
+                results = self._handle_ping(ctx)
 
-            if event_type == "request_sync":
-                return self._handle_request_sync(encounter, ctx)
+            elif event_type == "request_sync":
+                results = self._handle_request_sync(encounter, ctx)
 
-            if event_type == "roll_dice":
-                return self._handle_roll_dice(envelope, ctx)
+            elif event_type == "roll_dice":
+                results = self._handle_roll_dice(envelope, ctx)
 
-            if event_type == "chat_message":
-                return self._handle_chat_message(envelope, ctx)
+            elif event_type == "chat_message":
+                results = self._handle_chat_message(envelope, ctx)
 
-            if event_type == "action":
-                return await self._handle_action(encounter, encounter_session, service, envelope, ctx)
+            elif event_type == "action":
+                results = await self._handle_action(encounter, encounter_session, service, envelope, ctx)
 
-            if event_type == "request_action":
-                return await self._handle_request_action(encounter, encounter_session, service, envelope, ctx)
+            elif event_type == "request_action":
+                results = await self._handle_request_action(encounter, encounter_session, service, envelope, ctx)
 
-            if event_type == "move_token":
+            elif event_type == "move_token":
                 events = await self._handle_move_token(encounter, encounter_session, service, envelope, ctx)
                 if encounter_session is not None and not self._is_error_only(events):
                     await service.save_full_state(encounter_session, encounter)
-                return events
+                results = events
 
-            if event_type == "add_actor":
+            elif event_type == "add_actor":
                 events = self._handle_add_actor(encounter, envelope)
                 if encounter_session is not None and not self._is_error_only(events):
                     await service.save_full_state(encounter_session, encounter)
-                return events
+                results = events
 
-            if event_type == "remove_actor":
+            elif event_type == "remove_actor":
                 events = self._handle_remove_actor(encounter, envelope)
                 if encounter_session is not None and not self._is_error_only(events):
                     await service.save_full_state(encounter_session, encounter)
-                return events
+                results = events
 
-            if event_type == "end_turn":
-                return await self._handle_end_turn(encounter, encounter_session, service, envelope)
+            elif event_type == "end_turn":
+                results = await self._handle_end_turn(encounter, encounter_session, service, envelope, ctx)
 
-            if event_type == "start_combat":
-                return await self._handle_start_combat(encounter, encounter_session, service)
+            elif event_type == "start_combat":
+                results = await self._handle_start_combat(encounter, encounter_session, service, envelope)
 
-            if event_type == "end_combat":
+            elif event_type == "end_combat":
                 events = self._handle_end_combat(encounter)
                 if encounter_session is not None:
                     await service.save_full_state(encounter_session, encounter)
-                return events
+                results = events
 
-            if event_type == "apply_damage":
+            elif event_type == "apply_damage":
                 events = self._handle_apply_damage(encounter, envelope)
                 if encounter_session is not None and not self._is_error_only(events):
                     await service.save_full_state(encounter_session, encounter)
-                return events
+                results = events
 
-            if event_type == "apply_healing":
+            elif event_type == "apply_healing":
                 events = self._handle_apply_healing(encounter, envelope)
                 if encounter_session is not None and not self._is_error_only(events):
                     await service.save_full_state(encounter_session, encounter)
-                return events
+                results = events
 
-            if event_type == "apply_condition":
+            elif event_type == "apply_condition":
                 events = self._handle_apply_condition(encounter, envelope)
                 if encounter_session is not None and not self._is_error_only(events):
                     await service.save_full_state(encounter_session, encounter)
-                return events
+                results = events
 
-            if event_type == "remove_condition":
+            elif event_type == "remove_condition":
                 events = self._handle_remove_condition(encounter, envelope)
                 if encounter_session is not None and not self._is_error_only(events):
                     await service.save_full_state(encounter_session, encounter)
-                return events
+                results = events
+
+        if results is not None:
+            return self._attach_request_id(results, envelope.request_id)
 
         # Unknown event
-        return [
-            WsOutbound(
-                type="error",
-                payload={
-                    "message": f"Unknown event type: {event_type}",
-                    "code": WsErrorCode.INVALID_MESSAGE.value,
-                },
-                visibility=Visibility.ALL,
-                target_user_id=ctx.user_id,
-            )
-        ]
+        return self._attach_request_id(
+            [
+                WsOutbound(
+                    type="error",
+                    payload={
+                        "message": f"Unknown event type: {event_type}",
+                        "code": WsErrorCode.INVALID_MESSAGE.value,
+                    },
+                    visibility=Visibility.ALL,
+                    target_user_id=ctx.user_id,
+                )
+            ],
+            envelope.request_id,
+        )
 
     # ------------------------------------------------------------------
     # Event Handlers
@@ -421,16 +469,14 @@ class Dnd5eWsHandler(ISystemHandler):
                 denial_reason=auth.reason_code,
             )
             return [
-                WsOutbound(
-                    type="action_denied",
-                    payload={
-                        "actor_id": actor_id,
-                        "action_type": action_type,
-                        "reason_code": auth.reason_code or "invalid_action",
-                        "message": auth.message or "Action denied",
-                    },
-                    visibility=Visibility.ACTOR_OWNER,
-                    target_user_id=ctx.user_id,
+                self._denied(
+                    "action",
+                    auth.message or "Action denied",
+                    auth.reason_code or "invalid_action",
+                    ctx,
+                    request_id,
+                    actor_id=actor_id,
+                    action_type=action_type,
                 )
             ]
 
@@ -464,9 +510,18 @@ class Dnd5eWsHandler(ISystemHandler):
         encounter_session,
         service: CombatService,
         envelope: WsEnvelope,
+        ctx: SessionContext,
     ) -> list[WsOutbound]:
         if encounter.turn_phase != "active":
-            return []
+            return [
+                self._denied(
+                    "end_turn",
+                    "Cannot end turn when combat is not active",
+                    "invalid_action",
+                    ctx,
+                    envelope.request_id,
+                )
+            ]
 
         if encounter_session is None:
             next_turn(encounter)
@@ -513,11 +568,19 @@ class Dnd5eWsHandler(ISystemHandler):
                 ctx,
                 payload.actor_id,
                 payload.path,
+                envelope.request_id,
             )
             if not auth.allowed:
-                code = WsErrorCode(
-                    auth.reason_code) if auth.reason_code in WsErrorCode._value2member_map_ else WsErrorCode.INVALID_ACTION
-                return [self._error(auth.message or "Movement denied", code, ctx)]
+                return [
+                    self._denied(
+                        "move_token",
+                        auth.message or "Movement denied",
+                        auth.reason_code or "invalid_action",
+                        ctx,
+                        envelope.request_id,
+                        actor_id=payload.actor_id,
+                    )
+                ]
 
         validated_path: list[dict[str, int]] = []
         for step in payload.path:
@@ -659,9 +722,10 @@ class Dnd5eWsHandler(ISystemHandler):
         encounter: EncounterState,
         encounter_session,
         service: CombatService,
+        envelope: WsEnvelope,
     ) -> list[WsOutbound]:
         if not encounter.combatants:
-            return [self._error_raw("No combatants to start combat", WsErrorCode.INVALID_ACTION)]
+            return [self._error_raw("No combatants to start combat", WsErrorCode.INVALID_ACTION, envelope.request_id)]
 
         if encounter_session is None:
             initiatives = []
@@ -889,21 +953,63 @@ class Dnd5eWsHandler(ISystemHandler):
         return f"{slug_base}_{index}"
 
     @staticmethod
-    def _error(message: str, code: WsErrorCode, ctx: SessionContext) -> WsOutbound:
+    def _error(message: str, code: WsErrorCode, ctx: SessionContext, request_id: str | None = None) -> WsOutbound:
         return WsOutbound(
             type="error",
+            request_id=request_id,
             payload={"message": message, "code": code.value},
             visibility=Visibility.ACTOR_OWNER,
             target_user_id=ctx.user_id,
         )
 
     @staticmethod
-    def _error_raw(message: str, code: WsErrorCode) -> WsOutbound:
+    def _error_raw(message: str, code: WsErrorCode, request_id: str | None = None) -> WsOutbound:
         return WsOutbound(
             type="error",
+            request_id=request_id,
             payload={"message": message, "code": code.value},
             visibility=Visibility.ALL,
         )
+
+    @staticmethod
+    def _denied_event_type(event_type: str) -> str:
+        return "action_denied" if event_type in ACTION_EVENT_TYPES else "command_denied"
+
+    @classmethod
+    def _denied(
+        cls,
+        event_type: str,
+        message: str,
+        reason_code: str,
+        ctx: SessionContext,
+        request_id: str | None,
+        actor_id: str | None = None,
+        action_type: str | None = None,
+    ) -> WsOutbound:
+        payload: dict[str, str] = {
+            "event_type": event_type,
+            "reason_code": reason_code,
+            "message": message,
+        }
+        if actor_id:
+            payload["actor_id"] = actor_id
+        if action_type:
+            payload["action_type"] = action_type
+
+        return WsOutbound(
+            type=cls._denied_event_type(event_type),
+            request_id=request_id,
+            payload=payload,
+            visibility=Visibility.ACTOR_OWNER,
+            target_user_id=ctx.user_id,
+        )
+
+    @staticmethod
+    def _attach_request_id(events: list[WsOutbound], request_id: str | None) -> list[WsOutbound]:
+        for event in events:
+            if event.request_id is None:
+                event.request_id = request_id
+        return events
 
     async def _load_encounter(
         self,
@@ -934,4 +1040,4 @@ class Dnd5eWsHandler(ISystemHandler):
 
     @staticmethod
     def _is_error_only(events: list[WsOutbound]) -> bool:
-        return bool(events) and all(event.type in {"error", "action_denied"} for event in events)
+        return bool(events) and all(event.type in {"error", "action_denied", "command_denied"} for event in events)

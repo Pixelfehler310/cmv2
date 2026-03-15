@@ -129,6 +129,7 @@ async def test_apply_movement_denies_when_exceeds_budget(db_session: AsyncSessio
         ctx,
         actor_id="pc_1",
         path=[{"x": 5, "y": 1}, {"x": 5, "y": 5}],
+        request_id="req_move_budget_denied",
     )
 
     assert result.allowed is False

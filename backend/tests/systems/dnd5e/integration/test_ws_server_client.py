@@ -10,6 +10,8 @@ Tests the full WebSocket pipeline using FastAPI's TestClient, including:
 These tests exercise the real ws_dispatcher → ws_handler → engine chain.
 """
 
+from src.systems.dnd5e.ws_handler import Dnd5eWsHandler
+from src.core.ws_dispatcher import register_system_handler
 import json
 import pytest
 from jose import jwt
@@ -87,9 +89,6 @@ def cleanup():
     clear_encounters()
 
 
-from src.core.ws_dispatcher import register_system_handler
-from src.systems.dnd5e.ws_handler import Dnd5eWsHandler
-
 @pytest.fixture
 def client():
     """Synchronous TestClient for WebSocket testing."""
@@ -160,14 +159,17 @@ class TestCombatFlowOverWS:
             assert sync["type"] == "state_sync"
 
             # 2. Start combat
-            ws.send_json({"type": "start_combat"})
+            ws.send_json(
+                {"type": "start_combat", "request_id": "req_start_combat"})
             result = ws.receive_json()
             assert result["type"] == "combat_started"
+            assert result["request_id"] == "req_start_combat"
             assert len(result["payload"]["initiative_order"]) == 2
 
             # 3. Apply damage to goblin
             ws.send_json({
                 "type": "apply_damage",
+                "request_id": "req_apply_damage",
                 "payload": {
                     "actor_id": "goblin_1",
                     "amount": 5,
@@ -176,15 +178,18 @@ class TestCombatFlowOverWS:
             })
             dmg_result = ws.receive_json()
             assert dmg_result["type"] == "actor_damaged"
+            assert dmg_result["request_id"] == "req_apply_damage"
             assert dmg_result["payload"]["new_hp"] == 2
 
             # 4. End turn
             ws.send_json({
                 "type": "end_turn",
+                "request_id": "req_end_turn",
                 "payload": {"actor_id": "fighter_1"},
             })
             turn_result = ws.receive_json()
             assert turn_result["type"] == "turn_advanced"
+            assert turn_result["request_id"] == "req_end_turn"
 
     def test_lethal_damage_over_ws(self, client):
         """Apply enough damage to kill a monster → actor_died event."""
@@ -198,6 +203,7 @@ class TestCombatFlowOverWS:
 
             ws.send_json({
                 "type": "apply_damage",
+                "request_id": "req_lethal_damage",
                 "payload": {
                     "actor_id": "goblin_1",
                     "amount": 20,
@@ -206,7 +212,7 @@ class TestCombatFlowOverWS:
             })
             damaged_event = ws.receive_json()
             assert damaged_event["type"] == "actor_damaged"
-            
+
             result = ws.receive_json()
             # Should get actor_died event
             assert result["type"] == "actor_died"
@@ -230,6 +236,7 @@ class TestRoleEnforcement:
 
             ws.send_json({
                 "type": "apply_damage",
+                "request_id": "req_player_damage_denied",
                 "payload": {
                     "actor_id": "goblin_1",
                     "amount": 5,
@@ -237,8 +244,8 @@ class TestRoleEnforcement:
                 },
             })
             error = ws.receive_json()
-            assert error["type"] == "error"
-            assert error["payload"]["code"] == "unauthorized"
+            assert error["type"] == "command_denied"
+            assert error["payload"]["reason_code"] == "unauthorized"
 
 
 # ---------------------------------------------------------------------------
@@ -305,6 +312,7 @@ class TestConditionManagementOverWS:
             # Apply Stunned
             ws.send_json({
                 "type": "apply_condition",
+                "request_id": "req_apply_condition",
                 "payload": {"actor_id": "goblin_1", "condition": "Stunned"},
             })
             result = ws.receive_json()
@@ -314,6 +322,7 @@ class TestConditionManagementOverWS:
             # Remove Stunned
             ws.send_json({
                 "type": "remove_condition",
+                "request_id": "req_remove_condition",
                 "payload": {"actor_id": "goblin_1", "condition": "Stunned"},
             })
             result = ws.receive_json()
@@ -331,6 +340,7 @@ class TestConditionManagementOverWS:
 
             ws.send_json({
                 "type": "apply_condition",
+                "request_id": "req_invalid_condition",
                 "payload": {"actor_id": "goblin_1", "condition": "FakeCondition"},
             })
             result = ws.receive_json()
@@ -356,6 +366,7 @@ class TestHealingOverWS:
             # Damage fighter
             ws.send_json({
                 "type": "apply_damage",
+                "request_id": "req_damage_for_heal",
                 "payload": {
                     "actor_id": "fighter_1",
                     "amount": 10,
@@ -368,6 +379,7 @@ class TestHealingOverWS:
             # Heal fighter
             ws.send_json({
                 "type": "apply_healing",
+                "request_id": "req_heal_normal",
                 "payload": {"actor_id": "fighter_1", "amount": 5},
             })
             heal = ws.receive_json()
@@ -377,6 +389,7 @@ class TestHealingOverWS:
             # Over-heal → cap at max_hp
             ws.send_json({
                 "type": "apply_healing",
+                "request_id": "req_heal_cap",
                 "payload": {"actor_id": "fighter_1", "amount": 100},
             })
             heal2 = ws.receive_json()
@@ -415,6 +428,7 @@ class TestWSErrorHandling:
 
             ws.send_json({
                 "type": "apply_damage",
+                "request_id": "req_damage_invalid_target",
                 "payload": {
                     "actor_id": "nonexistent",
                     "amount": 5,

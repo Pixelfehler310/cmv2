@@ -30,6 +30,21 @@ router = APIRouter()
 # Singleton session manager — shared across the application
 session_manager = SessionManager()
 
+COMMAND_EVENT_TYPES = {
+    "action",
+    "request_action",
+    "move_token",
+    "add_actor",
+    "remove_actor",
+    "start_combat",
+    "end_combat",
+    "end_turn",
+    "apply_damage",
+    "apply_healing",
+    "apply_condition",
+    "remove_condition",
+}
+
 
 # ---------------------------------------------------------------------------
 # System handler interface
@@ -82,7 +97,8 @@ def _validate_token(token: str) -> Optional[dict]:
         return {"sub": "simon", "display_name": "Simon (Dev)"}
 
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY,
+                             algorithms=[settings.ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             return None
@@ -195,11 +211,20 @@ async def websocket_endpoint(
             except Exception:
                 error_event = WsOutbound(
                     type="error",
-                    payload={"message": "Invalid message format", "code": WsErrorCode.INVALID_MESSAGE},
+                    payload={"message": "Invalid message format",
+                             "code": WsErrorCode.INVALID_MESSAGE},
                     visibility=Visibility.ALL,
                 )
                 await session_manager.send_to_user(campaign_id, user_id, error_event)
                 continue
+
+            logger.info(
+                "WS inbound campaign=%s user=%s event=%s request_id=%s",
+                campaign_id,
+                user_id,
+                envelope.type,
+                envelope.request_id,
+            )
 
             # Dispatch to handler
             try:
@@ -209,17 +234,40 @@ async def websocket_endpoint(
                 error_event = WsOutbound(
                     type="error",
                     request_id=envelope.request_id,
-                    payload={"message": "Internal server error", "code": WsErrorCode.INTERNAL_ERROR},
+                    payload={"message": "Internal server error",
+                             "code": WsErrorCode.INTERNAL_ERROR},
                     visibility=Visibility.ALL,
                 )
                 await session_manager.send_to_user(campaign_id, user_id, error_event)
                 continue
 
             # Broadcast results
+            if not results and envelope.type in COMMAND_EVENT_TYPES:
+                logger.warning(
+                    "WS command returned no terminal events campaign=%s user=%s event=%s request_id=%s",
+                    campaign_id,
+                    user_id,
+                    envelope.type,
+                    envelope.request_id,
+                )
+
+            terminal_types: list[str] = []
             for event in results:
                 if event.request_id is None:
                     event.request_id = envelope.request_id
+                terminal_types.append(event.type)
                 await session_manager.broadcast(campaign_id, event)
+
+            if results:
+                logger.info(
+                    "WS outbound campaign=%s user=%s event=%s request_id=%s terminal=%s count=%s",
+                    campaign_id,
+                    user_id,
+                    envelope.type,
+                    envelope.request_id,
+                    terminal_types,
+                    len(results),
+                )
 
     except WebSocketDisconnect:
         logger.info("User %s disconnected from %s", user_id, campaign_id)

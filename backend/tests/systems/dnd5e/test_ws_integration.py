@@ -134,18 +134,20 @@ class TestPermissions:
     async def test_player_cannot_send_dm_only_actions(self, handler, player_ctx, mgr):
         envelope = WsEnvelope(
             type="apply_damage",
+            request_id="req_dm_only_denied",
             payload={"actor_id": "goblin_1",
                      "amount": 10, "damage_type": "slashing"},
         )
         events = await handler.handle(envelope, player_ctx, mgr)
         assert len(events) == 1
-        assert events[0].type == "error"
-        assert events[0].payload["code"] == "unauthorized"
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "unauthorized"
 
     @pytest.mark.anyio
     async def test_player_request_action_is_routed(self, handler, player_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="request_action",
+            request_id="req_player_request_action",
             payload={"actor_id": "fighter_1",
                      "action_type": "action", "action_name": "attack"},
         )
@@ -153,6 +155,26 @@ class TestPermissions:
         assert len(events) == 1
         assert events[0].type in {
             "action_authorized", "action_denied", "error"}
+
+    @pytest.mark.anyio
+    async def test_command_requires_request_id(self, handler, dm_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(
+            type="move_token",
+            payload={"actor_id": "goblin_1", "path": [{"x": 3, "y": 3}]},
+        )
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "error"
+        assert events[0].payload["code"] == "invalid_message"
+
+    @pytest.mark.anyio
+    async def test_utility_event_allows_missing_request_id(self, handler, dm_ctx, mgr):
+        envelope = WsEnvelope(type="ping")
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "pong"
 
 
 # ---------------------------------------------------------------------------
@@ -229,7 +251,8 @@ class TestCombat:
 
     @pytest.mark.anyio
     async def test_start_combat(self, handler, dm_ctx, mgr, combat_encounter):
-        envelope = WsEnvelope(type="start_combat")
+        envelope = WsEnvelope(type="start_combat",
+                              request_id="req_start_combat")
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert len(events) == 1
         assert events[0].type == "combat_started"
@@ -243,7 +266,8 @@ class TestCombat:
             EncounterState(
                 id="enc_empty", campaign_id="test_campaign", combatants=[]),
         )
-        envelope = WsEnvelope(type="start_combat")
+        envelope = WsEnvelope(type="start_combat",
+                              request_id="req_start_combat_empty")
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert len(events) == 1
         assert events[0].type == "error"
@@ -251,10 +275,10 @@ class TestCombat:
     @pytest.mark.anyio
     async def test_end_turn_advances(self, handler, dm_ctx, mgr, combat_encounter):
         # Start combat first
-        await handler.handle(WsEnvelope(type="start_combat"), dm_ctx, mgr)
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_end_turn"), dm_ctx, mgr)
 
         # End turn
-        envelope = WsEnvelope(type="end_turn", payload={
+        envelope = WsEnvelope(type="end_turn", request_id="req_end_turn", payload={
                               "actor_id": "fighter_1"})
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert len(events) == 1
@@ -262,10 +286,20 @@ class TestCombat:
 
     @pytest.mark.anyio
     async def test_end_combat(self, handler, dm_ctx, mgr, combat_encounter):
-        await handler.handle(WsEnvelope(type="start_combat"), dm_ctx, mgr)
-        events = await handler.handle(WsEnvelope(type="end_combat"), dm_ctx, mgr)
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_end_combat"), dm_ctx, mgr)
+        events = await handler.handle(WsEnvelope(type="end_combat", request_id="req_end_combat"), dm_ctx, mgr)
         assert len(events) == 1
         assert events[0].type == "combat_ended"
+
+    @pytest.mark.anyio
+    async def test_end_turn_inactive_phase_returns_denied(self, handler, dm_ctx, mgr, combat_encounter):
+        envelope = WsEnvelope(type="end_turn", request_id="req_end_turn_inactive", payload={
+                              "actor_id": "fighter_1"})
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "invalid_action"
 
 
 # ---------------------------------------------------------------------------
@@ -278,6 +312,7 @@ class TestMovement:
     async def test_move_token_updates_actor_and_map_token(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="move_token",
+            request_id="req_move_success",
             payload={"actor_id": "goblin_1", "path": [{"x": 12, "y": 14}]},
         )
 
@@ -302,6 +337,7 @@ class TestMovement:
     async def test_move_token_invalid_target_returns_error(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="move_token",
+            request_id="req_move_invalid_target",
             payload={"actor_id": "missing_actor", "path": [{"x": 2, "y": 2}]},
         )
 
@@ -315,6 +351,7 @@ class TestMovement:
     async def test_player_can_send_move_token(self, handler, player_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="move_token",
+            request_id="req_move_player",
             payload={"actor_id": "fighter_1", "path": [{"x": 8, "y": 8}]},
         )
 
@@ -334,6 +371,7 @@ class TestAddActor:
     async def test_add_actor_adds_combatant_and_token(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="add_actor",
+            request_id="req_add_actor",
             payload={
                 "definition_slug": "orc-warrior",
                 "name": "Orc Brute",
@@ -365,6 +403,7 @@ class TestAddActor:
     async def test_add_actor_invalid_position_returns_error(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="add_actor",
+            request_id="req_add_actor_invalid_pos",
             payload={
                 "definition_slug": "goblin",
                 "position": {"x": 999, "y": 1},
@@ -381,6 +420,7 @@ class TestAddActor:
     async def test_player_cannot_add_actor(self, handler, player_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="add_actor",
+            request_id="req_add_actor_player_denied",
             payload={"definition_slug": "goblin",
                      "position": {"x": 1, "y": 1}},
         )
@@ -388,8 +428,8 @@ class TestAddActor:
         events = await handler.handle(envelope, player_ctx, mgr)
 
         assert len(events) == 1
-        assert events[0].type == "error"
-        assert events[0].payload["code"] == "unauthorized"
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "unauthorized"
 
 
 # ---------------------------------------------------------------------------
@@ -402,6 +442,7 @@ class TestRemoveActor:
     async def test_remove_actor_removes_combatant_and_token(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="remove_actor",
+            request_id="req_remove_actor",
             payload={"actor_id": "goblin_1"},
         )
 
@@ -418,6 +459,7 @@ class TestRemoveActor:
     async def test_remove_actor_invalid_target_returns_error(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="remove_actor",
+            request_id="req_remove_actor_invalid",
             payload={"actor_id": "missing_actor"},
         )
 
@@ -431,14 +473,15 @@ class TestRemoveActor:
     async def test_player_cannot_remove_actor(self, handler, player_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="remove_actor",
+            request_id="req_remove_actor_player_denied",
             payload={"actor_id": "goblin_1"},
         )
 
         events = await handler.handle(envelope, player_ctx, mgr)
 
         assert len(events) == 1
-        assert events[0].type == "error"
-        assert events[0].payload["code"] == "unauthorized"
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "unauthorized"
 
 
 # ---------------------------------------------------------------------------
@@ -451,6 +494,7 @@ class TestDamageHealing:
     async def test_apply_damage(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="apply_damage",
+            request_id="req_apply_damage",
             payload={"actor_id": "goblin_1",
                      "amount": 5, "damage_type": "slashing"},
         )
@@ -463,6 +507,7 @@ class TestDamageHealing:
     async def test_apply_lethal_damage(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="apply_damage",
+            request_id="req_apply_lethal_damage",
             payload={"actor_id": "goblin_1",
                      "amount": 20, "damage_type": "slashing"},
         )
@@ -474,13 +519,14 @@ class TestDamageHealing:
         # Damage first
         await handler.handle(
             WsEnvelope(type="apply_damage", payload={
-                       "actor_id": "fighter_1", "amount": 10, "damage_type": "slashing"}),
+                       "actor_id": "fighter_1", "amount": 10, "damage_type": "slashing"}, request_id="req_damage_before_heal"),
             dm_ctx, mgr,
         )
 
         # Heal
         envelope = WsEnvelope(
             type="apply_healing",
+            request_id="req_apply_healing",
             payload={"actor_id": "fighter_1", "amount": 5},
         )
         events = await handler.handle(envelope, dm_ctx, mgr)
@@ -492,6 +538,7 @@ class TestDamageHealing:
     async def test_healing_capped_at_max(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="apply_healing",
+            request_id="req_heal_cap",
             payload={"actor_id": "fighter_1", "amount": 100},
         )
         events = await handler.handle(envelope, dm_ctx, mgr)
@@ -501,6 +548,7 @@ class TestDamageHealing:
     async def test_damage_invalid_target(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="apply_damage",
+            request_id="req_damage_invalid_target",
             payload={"actor_id": "nonexistent",
                      "amount": 5, "damage_type": "slashing"},
         )
@@ -519,6 +567,7 @@ class TestConditions:
     async def test_apply_condition(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="apply_condition",
+            request_id="req_apply_condition",
             payload={"actor_id": "goblin_1", "condition": "Stunned"},
         )
         events = await handler.handle(envelope, dm_ctx, mgr)
@@ -539,6 +588,7 @@ class TestConditions:
 
         envelope = WsEnvelope(
             type="remove_condition",
+            request_id="req_remove_condition",
             payload={"actor_id": "goblin_1", "condition": "Prone"},
         )
         events = await handler.handle(envelope, dm_ctx, mgr)
@@ -550,6 +600,7 @@ class TestConditions:
     async def test_invalid_condition(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="apply_condition",
+            request_id="req_invalid_condition",
             payload={"actor_id": "goblin_1", "condition": "NotACondition"},
         )
         events = await handler.handle(envelope, dm_ctx, mgr)
