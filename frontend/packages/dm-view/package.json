@@ -21,7 +21,9 @@
         "typescript": "^5.0.0"
     },
     "dependencies": {
+        "@rpg/bridge": "workspace:*",
         "@rpg/shared": "workspace:*",
+        "flexlayout-react": "^0.7.15",
         "zustand": "^4.4.0"
     }
 }

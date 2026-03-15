@@ -51,7 +51,8 @@ export const InitiativePanel: React.FC<InitiativePanelProps> = ({ onSelectCombat
 
 const styles = {
   panel: {
-    width: "300px",
+    width: "100%",
+    height: "100%",
     backgroundColor: "#1a1a1a",
     borderLeft: "1px solid #333",
     color: "#fff",

@@ -2,7 +2,7 @@ import React from "react";
 import { useCombatStore } from "@rpg/shared";
 
 type DmCommandDeckProps = {
-  selectedCombatantId: string;
+  selectedCombatantId: string | null;
   onRemoveSelected?: () => void;
 };
 
@@ -33,10 +33,16 @@ export const DmCommandDeck: React.FC<DmCommandDeckProps> = ({ selectedCombatantI
   const { public_name, hp_current, hp_max, action_used, bonus_action_used, movement_remaining } = selectedCombatant;
 
   const handleDamage = (amount: number) => {
+    if (!selectedCombatantId) {
+      return;
+    }
     applyDamage(selectedCombatantId, amount, "slashing");
   };
 
   const handleRemove = () => {
+    if (!selectedCombatantId) {
+      return;
+    }
     removeActor(selectedCombatantId);
     onRemoveSelected?.();
   };
@@ -82,17 +88,14 @@ export const DmCommandDeck: React.FC<DmCommandDeckProps> = ({ selectedCombatantI
 
 const styles = {
   deckContainer: {
-    position: "fixed" as const,
-    bottom: 0,
-    left: "20%",
-    width: "60%",
+    height: "100%",
+    width: "100%",
     backgroundColor: "#1e1e1e",
     color: "#fff",
     padding: "20px",
-    borderTopLeftRadius: "12px",
-    borderTopRightRadius: "12px",
-    boxShadow: "0 -4px 20px rgba(0,0,0,0.5)",
+    boxSizing: "border-box" as const,
     fontFamily: "sans-serif",
+    overflowY: "auto" as const,
   },
   header: {
     display: "flex",
