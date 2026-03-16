@@ -9,7 +9,9 @@
         "./*": "./src/*"
     },
     "scripts": {
-        "build": "tsc"
+        "build": "tsc",
+        "lint": "tsc --noEmit",
+        "test": "vitest run"
     },
     "peerDependencies": {
         "react": "^18.2.0",
@@ -21,6 +23,7 @@
         "@testing-library/user-event": "^14.6.1",
         "@types/react": "^18.2.0",
         "@types/react-dom": "^18.2.0",
+        "happy-dom": "^15.11.7",
         "jsdom": "^28.1.0",
         "typescript": "^5.0.0",
         "vite": "^7.3.1",

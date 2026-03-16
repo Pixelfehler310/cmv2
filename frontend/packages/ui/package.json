@@ -12,6 +12,7 @@
     },
     "scripts": {
         "build": "tsc",
+        "lint": "tsc --noEmit",
         "dev": "echo '@rpg/ui ready'"
     },
     "peerDependencies": {

@@ -1,4 +1,3 @@
-
 export interface GameEntity {
   id: string;
   name: string;
@@ -39,8 +38,7 @@ export interface ClassResponse extends GameEntity {
   hit_die: string;
 }
 
-export interface BackgroundResponse extends GameEntity {
-}
+export interface BackgroundResponse extends GameEntity {}
 
 export interface PaginationParams {
   skip?: number;
@@ -50,8 +48,17 @@ export interface PaginationParams {
 class ApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = import.meta.env.VITE_API_BASE_URL ?? "/api") {
+  constructor(baseUrl: string = this.resolveDefaultBaseUrl()) {
     this.baseUrl = baseUrl.replace(/\/$/, "");
+  }
+
+  private resolveDefaultBaseUrl(): string {
+    const meta = import.meta as unknown as {
+      env?: {
+        VITE_API_BASE_URL?: string;
+      };
+    };
+    return meta.env?.VITE_API_BASE_URL ?? "/api";
   }
 
   private async fetchJson<T>(path: string, options?: RequestInit): Promise<T> {

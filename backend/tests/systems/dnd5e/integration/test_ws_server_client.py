@@ -165,6 +165,7 @@ class TestCombatFlowOverWS:
             assert result["type"] == "combat_started"
             assert result["request_id"] == "req_start_combat"
             assert len(result["payload"]["initiative_order"]) == 2
+            active_actor_id = result["payload"]["initiative_order"][0]["actor_id"]
 
             # 3. Apply damage to goblin
             ws.send_json({
@@ -185,7 +186,7 @@ class TestCombatFlowOverWS:
             ws.send_json({
                 "type": "end_turn",
                 "request_id": "req_end_turn",
-                "payload": {"actor_id": "fighter_1"},
+                "payload": {"actor_id": active_actor_id},
             })
             turn_result = ws.receive_json()
             assert turn_result["type"] == "turn_advanced"
