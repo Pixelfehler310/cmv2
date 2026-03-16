@@ -2,6 +2,7 @@ from src.config import settings
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from .data.routers import items, spells, monsters, definitions
 from .campaigns.routers import campaigns, characters
 from .identity.router import router as identity_router
@@ -12,10 +13,41 @@ from .database import engine, Base
 import logging
 from pathlib import Path
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Register game system handlers once during app startup.
+    register_system_handler("dnd5e", Dnd5eWsHandler())
+    logger.info(
+        "Backend startup: cwd=%s, LOAD_MOCK_DATA=%s",
+        Path.cwd(),
+        settings.LOAD_MOCK_DATA,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    if settings.LOAD_MOCK_DATA:
+        from src.database import AsyncSessionLocal
+        from src.data.lib.loader import DataLoader
+
+        logger.info("LOAD_MOCK_DATA=true. Loading mock data from fixtures.")
+        fixtures_dir = Path(__file__).parent.parent / "data" / "fixtures"
+        loader = DataLoader(str(fixtures_dir))
+
+        async with AsyncSessionLocal() as session:
+            db_summary = await loader.load_all(session)
+            logger.info("Startup fixture load summary: %s", db_summary)
+    else:
+        logger.info(
+            "LOAD_MOCK_DATA is false. Skipping startup fixture import and dev router registration.")
+
+    yield
+
 app = FastAPI(
     title="Open RPG Engine API",
     description="Backend for the Open RPG Engine VTT",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=lifespan,
 )
 
 
@@ -49,34 +81,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-async def init_tables():
-    # Register game system handlers
-    register_system_handler("dnd5e", Dnd5eWsHandler())
-    logger.info(
-        "Backend startup: cwd=%s, LOAD_MOCK_DATA=%s",
-        Path.cwd(),
-        settings.LOAD_MOCK_DATA,
-    )
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    if settings.LOAD_MOCK_DATA:
-        from src.database import AsyncSessionLocal
-        from src.data.lib.loader import DataLoader
-
-        logger.info("LOAD_MOCK_DATA=true. Loading mock data from fixtures.")
-        fixtures_dir = Path(__file__).parent.parent / "data" / "fixtures"
-        loader = DataLoader(str(fixtures_dir))
-
-        async with AsyncSessionLocal() as session:
-            db_summary = await loader.load_all(session)
-            logger.info("Startup fixture load summary: %s", db_summary)
-    else:
-        logger.info(
-            "LOAD_MOCK_DATA is false. Skipping startup fixture import and dev router registration.")
 
 app.include_router(items.router)
 app.include_router(spells.router)

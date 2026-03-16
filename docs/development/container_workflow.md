@@ -2,6 +2,8 @@
 
 This project is developed primarily inside Docker containers.
 
+For complete run and test procedures (backend + frontend + troubleshooting), see `docs/development/running_and_testing.md`.
+
 ## Quick Start (VS Code)
 
 Run one of the following tasks from "Tasks: Run Task":
