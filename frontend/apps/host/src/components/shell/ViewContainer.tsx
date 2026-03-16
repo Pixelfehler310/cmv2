@@ -2,6 +2,7 @@ import React, { Suspense, useEffect } from "react";
 import { IHostBridge } from "@rpg/bridge";
 import { logger } from "../../lib/logger";
 import { JSONDebugger } from "../JSONDebugger";
+import { config } from "../../config";
 
 // Lazy load MFEs
 const PlayerView = React.lazy(() => import("@rpg/player-view").then((module) => ({ default: module.PlayerView })));
@@ -24,7 +25,7 @@ export const ViewContainer = ({ viewType, bridge, campaignId }: ViewContainerPro
   const renderView = () => {
     switch (viewType) {
       case "player":
-        return <PlayerView bridge={bridge} campaignId={campaignId} />;
+        return <PlayerView bridge={bridge} campaignId={campaignId} frontendTesting={config.frontendTesting} />;
       case "dm":
         return <DMView bridge={bridge} campaignId={campaignId} />;
       case "campaign_creator":
