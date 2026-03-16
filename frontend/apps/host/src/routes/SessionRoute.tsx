@@ -47,7 +47,9 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
 
           useCombatStore
             .getState()
-            .setActionDispatcher((type, payload) => newBridge.actions.dispatch(type, payload));
+            .setActionDispatcher((commandOrType, payload) =>
+              typeof commandOrType === "string" ? newBridge.actions.dispatch(commandOrType, payload ?? {}) : newBridge.actions.dispatch(commandOrType),
+            );
           unsubscribeBridgeRecv = newBridge.events.on("ws:recv", (data) => {
             useCombatStore.getState().ingestEnvelope(data);
           });

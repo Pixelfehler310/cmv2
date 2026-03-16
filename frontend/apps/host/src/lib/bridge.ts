@@ -1,5 +1,6 @@
 import { IHostBridge, IEventBus, IActionDispatcher, IAuthService, IConnectionState, ActionResult } from "@rpg/bridge";
 import { WsClient } from "@rpg/bridge";
+import { ensureRequestId } from "@rpg/bridge";
 import { QueryClient } from "@tanstack/react-query";
 import type { WsInboundEnvelope, WsOutboundEnvelope } from "@rpg/types";
 
@@ -43,7 +44,8 @@ export class ReactHostBridge implements IHostBridge {
 
     this.actions = {
       dispatch: async (commandOrType: WsInboundEnvelope | string, payload?: Record<string, unknown>): Promise<ActionResult> => {
-        const envelope: WsInboundEnvelope = typeof commandOrType === "string" ? { type: commandOrType, payload: payload ?? {} } : commandOrType;
+        const rawEnvelope: WsInboundEnvelope = typeof commandOrType === "string" ? { type: commandOrType, payload: payload ?? {} } : commandOrType;
+        const envelope = ensureRequestId(rawEnvelope);
 
         try {
           this.events.emit("ws:send", envelope);
