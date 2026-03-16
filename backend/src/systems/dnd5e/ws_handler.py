@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Optional
+from typing import Any, Optional
 
 from src.database import AsyncSessionLocal
 from src.core.ws_dispatcher import ISystemHandler
@@ -39,8 +39,9 @@ from .event_types import (
 from .schemas.encounter import EncounterState
 from .schemas.encounter import MapToken
 from .schemas.instances import ActorInstance, ConditionInstance
-from .schemas.enums import ConditionType, DamageType, ActorType
-from .schemas.common import AbilityScores, SpeedBlock, Position
+from .schemas.enums import Ability, ActionType, ConditionType, DamageType, ActorType
+from .schemas.common import AbilityScores, SaveRequirement, SpeedBlock, Position
+from .schemas.definitions import ActionDefinition
 
 from .engine.combat_state import (
     start_combat,
@@ -50,6 +51,7 @@ from .engine.combat_state import (
 from .engine.initiative import InitiativeEntry
 from .engine.dice import DiceService
 from .engine.damage import apply_damage
+from .engine.action_resolver import resolve_attack, resolve_healing, resolve_save_action
 from .services.combat_service import CombatService
 
 logger = logging.getLogger(__name__)
@@ -70,6 +72,15 @@ COMMAND_EVENT_TYPES = {
 }
 
 ACTION_EVENT_TYPES = {"action", "request_action"}
+
+TURN_DENIED_REASON_INVALID_PHASE = "invalid_turn_phase"
+TURN_DENIED_REASON_NOT_ACTIVE_ACTOR = "not_your_turn"
+TURN_DENIED_REASON_NO_ACTIVE_ACTOR = "no_active_actor"
+
+ACTION_FAMILY_ATTACK = "attack"
+ACTION_FAMILY_SAVE = "save"
+ACTION_FAMILY_HEALING = "healing"
+ACTION_FAMILY_UTILITY = "utility"
 
 
 # ---------------------------------------------------------------------------
@@ -406,13 +417,15 @@ class Dnd5eWsHandler(ISystemHandler):
         except Exception:
             return [self._error("Invalid action payload", WsErrorCode.INVALID_MESSAGE, ctx)]
 
-        return await self._authorize_and_log_action(
+        return await self._execute_action_command(
             encounter,
             encounter_session,
             service,
             actor_id=payload.actor_id,
-            action_type=payload.action_type,
+            action_type=service.normalize_action_type(payload.action_type),
             action_name=payload.action_name,
+            target_ids=payload.target_ids,
+            action_payload={},
             request_id=envelope.request_id,
             ctx=ctx,
             response_ctx=ctx,
@@ -435,20 +448,29 @@ class Dnd5eWsHandler(ISystemHandler):
         effective_ctx = self._resolve_impersonated_ctx(
             ctx, payload.acting_as_user_id)
 
-        return await self._authorize_and_log_action(
+        requested_target_ids = []
+        raw_target_ids = payload.payload.get(
+            "target_ids", []) if isinstance(payload.payload, dict) else []
+        if isinstance(raw_target_ids, list):
+            requested_target_ids = [
+                str(target_id) for target_id in raw_target_ids if isinstance(target_id, str)]
+
+        return await self._execute_action_command(
             encounter,
             encounter_session,
             service,
             actor_id=payload.actor_id,
-            action_type=payload.action_type,
+            action_type=service.normalize_action_type(payload.action_type),
             action_name=payload.action_name,
+            target_ids=requested_target_ids,
+            action_payload=payload.payload,
             request_id=envelope.request_id,
             ctx=effective_ctx,
             response_ctx=ctx,
             raw_payload=payload.model_dump(mode="json"),
         )
 
-    async def _authorize_and_log_action(
+    async def _execute_action_command(
         self,
         encounter: EncounterState,
         encounter_session,
@@ -456,24 +478,13 @@ class Dnd5eWsHandler(ISystemHandler):
         actor_id: str,
         action_type: str,
         action_name: str,
+        target_ids: list[str],
+        action_payload: dict[str, Any],
         request_id: str | None,
         ctx: SessionContext,
         response_ctx: SessionContext,
         raw_payload: dict,
     ) -> list[WsOutbound]:
-        if encounter_session is None:
-            return [
-                WsOutbound(
-                    type="action_authorized",
-                    payload={
-                        "actor_id": actor_id,
-                        "action_type": action_type,
-                        "action_name": action_name,
-                    },
-                    visibility=Visibility.ALL,
-                )
-            ]
-
         auth = await service.check_can_act(
             encounter_session,
             encounter,
@@ -482,16 +493,17 @@ class Dnd5eWsHandler(ISystemHandler):
             ctx=ctx,
         )
         if not auth.allowed:
-            await service.log_action_attempt(
-                encounter_session,
-                request_id=request_id,
-                actor_id=actor_id,
-                action_type=action_type,
-                action_state="denied",
-                payload=raw_payload,
-                checks=auth.checks or {},
-                denial_reason=auth.reason_code,
-            )
+            if encounter_session is not None:
+                await service.log_action_attempt(
+                    encounter_session,
+                    request_id=request_id,
+                    actor_id=actor_id,
+                    action_type=action_type,
+                    action_state="denied",
+                    payload=raw_payload,
+                    checks=auth.checks or {},
+                    denial_reason=auth.reason_code,
+                )
             return [
                 self._denied(
                     "action",
@@ -504,29 +516,565 @@ class Dnd5eWsHandler(ISystemHandler):
                 )
             ]
 
+        actor = self._find_actor(encounter, actor_id)
+        if actor is None:
+            return [
+                self._denied(
+                    "action",
+                    f"Actor {actor_id} not found",
+                    "invalid_target",
+                    response_ctx,
+                    request_id,
+                    actor_id=actor_id,
+                    action_type=action_type,
+                )
+            ]
+
+        targets: list[ActorInstance] = []
+        for target_id in target_ids:
+            target = self._find_actor(encounter, target_id)
+            if target is None:
+                return [
+                    self._denied(
+                        "action",
+                        f"Target actor {target_id} not found",
+                        "invalid_target",
+                        response_ctx,
+                        request_id,
+                        actor_id=actor_id,
+                        action_type=action_type,
+                    )
+                ]
+            targets.append(target)
+
+        family = self._resolve_action_family(
+            action_name, action_payload, targets)
+        if family is None:
+            if encounter_session is not None:
+                await service.log_action_attempt(
+                    encounter_session,
+                    request_id=request_id,
+                    actor_id=actor_id,
+                    action_type=action_type,
+                    action_state="denied",
+                    payload=raw_payload,
+                    checks=auth.checks or {},
+                    denial_reason="unsupported_action",
+                )
+            return [
+                self._denied(
+                    "action",
+                    "Unsupported action family",
+                    "unsupported_action",
+                    response_ctx,
+                    request_id,
+                    actor_id=actor_id,
+                    action_type=action_type,
+                )
+            ]
+
         await service.consume_budget(encounter_session, encounter, actor_id, action_type)
-        await service.log_action_attempt(
-            encounter_session,
-            request_id=request_id,
-            actor_id=actor_id,
-            action_type=action_type,
-            action_state="authorized",
-            payload=raw_payload,
-            checks=auth.checks or {},
-            denial_reason=None,
-        )
-        await service.save_full_state(encounter_session, encounter)
-        return [
+
+        budget_snapshot = await service.get_turn_budget_snapshot(encounter_session, encounter)
+
+        events: list[WsOutbound] = [
             WsOutbound(
                 type="action_authorized",
                 payload={
                     "actor_id": actor_id,
                     "action_type": action_type,
                     "action_name": action_name,
+                    "family": family,
+                    "turn_budget": budget_snapshot,
                 },
                 visibility=Visibility.ALL,
             )
         ]
+
+        family_events = self._resolve_action_family_events(
+            family,
+            encounter,
+            actor,
+            targets,
+            action_name,
+            action_payload,
+        )
+        events.extend(family_events)
+
+        if encounter_session is not None:
+            await service.log_action_attempt(
+                encounter_session,
+                request_id=request_id,
+                actor_id=actor_id,
+                action_type=action_type,
+                action_state="resolved",
+                payload=raw_payload,
+                checks=auth.checks or {},
+                denial_reason=None,
+            )
+            await service.save_full_state(encounter_session, encounter)
+
+        return events
+
+    def _resolve_action_family(
+        self,
+        action_name: str,
+        action_payload: dict[str, Any],
+        targets: list[ActorInstance],
+    ) -> str | None:
+        family_value = str(action_payload.get("family", "")).strip().lower()
+        if family_value in {ACTION_FAMILY_ATTACK, ACTION_FAMILY_SAVE, ACTION_FAMILY_HEALING, ACTION_FAMILY_UTILITY}:
+            return family_value
+
+        resolution_hint = str(action_payload.get(
+            "resolution", "")).strip().lower()
+        if resolution_hint in {ACTION_FAMILY_ATTACK, ACTION_FAMILY_SAVE, ACTION_FAMILY_HEALING, ACTION_FAMILY_UTILITY}:
+            return resolution_hint
+
+        if "save" in action_payload or "save_dc" in action_payload or "save_ability" in action_payload:
+            return ACTION_FAMILY_SAVE
+
+        if any(key in action_payload for key in {"condition", "remove_condition", "condition_op"}):
+            return ACTION_FAMILY_UTILITY
+
+        lowered_name = action_name.strip().lower()
+        if any(token in lowered_name for token in {"heal", "cure", "mend"}):
+            return ACTION_FAMILY_HEALING
+        if any(token in lowered_name for token in {"save", "breath", "blast", "fireball"}):
+            return ACTION_FAMILY_SAVE
+        if any(token in lowered_name for token in {"condition", "stun", "poison", "prone", "grapple"}):
+            return ACTION_FAMILY_UTILITY
+        if targets:
+            return ACTION_FAMILY_ATTACK
+
+        return ACTION_FAMILY_UTILITY
+
+    def _resolve_action_family_events(
+        self,
+        family: str,
+        encounter: EncounterState,
+        actor: ActorInstance,
+        targets: list[ActorInstance],
+        action_name: str,
+        action_payload: dict[str, Any],
+    ) -> list[WsOutbound]:
+        if family == ACTION_FAMILY_ATTACK:
+            return self._resolve_attack_events(actor, targets, action_name, action_payload)
+
+        if family == ACTION_FAMILY_SAVE:
+            return self._resolve_save_events(encounter, actor, targets, action_name, action_payload)
+
+        if family == ACTION_FAMILY_HEALING:
+            return self._resolve_healing_events(actor, targets, action_name, action_payload)
+
+        return self._resolve_utility_events(encounter, actor, targets, action_name, action_payload)
+
+    def _resolve_attack_events(
+        self,
+        actor: ActorInstance,
+        targets: list[ActorInstance],
+        action_name: str,
+        action_payload: dict[str, Any],
+    ) -> list[WsOutbound]:
+        if not targets:
+            return [self._error_raw("Attack action requires at least one target", WsErrorCode.INVALID_MESSAGE)]
+
+        target = targets[0]
+        action_def = self._build_action_definition(
+            ACTION_FAMILY_ATTACK, actor, action_name, action_payload)
+
+        roll_override = self._safe_int(action_payload.get("roll_override"))
+        roll_overrides = self._safe_int_list(
+            action_payload.get("roll_overrides"))
+        advantage = bool(action_payload.get("advantage", False))
+        disadvantage = bool(action_payload.get("disadvantage", False))
+
+        attack_result = resolve_attack(
+            actor,
+            target,
+            action_def,
+            roll_override=roll_override,
+            roll_overrides=roll_overrides,
+            advantage=advantage,
+            disadvantage=disadvantage,
+        )
+
+        events: list[WsOutbound] = [
+            WsOutbound(
+                type="attack_result",
+                payload={
+                    "attacker_id": actor.id,
+                    "target_id": target.id,
+                    "action_name": action_name,
+                    "hit": attack_result.hit,
+                    "is_critical": attack_result.is_critical,
+                    "roll_used": attack_result.roll_used,
+                    "roll_count": attack_result.roll_count,
+                    "damage": attack_result.total_damage,
+                    "damage_type": (action_def.damage_type.value if action_def.damage_type else DamageType.BLUDGEONING.value),
+                },
+                visibility=Visibility.ALL,
+            )
+        ]
+
+        if attack_result.hit and attack_result.total_damage > 0:
+            events.append(
+                WsOutbound(
+                    type="actor_damaged",
+                    payload={
+                        "actor_id": target.id,
+                        "amount": attack_result.total_damage,
+                        "new_hp": target.current_hp,
+                        "source": action_name,
+                    },
+                    visibility=Visibility.ALL,
+                )
+            )
+            if target.current_hp <= 0:
+                events.append(
+                    WsOutbound(
+                        type="actor_died",
+                        payload={"actor_id": target.id},
+                        visibility=Visibility.ALL,
+                    )
+                )
+
+        return events
+
+    def _resolve_save_events(
+        self,
+        encounter: EncounterState,
+        actor: ActorInstance,
+        targets: list[ActorInstance],
+        action_name: str,
+        action_payload: dict[str, Any],
+    ) -> list[WsOutbound]:
+        if not targets:
+            return [self._error_raw("Save action requires at least one target", WsErrorCode.INVALID_MESSAGE)]
+
+        action_def = self._build_action_definition(
+            ACTION_FAMILY_SAVE, actor, action_name, action_payload)
+
+        damage_roll_override = self._safe_int(
+            action_payload.get("damage_roll_override"))
+        save_overrides = self._safe_int_list(
+            action_payload.get("save_overrides"))
+
+        save_result = resolve_save_action(
+            actor,
+            targets,
+            action_def,
+            damage_roll_override=damage_roll_override,
+            save_overrides=save_overrides,
+        )
+
+        save_payload_results = []
+        events: list[WsOutbound] = []
+        for target_result in save_result.results:
+            save_payload_results.append(
+                {
+                    "target_id": target_result.target_id,
+                    "passed": target_result.passed,
+                    "save_roll": target_result.save_roll,
+                    "damage": target_result.damage,
+                }
+            )
+
+            if target_result.damage > 0:
+                target = self._find_actor(encounter, target_result.target_id)
+                if target is not None:
+                    events.append(
+                        WsOutbound(
+                            type="actor_damaged",
+                            payload={
+                                "actor_id": target.id,
+                                "amount": target_result.damage,
+                                "new_hp": target.current_hp,
+                                "source": action_name,
+                            },
+                            visibility=Visibility.ALL,
+                        )
+                    )
+                    if target.current_hp <= 0:
+                        events.append(
+                            WsOutbound(
+                                type="actor_died",
+                                payload={"actor_id": target.id},
+                                visibility=Visibility.ALL,
+                            )
+                        )
+
+        save_req = action_def.save
+        events.insert(
+            0,
+            WsOutbound(
+                type="save_result",
+                payload={
+                    "caster_id": actor.id,
+                    "action_name": action_name,
+                    "save_ability": save_req.ability.value if save_req else Ability.DEX.value,
+                    "save_dc": save_req.dc if save_req else 10,
+                    "results": save_payload_results,
+                },
+                visibility=Visibility.ALL,
+            ),
+        )
+
+        return events
+
+    def _resolve_healing_events(
+        self,
+        actor: ActorInstance,
+        targets: list[ActorInstance],
+        action_name: str,
+        action_payload: dict[str, Any],
+    ) -> list[WsOutbound]:
+        target = targets[0] if targets else actor
+        action_def = self._build_action_definition(
+            ACTION_FAMILY_HEALING, actor, action_name, action_payload)
+        dice_override = self._safe_int(action_payload.get("dice_override"))
+
+        healing_result = resolve_healing(
+            target, action_def, dice_override=dice_override)
+
+        return [
+            WsOutbound(
+                type="effect_applied",
+                payload={
+                    "actor_id": actor.id,
+                    "target_id": target.id,
+                    "action_name": action_name,
+                    "effect_type": "healing",
+                    "amount": healing_result.hp_restored,
+                },
+                visibility=Visibility.ALL,
+            ),
+            WsOutbound(
+                type="actor_healed",
+                payload={
+                    "actor_id": target.id,
+                    "amount": healing_result.hp_restored,
+                    "new_hp": healing_result.new_hp,
+                },
+                visibility=Visibility.ALL,
+            ),
+        ]
+
+    def _resolve_utility_events(
+        self,
+        encounter: EncounterState,
+        actor: ActorInstance,
+        targets: list[ActorInstance],
+        action_name: str,
+        action_payload: dict[str, Any],
+    ) -> list[WsOutbound]:
+        target = targets[0] if targets else actor
+        condition = self._parse_condition(action_payload.get("condition"))
+        condition_op = str(action_payload.get(
+            "condition_op", "add")).strip().lower()
+        should_remove = bool(action_payload.get(
+            "remove_condition", False)) or condition_op in {"remove", "delete"}
+
+        if condition is None:
+            return [
+                WsOutbound(
+                    type="effect_applied",
+                    payload={
+                        "actor_id": actor.id,
+                        "target_id": target.id,
+                        "action_name": action_name,
+                        "effect_type": "utility",
+                    },
+                    visibility=Visibility.ALL,
+                )
+            ]
+
+        if should_remove:
+            target.conditions = [
+                entry for entry in target.conditions if entry.condition != condition]
+            condition_event = WsOutbound(
+                type="condition_removed",
+                payload={
+                    "actor_id": target.id,
+                    "condition": condition.value,
+                },
+                visibility=Visibility.ALL,
+            )
+            effect_type = "condition_removed"
+        else:
+            target.conditions.append(
+                ConditionInstance(
+                    condition=condition,
+                    source_id=actor.id,
+                )
+            )
+            condition_event = WsOutbound(
+                type="condition_added",
+                payload={
+                    "actor_id": target.id,
+                    "condition": condition.value,
+                    "source": actor.id,
+                },
+                visibility=Visibility.ALL,
+            )
+            effect_type = "condition_added"
+
+        return [
+            WsOutbound(
+                type="effect_applied",
+                payload={
+                    "actor_id": actor.id,
+                    "target_id": target.id,
+                    "action_name": action_name,
+                    "effect_type": effect_type,
+                    "condition": condition.value,
+                },
+                visibility=Visibility.ALL,
+            ),
+            condition_event,
+        ]
+
+    def _build_action_definition(
+        self,
+        family: str,
+        actor: ActorInstance,
+        action_name: str,
+        action_payload: dict[str, Any],
+    ) -> ActionDefinition:
+        attack_bonus = self._safe_int(action_payload.get(
+            "attack_bonus"), default=actor.proficiency_bonus)
+        damage_dice = str(action_payload.get("damage_dice") or "1d8")
+        damage_bonus = self._safe_int(
+            action_payload.get("damage_bonus"), default=0)
+        damage_type = self._parse_damage_type(
+            action_payload.get("damage_type"))
+
+        if family == ACTION_FAMILY_SAVE:
+            save_data = action_payload.get("save", {}) if isinstance(
+                action_payload.get("save"), dict) else {}
+            ability = self._parse_ability(save_data.get(
+                "ability") or action_payload.get("save_ability"))
+            save_dc = self._safe_int(save_data.get("dc") or action_payload.get(
+                "save_dc"), default=10 + actor.proficiency_bonus)
+            on_success = str(save_data.get("on_success") or action_payload.get(
+                "save_on_success") or "half_damage")
+            on_fail = str(save_data.get("on_fail") or action_payload.get(
+                "save_on_fail") or "full_damage")
+            return ActionDefinition(
+                name=action_name,
+                action_type=ActionType.SAVE_EFFECT,
+                damage_dice=damage_dice,
+                damage_bonus=damage_bonus,
+                damage_type=damage_type,
+                save=SaveRequirement(
+                    ability=ability,
+                    dc=save_dc,
+                    on_success=on_success,
+                    on_fail=on_fail,
+                ),
+            )
+
+        if family == ACTION_FAMILY_HEALING:
+            return ActionDefinition(
+                name=action_name,
+                action_type=ActionType.HEALING,
+                damage_dice=str(action_payload.get(
+                    "heal_dice") or damage_dice),
+                damage_bonus=self._safe_int(action_payload.get(
+                    "heal_bonus"), default=damage_bonus),
+            )
+
+        if family == ACTION_FAMILY_UTILITY:
+            return ActionDefinition(
+                name=action_name,
+                action_type=ActionType.UTILITY,
+            )
+
+        attack_mode = str(action_payload.get("attack_mode") or action_payload.get(
+            "attack_type") or "").strip().lower()
+        action_type = ActionType.MELEE_WEAPON
+        if attack_mode in {"ranged", "ranged_weapon"}:
+            action_type = ActionType.RANGED_WEAPON
+        elif attack_mode in {"melee_spell", "spell_melee"}:
+            action_type = ActionType.MELEE_SPELL
+        elif attack_mode in {"ranged_spell", "spell_ranged"}:
+            action_type = ActionType.RANGED_SPELL
+
+        return ActionDefinition(
+            name=action_name,
+            action_type=action_type,
+            attack_bonus=attack_bonus,
+            damage_dice=damage_dice,
+            damage_bonus=damage_bonus,
+            damage_type=damage_type,
+        )
+
+    @staticmethod
+    def _safe_int(value: Any, default: int | None = None) -> int | None:
+        if value is None:
+            return default
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _safe_int_list(value: Any) -> list[int] | None:
+        if not isinstance(value, list):
+            return None
+
+        parsed: list[int] = []
+        for entry in value:
+            try:
+                parsed.append(int(entry))
+            except (TypeError, ValueError):
+                return None
+        return parsed
+
+    @staticmethod
+    def _parse_damage_type(raw_value: Any) -> DamageType:
+        if isinstance(raw_value, DamageType):
+            return raw_value
+
+        normalized = str(raw_value or "").strip().lower()
+        for candidate in DamageType:
+            if candidate.value == normalized:
+                return candidate
+        return DamageType.BLUDGEONING
+
+    @staticmethod
+    def _parse_ability(raw_value: Any) -> Ability:
+        normalized = str(raw_value or "").strip().lower()
+        mapping = {
+            "str": Ability.STR,
+            "strength": Ability.STR,
+            "dex": Ability.DEX,
+            "dexterity": Ability.DEX,
+            "con": Ability.CON,
+            "constitution": Ability.CON,
+            "int": Ability.INT,
+            "intelligence": Ability.INT,
+            "wis": Ability.WIS,
+            "wisdom": Ability.WIS,
+            "cha": Ability.CHA,
+            "charisma": Ability.CHA,
+        }
+        return mapping.get(normalized, Ability.DEX)
+
+    @staticmethod
+    def _parse_condition(raw_value: Any) -> ConditionType | None:
+        if isinstance(raw_value, ConditionType):
+            return raw_value
+
+        normalized = str(raw_value or "").strip().lower()
+        if not normalized:
+            return None
+
+        for condition in ConditionType:
+            if condition.value.lower() == normalized:
+                return condition
+
+        return None
 
     async def _handle_end_turn(
         self,
@@ -536,23 +1084,56 @@ class Dnd5eWsHandler(ISystemHandler):
         envelope: WsEnvelope,
         ctx: SessionContext,
     ) -> list[WsOutbound]:
+        try:
+            payload = EndTurnPayload.model_validate(envelope.payload)
+        except Exception:
+            return [self._error("Invalid end_turn payload", WsErrorCode.INVALID_MESSAGE, ctx, envelope.request_id)]
+
         if encounter.turn_phase != "active":
             return [
                 self._denied(
                     "end_turn",
                     "Cannot end turn when combat is not active",
-                    "invalid_action",
+                    TURN_DENIED_REASON_INVALID_PHASE,
                     ctx,
                     envelope.request_id,
                 )
             ]
 
+        active_actor = get_active_combatant(encounter)
+        if active_actor is None:
+            return [
+                self._denied(
+                    "end_turn",
+                    "No active combatant available",
+                    TURN_DENIED_REASON_NO_ACTIVE_ACTOR,
+                    ctx,
+                    envelope.request_id,
+                    actor_id=payload.actor_id,
+                )
+            ]
+
+        if payload.actor_id != active_actor.id:
+            return [
+                self._denied(
+                    "end_turn",
+                    "Only the active combatant can end the turn",
+                    TURN_DENIED_REASON_NOT_ACTIVE_ACTOR,
+                    ctx,
+                    envelope.request_id,
+                    actor_id=payload.actor_id,
+                )
+            ]
+
         if encounter_session is None:
             next_turn(encounter)
+            await service.on_turn_started(encounter_session, encounter)
             active = get_active_combatant(encounter)
             active_id = active.id if active else ""
         else:
             active_id, _ = await service.advance_turn(encounter_session, encounter)
+
+        budget_snapshot = await service.get_turn_budget_snapshot(encounter_session, encounter)
 
         return [
             WsOutbound(
@@ -560,6 +1141,7 @@ class Dnd5eWsHandler(ISystemHandler):
                 payload={
                     "active_actor_id": active_id,
                     "round": encounter.round_number,
+                    "turn_budget": budget_snapshot,
                 },
                 visibility=Visibility.ALL,
             )
@@ -588,26 +1170,25 @@ class Dnd5eWsHandler(ISystemHandler):
         if actor is None:
             return [self._error_raw(f"Actor {payload.actor_id} not found", WsErrorCode.INVALID_TARGET)]
 
-        if encounter_session is not None:
-            auth = await service.apply_movement(
-                encounter_session,
-                encounter,
-                effective_ctx,
-                payload.actor_id,
-                payload.path,
-                envelope.request_id,
-            )
-            if not auth.allowed:
-                return [
-                    self._denied(
-                        "move_token",
-                        auth.message or "Movement denied",
-                        auth.reason_code or "invalid_action",
-                        ctx,
-                        envelope.request_id,
-                        actor_id=payload.actor_id,
-                    )
-                ]
+        auth = await service.apply_movement(
+            encounter_session,
+            encounter,
+            effective_ctx,
+            payload.actor_id,
+            payload.path,
+            envelope.request_id,
+        )
+        if not auth.allowed:
+            return [
+                self._denied(
+                    "move_token",
+                    auth.message or "Movement denied",
+                    auth.reason_code or "invalid_action",
+                    ctx,
+                    envelope.request_id,
+                    actor_id=payload.actor_id,
+                )
+            ]
 
         validated_path: list[dict[str, int]] = []
         for step in payload.path:
@@ -632,6 +1213,8 @@ class Dnd5eWsHandler(ISystemHandler):
         else:
             token.position = actor.position
 
+        budget_snapshot = await service.get_turn_budget_snapshot(encounter_session, encounter)
+
         return [
             WsOutbound(
                 type="actor_moved",
@@ -639,6 +1222,7 @@ class Dnd5eWsHandler(ISystemHandler):
                     "actor_id": payload.actor_id,
                     "path": validated_path,
                     "position": final_step,
+                    "turn_budget": budget_snapshot,
                 },
                 visibility=Visibility.ALL,
             )
@@ -776,10 +1360,15 @@ class Dnd5eWsHandler(ISystemHandler):
         else:
             order = await service.start_combat(encounter_session, encounter)
 
+        budget_snapshot = await service.get_turn_budget_snapshot(encounter_session, encounter)
+
         return [
             WsOutbound(
                 type="combat_started",
-                payload={"initiative_order": order},
+                payload={
+                    "initiative_order": order,
+                    "turn_budget": budget_snapshot,
+                },
                 visibility=Visibility.ALL,
             )
         ]

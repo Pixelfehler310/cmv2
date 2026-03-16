@@ -133,4 +133,4 @@ async def test_apply_movement_denies_when_exceeds_budget(db_session: AsyncSessio
     )
 
     assert result.allowed is False
-    assert result.reason_code == "resource_exhausted"
+    assert result.reason_code == "movement_exhausted"

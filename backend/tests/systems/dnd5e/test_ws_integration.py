@@ -146,7 +146,8 @@ class TestPermissions:
         assert events[0].payload["reason_code"] == "unauthorized"
 
     @pytest.mark.anyio
-    async def test_player_request_action_is_routed(self, handler, player_ctx, mgr, combat_encounter):
+    async def test_player_request_action_is_routed(self, handler, dm_ctx, player_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_before_player_request"), dm_ctx, mgr)
         envelope = WsEnvelope(
             type="request_action",
             request_id="req_player_request_action",
@@ -154,9 +155,9 @@ class TestPermissions:
                      "action_type": "action", "action_name": "attack"},
         )
         events = await handler.handle(envelope, player_ctx, mgr)
-        assert len(events) == 1
-        assert events[0].type in {
-            "action_authorized", "action_denied", "error"}
+        assert len(events) >= 1
+        event_types = {event.type for event in events}
+        assert event_types & {"action_authorized", "action_denied", "error"}
 
     @pytest.mark.anyio
     async def test_dm_can_impersonate_player_for_request_action(self, handler, dm_ctx, mgr, combat_encounter):
@@ -317,9 +318,11 @@ class TestCombat:
         # Start combat first
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_end_turn"), dm_ctx, mgr)
 
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
         # End turn
         envelope = WsEnvelope(type="end_turn", request_id="req_end_turn", payload={
-                              "actor_id": "fighter_1"})
+                              "actor_id": active_actor_id})
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert len(events) == 1
         assert events[0].type == "turn_advanced"
@@ -339,7 +342,26 @@ class TestCombat:
 
         assert len(events) == 1
         assert events[0].type == "command_denied"
-        assert events[0].payload["reason_code"] == "invalid_action"
+        assert events[0].payload["reason_code"] == "invalid_turn_phase"
+
+    @pytest.mark.anyio
+    async def test_end_turn_wrong_actor_returns_not_your_turn(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_wrong_end_turn"), dm_ctx, mgr)
+
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+        wrong_actor_id = next(
+            c.id for c in combat_encounter.combatants if c.id != active_actor_id)
+
+        envelope = WsEnvelope(
+            type="end_turn",
+            request_id="req_end_turn_wrong_actor",
+            payload={"actor_id": wrong_actor_id},
+        )
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "not_your_turn"
 
 
 # ---------------------------------------------------------------------------
@@ -417,6 +439,306 @@ class TestMovement:
         assert len(events) == 1
         assert events[0].type == "command_denied"
         assert events[0].payload["reason_code"] == "unauthorized"
+
+    @pytest.mark.anyio
+    async def test_move_token_non_active_actor_denied_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_move_turn_check"), dm_ctx, mgr)
+
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+        non_active_actor_id = next(
+            c.id for c in combat_encounter.combatants if c.id != active_actor_id)
+
+        envelope = WsEnvelope(
+            type="move_token",
+            request_id="req_move_non_active_denied",
+            payload={"actor_id": non_active_actor_id,
+                     "path": [{"x": 9, "y": 9}]},
+        )
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "not_your_turn"
+
+    @pytest.mark.anyio
+    async def test_move_token_path_exceeding_budget_denied_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_move_budget"), dm_ctx, mgr)
+
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        envelope = WsEnvelope(
+            type="move_token",
+            request_id="req_move_budget_denied",
+            payload={"actor_id": active_actor_id,
+                     "path": [{"x": 39, "y": 39}]},
+        )
+        events = await handler.handle(envelope, dm_ctx, mgr)
+
+        assert len(events) == 1
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "movement_exhausted"
+
+
+# ---------------------------------------------------------------------------
+# Action Economy Tests
+# ---------------------------------------------------------------------------
+
+class TestActionEconomy:
+
+    @pytest.mark.anyio
+    async def test_action_budget_exhaustion_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_action_economy"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        first = await handler.handle(
+            WsEnvelope(
+                type="action",
+                request_id="req_action_first",
+                payload={
+                    "actor_id": active_actor_id,
+                    "action_type": "attack",
+                    "action_name": "Longsword",
+                    "target_ids": ["goblin_1"],
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        first_types = {event.type for event in first}
+        assert "action_authorized" in first_types
+        assert "attack_result" in first_types
+
+        second = await handler.handle(
+            WsEnvelope(
+                type="action",
+                request_id="req_action_second",
+                payload={
+                    "actor_id": active_actor_id,
+                    "action_type": "action",
+                    "action_name": "Second Attack",
+                    "target_ids": ["goblin_1"],
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        assert len(second) == 1
+        assert second[0].type == "action_denied"
+        assert second[0].payload["reason_code"] == "action_exhausted"
+
+    @pytest.mark.anyio
+    async def test_bonus_action_budget_exhaustion_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_bonus_economy"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        first = await handler.handle(
+            WsEnvelope(
+                type="request_action",
+                request_id="req_bonus_first",
+                payload={
+                    "actor_id": active_actor_id,
+                    "action_type": "bonus",
+                    "action_name": "Second Wind",
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
+        first_types = {event.type for event in first}
+        assert "action_authorized" in first_types
+        assert "effect_applied" in first_types
+
+        second = await handler.handle(
+            WsEnvelope(
+                type="request_action",
+                request_id="req_bonus_second",
+                payload={
+                    "actor_id": active_actor_id,
+                    "action_type": "bonus_action",
+                    "action_name": "Second Wind Again",
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        assert len(second) == 1
+        assert second[0].type == "action_denied"
+        assert second[0].payload["reason_code"] == "bonus_action_exhausted"
+
+    @pytest.mark.anyio
+    async def test_reaction_budget_exhaustion_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_reaction_economy"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        first = await handler.handle(
+            WsEnvelope(
+                type="request_action",
+                request_id="req_reaction_first",
+                payload={
+                    "actor_id": active_actor_id,
+                    "action_type": "reaction",
+                    "action_name": "Opportunity Attack",
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
+        first_types = {event.type for event in first}
+        assert "action_authorized" in first_types
+        assert "effect_applied" in first_types
+
+        second = await handler.handle(
+            WsEnvelope(
+                type="request_action",
+                request_id="req_reaction_second",
+                payload={
+                    "actor_id": active_actor_id,
+                    "action_type": "reaction",
+                    "action_name": "Second Opportunity Attack",
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        assert len(second) == 1
+        assert second[0].type == "action_denied"
+        assert second[0].payload["reason_code"] == "reaction_exhausted"
+
+
+# ---------------------------------------------------------------------------
+# Action Resolution Tests (Phase 3)
+# ---------------------------------------------------------------------------
+
+class TestActionResolutionPhase3:
+
+    @pytest.mark.anyio
+    async def test_attack_family_publishes_result_and_damage(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase3_attack_start"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        events = await handler.handle(
+            WsEnvelope(
+                type="action",
+                request_id="req_phase3_attack",
+                payload={
+                    "actor_id": active_actor_id,
+                    "action_type": "action",
+                    "action_name": "Longsword Strike",
+                    "target_ids": ["goblin_1"],
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        event_types = {event.type for event in events}
+        assert "action_authorized" in event_types
+        assert "attack_result" in event_types
+
+    @pytest.mark.anyio
+    async def test_save_family_publishes_save_result(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase3_save_start"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        events = await handler.handle(
+            WsEnvelope(
+                type="request_action",
+                request_id="req_phase3_save",
+                payload={
+                    "actor_id": active_actor_id,
+                    "action_type": "action",
+                    "action_name": "Fire Breath",
+                    "payload": {
+                        "family": "save",
+                        "save_ability": "dexterity",
+                        "save_dc": 18,
+                        "damage_dice": "3d6",
+                        "damage_type": "fire",
+                        "target_ids": ["goblin_1"],
+                    },
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        event_types = {event.type for event in events}
+        assert "action_authorized" in event_types
+        assert "save_result" in event_types
+
+    @pytest.mark.anyio
+    async def test_healing_family_publishes_effect_and_heal(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase3_heal_start"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        await handler.handle(
+            WsEnvelope(
+                type="apply_damage",
+                request_id="req_phase3_heal_setup_damage",
+                payload={"actor_id": active_actor_id,
+                         "amount": 6, "damage_type": "slashing"},
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        events = await handler.handle(
+            WsEnvelope(
+                type="request_action",
+                request_id="req_phase3_heal",
+                payload={
+                    "actor_id": active_actor_id,
+                    "action_type": "bonus_action",
+                    "action_name": "Second Wind",
+                    "payload": {
+                        "family": "healing",
+                        "target_ids": [active_actor_id],
+                        "heal_dice": "1d8",
+                        "heal_bonus": 2,
+                    },
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        event_types = {event.type for event in events}
+        assert "action_authorized" in event_types
+        assert "effect_applied" in event_types
+        assert "actor_healed" in event_types
+
+    @pytest.mark.anyio
+    async def test_utility_family_publishes_effect_and_condition(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase3_utility_start"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        events = await handler.handle(
+            WsEnvelope(
+                type="request_action",
+                request_id="req_phase3_utility",
+                payload={
+                    "actor_id": active_actor_id,
+                    "action_type": "reaction",
+                    "action_name": "Trip",
+                    "payload": {
+                        "family": "utility",
+                        "condition": "Prone",
+                        "target_ids": ["goblin_1"],
+                    },
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        event_types = {event.type for event in events}
+        assert "action_authorized" in event_types
+        assert "effect_applied" in event_types
+        assert "condition_added" in event_types
 
 
 # ---------------------------------------------------------------------------

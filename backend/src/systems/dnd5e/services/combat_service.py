@@ -75,6 +75,7 @@ class CombatService:
 
     async def advance_turn(self, encounter_session: EncounterSession, encounter: EncounterState) -> tuple[str, int]:
         next_turn(encounter)
+        await self.on_turn_started(encounter_session, encounter)
         await self._persist_encounter(encounter_session, encounter)
         await self._ensure_round_budgets(encounter_session, encounter)
 
@@ -84,7 +85,7 @@ class CombatService:
 
     async def apply_movement(
         self,
-        encounter_session: EncounterSession,
+        encounter_session: EncounterSession | None,
         encounter: EncounterState,
         ctx: SessionContext,
         actor_id: str,
@@ -97,98 +98,134 @@ class CombatService:
 
         checks = await self._base_actor_checks(encounter_session, encounter, actor_id, "move", ctx)
         if not checks.allowed:
-            await self.log_action_attempt(
-                encounter_session,
-                request_id=request_id,
-                actor_id=actor_id,
-                action_type="move",
-                action_state="denied",
-                payload={"path": path},
-                checks=checks.checks or {},
-                denial_reason=checks.reason_code,
-            )
+            if encounter_session is not None:
+                await self.log_action_attempt(
+                    encounter_session,
+                    request_id=request_id,
+                    actor_id=actor_id,
+                    action_type="move",
+                    action_state="denied",
+                    payload={"path": path},
+                    checks=checks.checks or {},
+                    denial_reason=checks.reason_code,
+                )
             return checks
 
         distance = self._path_distance(actor.position, path)
-        budget = await self._get_or_create_budget(encounter_session, actor_id, encounter.round_number, actor.speed.walk)
-        movement_remaining = max(budget.max_movement - budget.movement_used, 0)
+        if encounter_session is None:
+            budget_state = self._get_or_create_in_memory_budget(
+                encounter, actor_id)
+            movement_remaining = max(
+                int(budget_state["max_movement"]) - int(budget_state["movement_used"]), 0)
+        else:
+            budget = await self._get_or_create_budget(encounter_session, actor_id, encounter.round_number, actor.speed.walk)
+            movement_remaining = max(
+                budget.max_movement - budget.movement_used, 0)
+
         if distance > movement_remaining:
             checks_data = checks.checks or {}
             checks_data["movement_remaining"] = movement_remaining
             checks_data["movement_required"] = distance
+            if encounter_session is not None:
+                await self.log_action_attempt(
+                    encounter_session,
+                    request_id=request_id,
+                    actor_id=actor_id,
+                    action_type="move",
+                    action_state="denied",
+                    payload={"path": path},
+                    checks=checks_data,
+                    denial_reason="movement_exceeded",
+                )
+            return AuthorizationResult(
+                False,
+                "movement_exhausted",
+                "Movement exceeds remaining budget",
+                checks=checks_data,
+            )
+
+        if encounter_session is None:
+            budget_state["movement_used"] = int(
+                budget_state["movement_used"]) + distance
+            budget_state["movement_remaining"] = max(
+                int(budget_state["max_movement"]) -
+                int(budget_state["movement_used"]),
+                0,
+            )
+        else:
+            budget.movement_used += distance
+            await self.db.flush()
             await self.log_action_attempt(
                 encounter_session,
                 request_id=request_id,
                 actor_id=actor_id,
                 action_type="move",
-                action_state="denied",
+                action_state="authorized",
                 payload={"path": path},
-                checks=checks_data,
-                denial_reason="movement_exceeded",
-            )
-            return AuthorizationResult(
-                False,
-                "resource_exhausted",
-                "Movement exceeds remaining budget",
-                checks=checks_data,
+                checks={
+                    **(checks.checks or {}),
+                    "movement_required": distance,
+                    "movement_remaining": max(budget.max_movement - budget.movement_used, 0),
+                },
+                denial_reason=None,
             )
 
-        budget.movement_used += distance
-        await self.db.flush()
-        await self.log_action_attempt(
-            encounter_session,
-            request_id=request_id,
-            actor_id=actor_id,
-            action_type="move",
-            action_state="authorized",
-            payload={"path": path},
-            checks={
-                **(checks.checks or {}),
-                "movement_required": distance,
-                "movement_remaining": max(budget.max_movement - budget.movement_used, 0),
-            },
-            denial_reason=None,
-        )
         return AuthorizationResult(True, checks=checks.checks)
 
     async def check_can_act(
         self,
-        encounter_session: EncounterSession,
+        encounter_session: EncounterSession | None,
         encounter: EncounterState,
         actor_id: str,
         action_type: str,
         ctx: SessionContext,
     ) -> AuthorizationResult:
-        action_type_normalized = action_type.lower().strip() or "action"
+        action_type_normalized = self.normalize_action_type(action_type)
         checks = await self._base_actor_checks(encounter_session, encounter, actor_id, action_type_normalized, ctx)
         if not checks.allowed:
             return checks
 
-        budget = await self._get_or_create_budget(
-            encounter_session,
-            actor_id,
-            encounter.round_number,
-            self._find_actor(encounter, actor_id).speed.walk,
-        )
+        actor = self._find_actor(encounter, actor_id)
+        if actor is None:
+            return AuthorizationResult(False, "invalid_target", f"Actor {actor_id} not found")
+
+        if encounter_session is None:
+            budget_state = self._get_or_create_in_memory_budget(
+                encounter, actor_id)
+            action_available = bool(budget_state.get("action_available", True))
+            bonus_action_available = bool(
+                budget_state.get("bonus_action_available", True))
+            reaction_available = bool(
+                budget_state.get("reaction_available", True))
+        else:
+            budget = await self._get_or_create_budget(
+                encounter_session,
+                actor_id,
+                encounter.round_number,
+                actor.speed.walk,
+            )
+            action_available = budget.action_available
+            bonus_action_available = budget.bonus_action_available
+            reaction_available = budget.reaction_available
 
         checks_data = checks.checks or {}
-        if action_type_normalized in {"action", "attack", "cast_spell"} and not budget.action_available:
+        if action_type_normalized == "action" and not action_available:
             checks_data["action_available"] = False
-            return AuthorizationResult(False, "resource_exhausted", "Action already spent this turn", checks_data)
+            return AuthorizationResult(False, "action_exhausted", "Action already spent this turn", checks_data)
 
-        if action_type_normalized in {"bonus_action", "bonus"} and not budget.bonus_action_available:
+        if action_type_normalized == "bonus_action" and not bonus_action_available:
             checks_data["bonus_action_available"] = False
-            return AuthorizationResult(False, "resource_exhausted", "Bonus action already spent this turn", checks_data)
+            return AuthorizationResult(False, "bonus_action_exhausted", "Bonus action already spent this turn", checks_data)
 
-        if action_type_normalized == "reaction" and not budget.reaction_available:
+        if action_type_normalized == "reaction" and not reaction_available:
             checks_data["reaction_available"] = False
-            return AuthorizationResult(False, "resource_exhausted", "Reaction already spent", checks_data)
+            return AuthorizationResult(False, "reaction_exhausted", "Reaction already spent", checks_data)
 
         return AuthorizationResult(True, checks=checks_data)
 
     async def consume_budget(
         self,
-        encounter_session: EncounterSession,
+        encounter_session: EncounterSession | None,
         encounter: EncounterState,
         actor_id: str,
         action_type: str,
@@ -197,17 +234,84 @@ class CombatService:
         if actor is None:
             return
 
-        budget = await self._get_or_create_budget(encounter_session, actor_id, encounter.round_number, actor.speed.walk)
-        normalized = action_type.lower().strip() or "action"
+        normalized = self.normalize_action_type(action_type)
 
-        if normalized in {"action", "attack", "cast_spell"}:
+        if encounter_session is None:
+            budget_state = self._get_or_create_in_memory_budget(
+                encounter, actor_id)
+            if normalized == "action":
+                budget_state["action_available"] = False
+            elif normalized == "bonus_action":
+                budget_state["bonus_action_available"] = False
+            elif normalized == "reaction":
+                budget_state["reaction_available"] = False
+
+            budget_state["movement_remaining"] = max(
+                int(budget_state.get("max_movement", actor.speed.walk)) -
+                int(budget_state.get("movement_used", 0)),
+                0,
+            )
+            return
+
+        budget = await self._get_or_create_budget(encounter_session, actor_id, encounter.round_number, actor.speed.walk)
+
+        if normalized == "action":
             budget.action_available = False
-        elif normalized in {"bonus_action", "bonus"}:
+        elif normalized == "bonus_action":
             budget.bonus_action_available = False
         elif normalized == "reaction":
             budget.reaction_available = False
 
         await self.db.flush()
+
+    async def on_turn_started(self, encounter_session: EncounterSession | None, encounter: EncounterState) -> None:
+        """Sync turn budget semantics when a new active actor's turn begins."""
+        active = get_active_combatant(encounter)
+        if active is None:
+            return
+
+        if encounter_session is None:
+            budget_state = self._get_or_create_in_memory_budget(
+                encounter, active.id)
+            budget_state["reaction_available"] = True
+            return
+
+        budget = await self._get_or_create_budget(
+            encounter_session,
+            active.id,
+            encounter.round_number,
+            active.speed.walk,
+        )
+        budget.reaction_available = True
+        await self.db.flush()
+
+    async def get_turn_budget_snapshot(self, encounter_session: EncounterSession | None, encounter: EncounterState) -> dict[str, Any]:
+        if encounter_session is None:
+            for actor in encounter.combatants:
+                self._get_or_create_in_memory_budget(encounter, actor.id)
+        else:
+            await self._refresh_turn_budgets_on_encounter(encounter, encounter_session)
+
+        active = get_active_combatant(encounter)
+        return {
+            "round": encounter.round_number,
+            "turn_phase": encounter.turn_phase,
+            "active_actor_id": active.id if active else None,
+            "budgets": encounter.turn_budgets,
+        }
+
+    @staticmethod
+    def normalize_action_type(action_type: str) -> str:
+        normalized = (action_type or "").strip().lower()
+        if normalized in {"", "action", "attack", "cast_spell", "cast-spell", "spell", "main_action"}:
+            return "action"
+        if normalized in {"bonus_action", "bonus-action", "bonus"}:
+            return "bonus_action"
+        if normalized in {"reaction"}:
+            return "reaction"
+        if normalized in {"move", "movement", "move_token"}:
+            return "move"
+        return normalized
 
     async def log_action_attempt(
         self,
@@ -376,7 +480,7 @@ class CombatService:
 
     async def _base_actor_checks(
         self,
-        encounter_session: EncounterSession,
+        encounter_session: EncounterSession | None,
         encounter: EncounterState,
         actor_id: str,
         action_type: str,
@@ -394,7 +498,10 @@ class CombatService:
             "actor_exists": True,
         }
 
-        combatant = await self._load_combatant(encounter_session.id, actor_id)
+        combatant = None
+        if encounter_session is not None:
+            combatant = await self._load_combatant(encounter_session.id, actor_id)
+
         owner_user_id = combatant.owner_user_id if combatant else actor.owner_user_id
         checks["owner_user_id"] = owner_user_id
 
@@ -416,6 +523,40 @@ class CombatService:
             return AuthorizationResult(False, "not_your_turn", "This actor is not the active turn", checks)
 
         return AuthorizationResult(True, checks=checks)
+
+    @staticmethod
+    def _get_or_create_in_memory_budget(encounter: EncounterState, actor_id: str) -> dict[str, Any]:
+        actor = CombatService._find_actor(encounter, actor_id)
+        max_movement = actor.speed.walk if actor is not None else 30
+
+        budget = encounter.turn_budgets.get(actor_id)
+        if budget is None:
+            budget = {
+                "action_available": True,
+                "bonus_action_available": True,
+                "reaction_available": True,
+                "max_movement": max_movement,
+                "movement_used": 0,
+                "movement_remaining": max_movement,
+                "round_number": encounter.round_number,
+            }
+            encounter.turn_budgets[actor_id] = budget
+
+        # Ensure movement max follows actor speed and reset if round changed.
+        budget["max_movement"] = max_movement
+        if int(budget.get("round_number", encounter.round_number)) != encounter.round_number:
+            budget["action_available"] = True
+            budget["bonus_action_available"] = True
+            budget["reaction_available"] = True
+            budget["movement_used"] = 0
+            budget["round_number"] = encounter.round_number
+
+        budget["movement_remaining"] = max(
+            int(budget.get("max_movement", max_movement)) -
+            int(budget.get("movement_used", 0)),
+            0,
+        )
+        return budget
 
     @staticmethod
     def _find_actor(encounter: EncounterState, actor_id: str) -> ActorInstance | None:

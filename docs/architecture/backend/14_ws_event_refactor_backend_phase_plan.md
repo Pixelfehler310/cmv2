@@ -154,6 +154,16 @@ Definition of done:
 
 - No event key is simultaneously documented as supported and unrouted.
 
+Implementation notes (Phase 4 baseline now applied):
+
+- Branch decision selected for all currently declared-but-unrouted keys: deferred/removed.
+- `update_hp`, `roll_initiative`, `cast_spell`, and `toggle_equip` were removed from:
+  - backend permission declaration sets,
+  - inbound payload schema declarations (`event_types.py`),
+  - active inbound event catalog documentation.
+- Runtime behavior for these keys is now uniformly "unknown event" at handler dispatch,
+  which avoids declared-vs-routed contract drift.
+
 ## Phase 5 - Frontend Contract Handover Prep
 
 Outcome:
@@ -169,6 +179,19 @@ Tasks:
 Definition of done:
 
 - Frontend team can implement against a stable, versioned contract.
+
+Implementation notes (Phase 5 baseline now applied):
+
+- Backend-to-frontend handover package is published in:
+  - [docs/architecture/backend/16_ws_event_frontend_contract_handover.md](docs/architecture/backend/16_ws_event_frontend_contract_handover.md)
+- Handover includes:
+  - baseline -> current outbound event changelog,
+  - canonical `ws-combat-v2` outbound catalog,
+  - state and `turn_budget` snapshot contract,
+  - compatibility/alias policy and migration checklist.
+- Phase 5 compatibility decision:
+  - no backend wire alias layer;
+  - transitional compatibility is frontend-adapter only and time-boxed.
 
 ## 4. Suggested Sequence by Event Family
 

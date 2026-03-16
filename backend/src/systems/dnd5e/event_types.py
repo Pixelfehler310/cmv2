@@ -87,13 +87,6 @@ class RemoveConditionPayload(BaseModel):
     condition: str
 
 
-class UpdateHpPayload(BaseModel):
-    """Payload for `update_hp` event."""
-    actor_id: str
-    current_hp: int
-    temp_hp: Optional[int] = None
-
-
 class AddActorPayload(BaseModel):
     """Payload for `add_actor` event."""
     definition_slug: str
@@ -105,12 +98,6 @@ class AddActorPayload(BaseModel):
 class RemoveActorPayload(BaseModel):
     """Payload for `remove_actor` event."""
     actor_id: str
-
-
-class RollInitiativePayload(BaseModel):
-    """Payload for `roll_initiative` event."""
-    actor_id: str
-    value: Optional[int] = None
 
 
 class ChatMessagePayload(BaseModel):

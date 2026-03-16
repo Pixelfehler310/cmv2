@@ -27,16 +27,12 @@ _DM_ONLY_EVENTS: set[str] = {
     "apply_healing",
     "apply_condition",
     "remove_condition",
-    "update_hp",
-    "cast_spell",
-    "roll_initiative",
 }
 
 # Events DM or the actor owner can send
 _DM_OR_OWNER_EVENTS: set[str] = {
     "move_token",
     "request_action",
-    "toggle_equip",
 }
 
 # Events anyone can send

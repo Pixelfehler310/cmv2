@@ -184,26 +184,26 @@ class Visibility(str, Enum):
 
 ### Event Types — Inbound (Client → Server)
 
-| Type               | Payload                                        | Who Can Send    |
-| ------------------ | ---------------------------------------------- | --------------- |
-| `action`           | `{actor_id, action_name, target_ids?}`         | DM              |
-| `move_token`       | `{actor_id, path: [{x, y}...]}`                | DM, Actor Owner |
-| `roll_dice`        | `{expression, purpose?}`                       | All             |
-| `roll_initiative`  | `{actor_id, value?}`                           | DM              |
-| `end_turn`         | `{actor_id}`                                   | DM              |
-| `start_combat`     | `{}`                                           | DM              |
-| `end_combat`       | `{}`                                           | DM              |
-| `add_actor`        | `{definition_slug, position, name?}`           | DM              |
-| `remove_actor`     | `{actor_id}`                                   | DM              |
-| `apply_condition`  | `{actor_id, condition, source_id?}`            | DM              |
-| `remove_condition` | `{actor_id, condition}`                        | DM              |
-| `apply_damage`     | `{actor_id, amount, damage_type}`              | DM              |
-| `apply_healing`    | `{actor_id, amount}`                           | DM              |
-| `update_hp`        | `{actor_id, current_hp, temp_hp?}`             | DM              |
-| `cast_spell`       | `{actor_id, spell_slug, slot_level, targets?}` | DM              |
-| `toggle_equip`     | `{actor_id, item_id}`                          | DM, Actor Owner |
-| `chat_message`     | `{message}`                                    | All             |
-| `ping`             | `{}`                                           | All             |
+| Type               | Payload                                | Who Can Send    |
+| ------------------ | -------------------------------------- | --------------- |
+| `action`           | `{actor_id, action_name, target_ids?}` | DM              |
+| `move_token`       | `{actor_id, path: [{x, y}...]}`        | DM, Actor Owner |
+| `roll_dice`        | `{expression, purpose?}`               | All             |
+| `roll_initiative`  | `{actor_id, value?}`                   | DM              |
+| `end_turn`         | `{actor_id}`                           | DM              |
+| `start_combat`     | `{}`                                   | DM              |
+| `end_combat`       | `{}`                                   | DM              |
+| `add_actor`        | `{definition_slug, position, name?}`   | DM              |
+| `remove_actor`     | `{actor_id}`                           | DM              |
+| `apply_condition`  | `{actor_id, condition, source_id?}`    | DM              |
+| `remove_condition` | `{actor_id, condition}`                | DM              |
+| `apply_damage`     | `{actor_id, amount, damage_type}`      | DM              |
+| `apply_healing`    | `{actor_id, amount}`                   | DM              |
+| `chat_message`     | `{message}`                            | All             |
+| `ping`             | `{}`                                   | All             |
+
+Phase 4 contract note: `update_hp`, `roll_initiative`, `cast_spell`, and `toggle_equip`
+are deferred and are not part of the currently supported inbound routing contract.
 
 ### Event Types — Outbound (Server → Client)
 

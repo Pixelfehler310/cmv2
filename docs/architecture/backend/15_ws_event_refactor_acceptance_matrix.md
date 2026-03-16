@@ -107,6 +107,12 @@ Rule:
 
 - Each declared key must end in exactly one branch: implemented or removed/deferred with explicit contract status.
 
+Phase 4 status (current):
+
+- Selected deferred/removed branch: X-02, X-04, X-06, X-08.
+- `update_hp`, `roll_initiative`, `cast_spell`, and `toggle_equip` are removed from
+  active permission/type declarations and active inbound contract docs.
+
 ## 9. Non-Functional Acceptance
 
 | ID   | Area          | Requirement                                                |
@@ -121,6 +127,13 @@ Phase 0 contract clarifications:
 
 - Command events MUST include `request_id`; missing ids are rejected with `error` (`invalid_message`).
 - Denied outcomes are explicit terminal denied events (`action_denied` for action-family, `command_denied` for other command families).
+
+Phase 5 handover status:
+
+- N-05 artifact published:
+  - [docs/architecture/backend/16_ws_event_frontend_contract_handover.md](docs/architecture/backend/16_ws_event_frontend_contract_handover.md)
+- Handover defines versioned contract target (`ws-combat-v2`) and frontend migration checklist.
+- Compatibility policy is explicit: no backend wire aliases; transitional compatibility is frontend adapter-only.
 
 ## 10. Exit Gate
 

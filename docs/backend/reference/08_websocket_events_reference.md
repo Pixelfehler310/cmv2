@@ -4,6 +4,29 @@ This document was auto-generated from `systems/dnd5e/event_types.py` via `script
 
 ## Inbound Events (Client -> Server)
 
+### `action_authorized`
+Payload for `action_authorized` event.
+
+```json
+{
+  "actor_id": "string",
+  "action_type": "string",
+  "action_name": "string"
+}
+```
+
+### `action_denied`
+Payload for `action_denied` event.
+
+```json
+{
+  "actor_id": "string",
+  "action_type": "string",
+  "reason_code": "string",
+  "message": "string"
+}
+```
+
 ### `action`
 Payload for `action` event — attack, spell, ability.
 
@@ -11,6 +34,7 @@ Payload for `action` event — attack, spell, ability.
 {
   "actor_id": "string",
   "action_name": "string",
+  "action_type": "string",
   "target_ids": []
 }
 ```
@@ -22,7 +46,8 @@ Payload for `add_actor` event.
 {
   "definition_slug": "string",
   "name": {},
-  "position": {}
+  "position": {},
+  "owner_user_id": {}
 }
 ```
 
@@ -89,7 +114,8 @@ Payload for `move_token` event.
 ```json
 {
   "actor_id": "string",
-  "path": []
+  "path": [],
+  "acting_as_user_id": {}
 }
 ```
 
@@ -112,6 +138,19 @@ Payload for `remove_condition` event.
 }
 ```
 
+### `request_action`
+Payload for `request_action` event from player clients.
+
+```json
+{
+  "actor_id": "string",
+  "action_type": "string",
+  "action_name": "string",
+  "payload": {},
+  "acting_as_user_id": {}
+}
+```
+
 ### `roll_dice`
 Payload for `roll_dice` event.
 
@@ -122,32 +161,11 @@ Payload for `roll_dice` event.
 }
 ```
 
-### `roll_initiative`
-Payload for `roll_initiative` event.
-
-```json
-{
-  "actor_id": "string",
-  "value": {}
-}
-```
-
 ### `start_combat`
 Payload for `start_combat` event.
 
 ```json
 {}
-```
-
-### `update_hp`
-Payload for `update_hp` event.
-
-```json
-{
-  "actor_id": "string",
-  "current_hp": 0,
-  "temp_hp": {}
-}
 ```
 
 ---
