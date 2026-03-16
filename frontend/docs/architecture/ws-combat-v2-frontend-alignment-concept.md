@@ -1,172 +1,188 @@
 # WS Combat V2 Frontend Alignment Concept
 
-Status: concept draft for implementation step
+Status: implementation concept (phase-ready)
 Owner: frontend
 Input contract: docs/architecture/backend/16_ws_event_frontend_contract_handover.md
+Companion docs:
 
-## 1. Purpose
+- frontend/docs/testing/interchangeable-action-button-concept.md
+- frontend/docs/testing/ws-combat-v2-player-dm-implementation-backlog.md
 
-This concept defines how frontend packages are aligned to the backend `ws-combat-v2` contract.
+## 1. Intent
 
-Primary goals:
+This document defines the contract-alignment implementation for the frontend layer after backend phases 13-16.
 
-- Keep backend authoritative and avoid client-side gameplay calculation.
-- Ingest full outbound catalog without dropping meaningful events.
-- Ensure command dispatch always includes `request_id` for command-like events.
-- Use backend `turn_budget` snapshots instead of local budget math.
+Primary outcomes:
 
-## 2. Current Baseline (as observed)
+- Frontend consumes the full `ws-combat-v2` outbound catalog.
+- Command-like sends always include `request_id`.
+- Store remains backend-authoritative for turn, budget, and state mutation.
+- Denied/error outcomes are deterministic and visible in UI.
 
-Current frontend already has useful scaffolding:
+## 2. Non-Negotiable Rules
 
-- `@rpg/shared` has a central `useCombatStore` reducer path.
-- `@rpg/types` has basic outbound/inbound envelope typing.
-- Host bridge already emits `ws:recv` into store ingestion.
-- DM has command/action deck surfaces for manual event probing.
+1. Backend is source of truth. Frontend does not infer combat outcomes.
+2. Unknown outbound events are non-fatal and logged.
+3. Budget/action economy UI mirrors backend snapshots only.
+4. Contract typing must use discriminated unions by `type`.
+5. Command-like envelopes must be `request_id`-complete before transport send.
 
-Gaps versus handover contract:
+## 3. Package Scope
 
-- Missing outbound event types in `@rpg/types`: `command_denied`, `attack_result`, `save_result`, `effect_applied`, plus utility/lifecycle events not fully represented.
-- Store reducer does not reduce all `ws-combat-v2` events.
-- Command dispatch path does not guarantee `request_id` on command-like sends.
-- Optimistic state changes still exist in a few command helpers and can conflict with backend-authoritative deltas.
+### 3.1 frontend/packages/types
 
-## 3. Scope by Package
+Required:
 
-### 3.1 `frontend/packages/types`
+- Extend outbound unions for all `ws-combat-v2` events:
+  - `state_sync`, `pong`, `dice_rolled`, `chat_message`
+  - `action_authorized`, `action_denied`, `command_denied`, `error`
+  - `combat_started`, `combat_ended`, `turn_advanced`, `actor_moved`, `actor_added`, `actor_removed`
+  - `attack_result`, `save_result`, `effect_applied`, `actor_damaged`, `actor_healed`, `actor_died`, `condition_added`, `condition_removed`
+- Add deny reason code union updates from handover.
+- Add optional `turn_budget` snapshot fields on applicable payloads.
+- Split inbound envelope unions into:
+  - command-like (`request_id` required)
+  - utility (`request_id` optional)
 
-Required changes:
+### 3.2 frontend/packages/shared
 
-- Extend `KnownWsOutboundEnvelope` union with all `ws-combat-v2` events.
-- Extend deny payload typing for `command_denied` and newer reason codes.
-- Add payload types for:
-  - `attack_result`
-  - `save_result`
-  - `effect_applied`
-  - `combat_started`
-  - `combat_ended`
-  - `condition_added`
-  - `condition_removed`
-  - `pong`
-  - `dice_rolled`
-  - `chat_message`
-- Add optional `turn_budget` snapshot where backend emits it.
-- Split inbound command envelope into:
-  - command-like events requiring `request_id`
-  - utility events where `request_id` remains optional
+Required in store/reducer path:
 
-Design note:
+- Exhaustive handling of known outbound keys.
+- Add unified denied view model for `action_denied` + `command_denied`.
+- Add timeline/telemetry state for result and utility events.
+- Apply `turn_budget` snapshots where emitted.
+- Add fallback reconciliation trigger (`request_sync`) for snapshot mismatch conditions.
 
-Do this with discriminated unions per `type` to keep reducer narrowing safe and exhaustive.
+### 3.3 frontend/apps/host and frontend/packages/bridge
 
-### 3.2 `frontend/packages/shared`
+Required at dispatch boundary:
 
-Required changes in `useCombatStore`:
+- Inject `request_id` for all command-like sends.
+- Preserve request correlation in local bridge events (`ws:send`, `ws:send_result`, `ws:error`, `ws:recv`).
+- Keep helper deterministic and side-effect free (`ensureRequestId`).
 
-- Reduce all catalog events from handover Section 3.
-- Add reducer branch for `command_denied` with the same UI-facing deny model as `action_denied`.
-- Add state fields for lightweight combat telemetry timeline entries for:
-  - attack/save/effect result events
-  - utility telemetry (`dice_rolled`, `chat_message`) where useful
-- Apply `turn_budget` snapshots whenever present on:
-  - `combat_started`
-  - `turn_advanced`
-  - `actor_moved`
-  - `action_authorized`
-- Add fallback reconciliation strategy:
-  - if required snapshot context is missing, trigger `request_sync`
+### 3.4 frontend/packages/dm-view and frontend/packages/player-view
 
-Anti-drift rule:
+Required consumer updates:
 
-For budget and turn state, local state only mirrors backend payloads. No local derived consumption logic.
+- Render unified denied feedback.
+- Render timeline entries for newly supported result/telemetry events.
+- Consume new selectors from shared store only (no duplicate local parsing).
 
-### 3.3 `frontend/apps/host` and `frontend/packages/bridge`
+## 4. Event Handling Buckets
 
-Required changes:
+### 4.1 State mutation
 
-- Add command request correlation at dispatch boundary.
-- Ensure generated `request_id` is attached to all command-like envelopes.
-- Preserve and log `request_id` through `ws:send`, `ws:send_result`, and `ws:error` local events.
+- `state_sync`, `combat_started`, `combat_ended`, `turn_advanced`, `actor_moved`, `actor_added`, `actor_removed`, `actor_damaged`, `actor_healed`, `actor_died`, `condition_added`, `condition_removed`
 
-Suggested implementation detail:
+### 4.2 Telemetry/result
 
-- Add a small helper: `ensureRequestId(envelope)`.
-- Request id format: `fe_${Date.now()}_${counter}` (simple and deterministic).
+- `attack_result`, `save_result`, `effect_applied`, `dice_rolled`, `chat_message`, `pong`
 
-### 3.4 `frontend/packages/dm-view` and `frontend/packages/player-view`
+### 4.3 Feedback/control
 
-Required changes:
+- `action_authorized`, `action_denied`, `command_denied`, `error`
 
-- Consume normalized deny event stream from store (action + command denied).
-- Surface timeline/log entries for newly supported result events.
-- Add command test controls for player and DM workflows (see companion concept).
+## 5. Store Additions (Concept Contract)
 
-## 4. Event Handling Policy
+```ts
+type CombatTimelineEntry = {
+  id: string;
+  at: string;
+  type: string;
+  requestId?: string;
+  actorId?: string;
+  summary: string;
+  rawPayload: Record<string, unknown>;
+};
 
-All outbound events should be in one of three buckets:
+type DeniedFeedback = {
+  requestId?: string;
+  type: "action_denied" | "command_denied";
+  reasonCode: string;
+  message?: string;
+  at: string;
+};
+```
 
-1. State mutation events
-
-- mutate game state directly (`actor_moved`, `turn_advanced`, etc.)
-
-2. Telemetry/result events
-
-- append to timeline/log (`attack_result`, `save_result`, `effect_applied`, `dice_rolled`, `chat_message`, `pong`)
-
-3. Feedback/control events
-
-- update feedback/errors/deny state (`error`, `action_denied`, `command_denied`, `action_authorized`)
-
-Mandatory rule:
-
-Unknown events are non-fatal. Log and ignore by default, with optional debug counters.
-
-## 5. Data Model Additions (Store-Level)
-
-Proposed additive fields in combat store state:
+Proposed additive state:
 
 - `eventTimeline: CombatTimelineEntry[]`
-- `lastRequestSyncAt: string | null`
+- `latestDenied: DeniedFeedback | null`
 - `unknownEventCount: number`
+- `lastRequestSyncAt: string | null`
 
-`CombatTimelineEntry` (proposed):
+## 6. Phase and PR Plan (This Document)
 
-- `id`
-- `at`
-- `type`
-- `requestId`
-- `actorId`
-- `summary`
-- `rawPayload`
+### Phase 1 / PR 1: Type Contract Freeze in Frontend
 
-This keeps troubleshooting local without overloading the core `gameState` shape.
+Scope:
 
-## 6. Migration Sequence
+- Implement complete outbound/inbound unions and payloads.
+- Remove reducer-facing `any` for known ws-combat-v2 events.
 
-1. Extend `@rpg/types` unions and payloads.
-2. Update store reducer to cover full outbound catalog.
-3. Add request id generator/injector in host bridge dispatch path.
-4. Wire DM/player views to new deny + timeline model.
-5. Remove or minimize optimistic mutations that can race authoritative updates.
-6. Run acceptance tests for critical rows from backend matrix (L-03, L-04, M-02, M-03, M-04, A-03, A-06, R-01).
+Files (expected):
+
+- frontend/packages/types/src/\*_/_
+- frontend/packages/types/package.json (if exports need adjustment)
+
+Acceptance:
+
+- `pnpm -r typecheck` passes.
+- Known event types can be narrowed exhaustively by `type`.
+
+### Phase 2 / PR 2: Shared Store Event Completeness
+
+Scope:
+
+- Exhaustive event reducer coverage.
+- Timeline + unified denied model.
+- Snapshot application and mismatch fallback hooks.
+
+Files (expected):
+
+- frontend/packages/shared/src/stores/\*_/_
+- frontend/packages/shared/src/selectors/\*_/_ (if present)
+- frontend/packages/shared/src/types/\*_/_ (if local store types exist)
+
+Acceptance:
+
+- Unknown events are counted/logged, not fatal.
+- `command_denied` is UI-consumable through same feedback lane as `action_denied`.
+
+### Phase 3 / PR 3: Request Correlation Infrastructure
+
+Scope:
+
+- `ensureRequestId` injection in host/bridge dispatch path.
+- Send-to-terminal correlation traceability foundations.
+
+Files (expected):
+
+- frontend/apps/host/src/\*_/_
+- frontend/packages/bridge/src/\*_/_
+
+Acceptance:
+
+- Command-like outbound envelopes always have `request_id`.
+- Correlation ids appear consistently in local bridge diagnostics.
 
 ## 7. Risks and Mitigations
 
-Risk: reducer churn causes regressions.
-Mitigation: add exhaustive switch checks on known event types plus targeted store unit tests.
+- Risk: union growth breaks existing narrowing paths.
+  - Mitigation: enforce `never` checks in reducer switch defaults.
+- Risk: optimistic state races authoritative deltas.
+  - Mitigation: remove command-driven optimistic mutations where contract events already cover result.
+- Risk: partial request-id injection misses niche call sites.
+  - Mitigation: centralize dispatch and prohibit bypass sends.
 
-Risk: accidental double-application (optimistic + authoritative).
-Mitigation: for command-driven state transitions, prefer backend event application only.
+## 8. Done Criteria
 
-Risk: missing request ids in some call paths.
-Mitigation: enforce at one central dispatch gateway in host bridge.
+This alignment concept is implemented when:
 
-## 8. Definition of Done
-
-Frontend alignment is done when:
-
-- All `ws-combat-v2` outbound keys are reduced or intentionally ignored with rationale.
+- All `ws-combat-v2` outbound keys are reduced or explicitly ignored with rationale.
 - Command-like sends always include `request_id`.
-- UI consistently handles both `action_denied` and `command_denied`.
-- Budget/action economy display is based on backend snapshots/state only.
-- Critical acceptance scenarios pass in manual and automated frontend checks.
+- Budget/turn UI is fully backend-snapshot driven.
+- Denied feedback is deterministic for both action and command families.
+- Critical acceptance rows are reproducible from frontend test surfaces: L-03, L-04, M-02, M-03, M-04, A-03, A-06, R-01.

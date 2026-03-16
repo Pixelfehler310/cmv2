@@ -10,6 +10,7 @@ export interface ActorMovedPayload {
   actor_id: string;
   path?: Array<{ x: number; y: number }>;
   position?: { x: number; y: number };
+  turn_budget?: TurnBudgetSnapshotPayload;
 }
 
 export interface ActorAddedPayload {
@@ -34,6 +35,7 @@ export interface ActorDiedPayload {
 export interface TurnAdvancedPayload {
   active_actor_id: string;
   round: number;
+  turn_budget?: TurnBudgetSnapshotPayload;
 }
 
 export interface ErrorPayload {
@@ -45,13 +47,105 @@ export interface ActionAuthorizedPayload {
   actor_id: string;
   action_type: string;
   action_name: string;
+  family?: "attack" | "save" | "healing" | "utility" | string;
+  turn_budget?: TurnBudgetSnapshotPayload;
 }
 
 export interface ActionDeniedPayload {
+  event_type?: string;
   actor_id: string;
   action_type: string;
   reason_code: string;
   message: string;
+}
+
+export interface CommandDeniedPayload {
+  event_type: string;
+  actor_id?: string;
+  action_type?: string;
+  reason_code: string;
+  message: string;
+}
+
+export interface CombatStartedPayload {
+  initiative_order: Array<{ actor_id: string; name: string }>;
+  turn_budget?: TurnBudgetSnapshotPayload;
+}
+
+export interface CombatEndedPayload {
+  [key: string]: never;
+}
+
+export interface ConditionAddedPayload {
+  actor_id: string;
+  condition: string;
+  source?: string;
+}
+
+export interface ConditionRemovedPayload {
+  actor_id: string;
+  condition: string;
+}
+
+export interface AttackResultPayload {
+  attacker_id: string;
+  target_id: string;
+  action_name: string;
+  hit: boolean;
+  is_critical: boolean;
+  roll_used: number;
+  roll_count: number;
+  damage: number;
+  damage_type: string;
+}
+
+export interface SaveResultTargetPayload {
+  target_id: string;
+  passed: boolean;
+  save_roll: number;
+  damage: number;
+}
+
+export interface SaveResultPayload {
+  caster_id: string;
+  action_name: string;
+  save_ability: string;
+  save_dc: number;
+  results: SaveResultTargetPayload[];
+}
+
+export interface EffectAppliedPayload {
+  actor_id: string;
+  target_id: string;
+  action_name: string;
+  effect_type: "healing" | "utility" | "condition_added" | "condition_removed" | string;
+  amount?: number;
+  condition?: string;
+}
+
+export interface DiceRolledPayload {
+  roller_id: string;
+  expression: string;
+  result: number;
+  purpose?: string | null;
+}
+
+export interface ChatMessagePayload {
+  sender_id: string;
+  sender_name: string;
+  sender_role: string;
+  message: string;
+}
+
+export interface PongPayload {
+  [key: string]: never;
+}
+
+export interface TurnBudgetSnapshotPayload {
+  round: number;
+  turn_phase: "pre_combat" | "active" | "post_combat" | string;
+  active_actor_id: string | null;
+  budgets: Record<string, Record<string, unknown>>;
 }
 
 export type StateSyncEvent = WsEnvelope<"state_sync", EncounterStateWire>;
@@ -65,6 +159,17 @@ export type ActorDiedEvent = WsEnvelope<"actor_died", ActorDiedPayload>;
 export type ErrorEvent = WsEnvelope<"error", ErrorPayload>;
 export type ActionAuthorizedEvent = WsEnvelope<"action_authorized", ActionAuthorizedPayload>;
 export type ActionDeniedEvent = WsEnvelope<"action_denied", ActionDeniedPayload>;
+export type CommandDeniedEvent = WsEnvelope<"command_denied", CommandDeniedPayload>;
+export type CombatStartedEvent = WsEnvelope<"combat_started", CombatStartedPayload>;
+export type CombatEndedEvent = WsEnvelope<"combat_ended", CombatEndedPayload>;
+export type ConditionAddedEvent = WsEnvelope<"condition_added", ConditionAddedPayload>;
+export type ConditionRemovedEvent = WsEnvelope<"condition_removed", ConditionRemovedPayload>;
+export type AttackResultEvent = WsEnvelope<"attack_result", AttackResultPayload>;
+export type SaveResultEvent = WsEnvelope<"save_result", SaveResultPayload>;
+export type EffectAppliedEvent = WsEnvelope<"effect_applied", EffectAppliedPayload>;
+export type DiceRolledEvent = WsEnvelope<"dice_rolled", DiceRolledPayload>;
+export type ChatMessageEvent = WsEnvelope<"chat_message", ChatMessagePayload>;
+export type PongEvent = WsEnvelope<"pong", PongPayload>;
 
 export type KnownWsOutboundEnvelope =
   | StateSyncEvent
@@ -77,7 +182,18 @@ export type KnownWsOutboundEnvelope =
   | ActorDiedEvent
   | ErrorEvent
   | ActionAuthorizedEvent
-  | ActionDeniedEvent;
+  | ActionDeniedEvent
+  | CommandDeniedEvent
+  | CombatStartedEvent
+  | CombatEndedEvent
+  | ConditionAddedEvent
+  | ConditionRemovedEvent
+  | AttackResultEvent
+  | SaveResultEvent
+  | EffectAppliedEvent
+  | DiceRolledEvent
+  | ChatMessageEvent
+  | PongEvent;
 
 export type WsOutboundEnvelope = KnownWsOutboundEnvelope | WsEnvelope<string, Record<string, unknown>>;
 
@@ -93,6 +209,17 @@ export const KNOWN_WS_OUTBOUND_TYPES = [
   "error",
   "action_authorized",
   "action_denied",
+  "command_denied",
+  "combat_started",
+  "combat_ended",
+  "condition_added",
+  "condition_removed",
+  "attack_result",
+  "save_result",
+  "effect_applied",
+  "dice_rolled",
+  "chat_message",
+  "pong",
 ] as const;
 
 export type KnownWsOutboundType = (typeof KNOWN_WS_OUTBOUND_TYPES)[number];

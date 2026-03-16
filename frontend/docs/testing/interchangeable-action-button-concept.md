@@ -1,58 +1,45 @@
 # Interchangeable Action Button Concept (DM + Player Test Harness)
 
-Status: concept draft for implementation step
-Related: frontend/docs/architecture/ws-combat-v2-frontend-alignment-concept.md
+Status: implementation concept (phase-ready)
+Related:
 
-## 1. Problem
+- frontend/docs/architecture/ws-combat-v2-frontend-alignment-concept.md
+- frontend/docs/testing/ws-combat-v2-player-dm-implementation-backlog.md
 
-You want a single reusable button/control model with interchangeable action values so most combat actions can be tested quickly in both DM and player flows.
+## 1. Problem Statement
 
-Today, test controls exist mostly in DM panels with ad-hoc buttons and raw envelope input.
-Player view has no comparable command lab surface.
+DM testing currently relies on ad-hoc controls while player testing has no equivalent command lab. This creates slow validation loops for ws-combat-v2 acceptance rows and poor parity between DM and player command flows.
 
-## 2. Goals
+## 2. Product Goal
 
-- One shared action-trigger component for both DM and player experiences.
-- Action value can be switched at runtime from a catalog (no code edits needed).
-- Cover most practical test actions with typed defaults and editable payload fields.
-- Show immediate feedback tied to request correlation (`request_id`, outcome event, denied reason).
+Deliver one shared test harness component that lets users switch command type at runtime and execute most combat commands without source edits.
 
-Non-goals:
+Success conditions:
 
-- This concept is not a gameplay UX redesign.
-- This concept is not replacing backend validation with frontend validation.
+- Same core component drives DM and player labs.
+- Preset switching is instant and safe.
+- Payload editing is structured first, raw JSON optional.
+- Each send shows correlated terminal outcome by `request_id`.
 
-## 3. High-Level Solution
+## 3. Explicit Non-Goals
 
-Introduce a shared `ActionCommandLab` composed from three reusable primitives:
+- No gameplay UX redesign outside testing surfaces.
+- No frontend-side rule enforcement replacing backend validation.
+- No schema auto-generation in this wave.
+
+## 4. Target Architecture
+
+`ActionCommandLab` is composed from:
 
 1. `ActionSelectButton`
-
-- Main interchangeable action trigger.
-- Can switch action preset (value) via dropdown/segmented picker.
-
 2. `ActionPayloadEditor`
-
-- Structured field editor generated from preset schema.
-- Optional raw JSON mode for edge-case tests.
-
 3. `ActionResultBadge`
 
-- Displays latest terminal outcome for the selected action:
-  - success event type
-  - denied reason
-  - error code/message
-  - request id
+Shared, role-aware action catalog drives all behavior. DM/player differences are policy and visibility, not implementation forks.
 
-Use one shared action catalog so DM/player surfaces differ only by policy and visibility, not by wiring.
+## 5. Catalog Contract
 
-## 4. Shared Action Catalog
-
-Create a catalog in shared package (conceptual path):
-
-- `frontend/packages/shared/src/testing/actionCatalog.ts`
-
-### 4.1 Catalog entry shape
+### 5.1 Preset shape
 
 ```ts
 export type ActionPreset = {
@@ -66,127 +53,69 @@ export type ActionPreset = {
     key: string;
     type: "string" | "number" | "boolean" | "actor-id" | "path" | "json";
     required?: boolean;
+    helpText?: string;
   }>;
 };
 ```
 
-### 4.2 Initial preset coverage
+### 5.2 Preset baseline (minimum)
 
-Lifecycle:
+- Lifecycle: `start_combat`, `end_turn`, `end_combat`
+- Movement: `move_token`
+- Action family: `request_action` (`action`, `bonus_action`, `reaction`)
+- Direct effects: `apply_damage`, `apply_healing`, `apply_condition`, `remove_condition`, `add_actor`, `remove_actor`
+- Utility: `request_sync`, `ping`, `roll_dice`, `chat_message`
+- Advanced (DM only): `raw_envelope`
 
-- `start_combat`
-- `end_turn`
-- `end_combat`
+## 6. Behavior Specification
 
-Movement:
+### 6.1 ActionSelectButton
 
-- `move_token`
+- Primary click sends selected preset.
+- Secondary selector changes preset immediately.
+- Optional keyboard cycle: `[` previous, `]` next.
+- Disabled if transport disconnected, role denied, or required fields missing.
 
-Action family:
+### 6.2 ActionPayloadEditor
 
-- `request_action` (action)
-- `request_action` (bonus_action)
-- `request_action` (reaction)
+- Starts from `payloadTemplate`.
+- Renders editable fields by `editableFields` metadata.
+- Supports raw JSON mode (DM-only by default).
+- Performs only structural input checks (required/type shape), not game rules.
 
-Direct effect tools:
+### 6.3 ActionResultBadge
 
-- `apply_damage`
-- `apply_healing`
-- `apply_condition`
-- `remove_condition`
-- `add_actor`
-- `remove_actor`
+- Displays latest terminal result tied to current send/request.
+- Terminal categories:
+  - success event (`turn_advanced`, `actor_moved`, `action_authorized`, etc.)
+  - denied (`action_denied`, `command_denied`)
+  - `error`
+- Always shows `request_id`.
 
-Utility:
-
-- `request_sync`
-- `ping`
-- `roll_dice`
-- `chat_message`
-
-Optional advanced preset:
-
-- `raw_envelope` passthrough for unknown/experimental keys
-
-## 5. Interchangeable Button Behavior
-
-`ActionSelectButton` acts as one command button with configurable value.
-
-Expected interactions:
-
-- Primary click sends currently selected preset.
-- Secondary control changes selected preset instantly.
-- Optional keyboard cycle (`[` and `]`) through presets for rapid testing.
-
-Label format example:
-
-- `Send: request_action (bonus_action)`
-
-Disabled state rules:
-
-- Missing required payload fields.
-- Role policy violation in current view mode.
-- Transport disconnected.
-
-## 6. DM vs Player Behavior
-
-Both use same shared component; policy differs by role context.
+## 7. DM and Player Policy Model
 
 DM view:
 
-- Full preset catalog visible.
-- Actor impersonation (`actingAsUserId`) can be toggled and injected where relevant.
-- Supports direct-effect tools (`apply_damage`, `remove_actor`, etc.).
+- Full catalog access.
+- Supports impersonation metadata injection where needed.
+- Raw envelope mode available in advanced section.
 
 Player view:
 
-- Only player-allowed/all presets visible by default.
-- DM-only presets hidden or visible-but-disabled with reason text.
-- Uses selected owned actor as default `actor_id`.
+- Only allowed presets by default.
+- DM-only presets hidden or disabled with reason text.
+- Default `actor_id` from selected owned actor.
 
-## 7. Request Correlation and Feedback
+## 8. Request Correlation Contract
 
-For each send, capture:
+For each send, persist:
 
-- outbound `request_id`
-- command type
+- `request_id`
+- outbound `type`
 - payload snapshot
+- send timestamp
 
-Then resolve against first terminal inbound event with same `request_id`:
-
-- success terminal event (for example: `turn_advanced`, `actor_moved`, `action_authorized`, `combat_started`)
-- denied (`action_denied`, `command_denied`)
-- `error`
-
-Render this in `ActionResultBadge` and append to command log timeline.
-
-## 8. Proposed Component Placement
-
-Shared package:
-
-- `frontend/packages/shared/src/components/testing/ActionCommandLab.tsx`
-- `frontend/packages/shared/src/components/testing/ActionSelectButton.tsx`
-- `frontend/packages/shared/src/components/testing/ActionPayloadEditor.tsx`
-- `frontend/packages/shared/src/components/testing/ActionResultBadge.tsx`
-- `frontend/packages/shared/src/testing/actionCatalog.ts`
-
-DM integration:
-
-- Replace or wrap current `ActionDeck` with `ActionCommandLab`.
-
-Player integration:
-
-- Add a compact `PlayerActionLab` section in stage/sidebar (feature-flagged).
-
-## 9. State and API Contract
-
-Store-level additions (concept):
-
-- `dispatchPreset(presetId: string, payloadOverrides?: Record<string, unknown>): Promise<void>`
-- `lastCommandOutcomeByRequestId: Record<string, CommandOutcome>`
-- `latestOutcome: CommandOutcome | null`
-
-`CommandOutcome` shape:
+Then match first terminal inbound event with same `request_id` and compute normalized outcome.
 
 ```ts
 type CommandOutcome = {
@@ -200,67 +129,95 @@ type CommandOutcome = {
 };
 ```
 
-## 10. UX Flow
+## 9. File Placement (Planned)
 
-1. Pick actor (or use selected token).
-2. Pick preset in interchangeable action button.
-3. Adjust payload fields (optional).
-4. Send command.
-5. Observe correlated terminal result badge.
-6. Repeat quickly with next preset.
+Shared:
 
-This enables deterministic exploratory testing without editing source code between attempts.
+- frontend/packages/shared/src/testing/actionCatalog.ts
+- frontend/packages/shared/src/components/testing/ActionSelectButton.tsx
+- frontend/packages/shared/src/components/testing/ActionPayloadEditor.tsx
+- frontend/packages/shared/src/components/testing/ActionResultBadge.tsx
+- frontend/packages/shared/src/components/testing/ActionCommandLab.tsx
 
-## 11. Rollout Plan
+DM integration:
 
-Phase A - Shared foundations
+- frontend/packages/dm-view/src/\*_/_ (replace/wrap current action deck surface)
 
-- Add action catalog and shared components.
-- Keep existing DM controls available in parallel.
+Player integration:
 
-Phase B - DM migration
+- frontend/packages/player-view/src/\*_/_ (feature-flagged player lab)
 
-- Replace ad-hoc DM action controls with shared lab.
-- Validate no loss of current capabilities.
+## 10. Phase and PR Plan (This Document)
 
-Phase C - Player enablement
+### Phase 4 / PR 4: Shared Lab Foundations
 
-- Add player-safe action lab subset.
-- Gate behind `frontendTesting.playerActionLab` feature flag.
+Scope:
 
-Phase D - Cleanup
+- Add catalog and all shared lab components.
+- Add preset dispatch contract and result-badge input contract.
 
-- Remove duplicate legacy controls.
-- Keep raw envelope mode only in DM advanced mode.
+Acceptance:
 
-## 12. Acceptance Criteria
+- Shared lab renders and can send at least 12 presets without code edits.
+- Result badge can display success/denied/error states.
 
-- One interchangeable action button exists and is used in DM and player testing surfaces.
-- At least 12 presets from Section 4.2 are executable without code edits.
-- Every send has visible `request_id` and terminal result status.
-- Denied outcomes display normalized reason codes.
-- Player surface cannot execute DM-only presets unless explicitly running in impersonated DM context.
+### Phase 5 / PR 5: DM Integration
 
-## 13. Test Matrix (Manual)
+Scope:
 
-Core checks:
+- Integrate `ActionCommandLab` in DM test panel.
+- Keep legacy controls temporarily for parity verification.
 
-- Send `end_turn` in active turn => terminal response appears.
-- Send `move_token` on non-active/non-owned actor => denied reason visible.
-- Send `request_action` with exhausted budget => denied reason visible.
-- Send `request_sync` => state refresh visible.
-- Send `apply_damage` as DM => hp delta reflected.
+Acceptance:
 
-Correlation checks:
+- DM can execute all DM-capable presets.
+- No regression versus prior DM ad-hoc controls.
 
-- Rapidly send 5 different presets and verify outcome mapping remains request-id correct.
+### Phase 6 / PR 6: Player Integration (Feature Flag)
 
-Resilience checks:
+Scope:
 
-- Unknown preset type via raw mode yields `error` and does not break UI.
+- Add `PlayerActionLab` variant wired to shared component.
+- Gate with `frontendTesting.playerActionLab`.
 
-## 14. Open Decisions
+Acceptance:
 
-- Whether player lab should be visible by default or only via debug flag.
-- Whether DM keeps both simplified quick buttons and advanced interchangeable mode.
-- Whether raw JSON editing is globally available or DM-only.
+- Player can execute permitted presets.
+- DM-only presets are blocked in UI presentation layer.
+
+### Phase 7 / PR 7: Cleanup and Consolidation
+
+Scope:
+
+- Remove duplicate legacy testing controls.
+- Restrict raw mode to DM advanced mode.
+- Finalize docs and matrix links.
+
+Acceptance:
+
+- Single interchangeable command model remains.
+- All testing docs reflect final component paths.
+
+## 11. Manual Validation Matrix
+
+Core:
+
+- `end_turn` in active turn -> terminal response visible.
+- `move_token` for non-active/non-owned actor -> denied reason visible.
+- `request_action` with exhausted budget -> denied reason visible.
+- `request_sync` -> state refresh observed.
+- `apply_damage` as DM -> hp delta observed.
+
+Correlation:
+
+- Send five different presets rapidly and verify one-to-one request/outcome mapping.
+
+Resilience:
+
+- Unknown command through raw mode returns `error` and does not break UI state.
+
+## 12. Open Decisions (Must Close Before PR 6)
+
+- Player lab default visibility: always-on or debug-only.
+- DM dual-mode strategy: quick shortcuts + lab, or lab only.
+- Raw JSON exposure: DM-only strict vs broader debug audience.
