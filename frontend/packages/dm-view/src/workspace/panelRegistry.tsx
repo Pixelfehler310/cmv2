@@ -6,12 +6,7 @@ import { DmCommandDeck } from "../components/CommandDeck";
 import { ActionDeck } from "../components/ActionDeck";
 import { CommandLogPanel } from "../components/CommandLogPanel";
 
-export type DmPanelId =
-  | "initiative"
-  | "map"
-  | "command-deck"
-  | "action-deck"
-  | "command-log";
+export type DmPanelId = "initiative" | "map" | "command-deck" | "action-deck" | "command-log";
 
 type PanelRenderContext = {
   bridge?: IHostBridge;
@@ -33,46 +28,25 @@ const panelRegistry: Record<DmPanelId, DmPanelDefinition> = {
     id: "initiative",
     displayName: "Initiative",
     ariaLabel: "Initiative panel",
-    render: ({ selectedCombatantId, onSelectCombatant }) => (
-      <InitiativePanel
-        selectedCombatantId={selectedCombatantId}
-        onSelectCombatant={(id) => onSelectCombatant(id)}
-      />
-    ),
+    render: ({ selectedCombatantId, onSelectCombatant }) => <InitiativePanel selectedCombatantId={selectedCombatantId} onSelectCombatant={(id) => onSelectCombatant(id)} />,
   },
   map: {
     id: "map",
     displayName: "Battle Map",
     ariaLabel: "Battle map panel",
-    render: ({ selectedCombatantId, onSelectCombatant }) => (
-      <MapBoard
-        selectedCombatantId={selectedCombatantId}
-        onSelectCombatant={onSelectCombatant}
-      />
-    ),
+    render: ({ selectedCombatantId, onSelectCombatant }) => <MapBoard selectedCombatantId={selectedCombatantId} onSelectCombatant={onSelectCombatant} />,
   },
   "command-deck": {
     id: "command-deck",
     displayName: "Command Deck",
     ariaLabel: "Command deck panel",
-    render: ({ selectedCombatantId, clearSelectedCombatant }) => (
-      <DmCommandDeck
-        selectedCombatantId={selectedCombatantId}
-        onRemoveSelected={clearSelectedCombatant}
-      />
-    ),
+    render: ({ selectedCombatantId, clearSelectedCombatant }) => <DmCommandDeck selectedCombatantId={selectedCombatantId} onRemoveSelected={clearSelectedCombatant} />,
   },
   "action-deck": {
     id: "action-deck",
     displayName: "Action Deck",
     ariaLabel: "Action deck panel",
-    render: ({ bridge, campaignId, selectedCombatantId }) => (
-      <ActionDeck
-        bridge={bridge}
-        selectedCombatantId={selectedCombatantId}
-        campaignId={campaignId}
-      />
-    ),
+    render: ({ campaignId, selectedCombatantId }) => <ActionDeck selectedCombatantId={selectedCombatantId} campaignId={campaignId} />,
   },
   "command-log": {
     id: "command-log",
@@ -82,9 +56,6 @@ const panelRegistry: Record<DmPanelId, DmPanelDefinition> = {
   },
 };
 
-export const getDmPanelDefinition = (
-  panelId: string,
-): DmPanelDefinition | undefined => panelRegistry[panelId as DmPanelId];
+export const getDmPanelDefinition = (panelId: string): DmPanelDefinition | undefined => panelRegistry[panelId as DmPanelId];
 
-export const listDmPanels = (): DmPanelDefinition[] =>
-  Object.values(panelRegistry);
+export const listDmPanels = (): DmPanelDefinition[] => Object.values(panelRegistry);

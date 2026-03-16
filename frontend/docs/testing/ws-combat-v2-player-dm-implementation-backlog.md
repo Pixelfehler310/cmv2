@@ -1,6 +1,6 @@
 # WS Combat V2 Frontend Implementation Backlog (Execution)
 
-Status: execution-ready backlog and PR orchestration
+Status: phase 7 implemented (cleanup/docs sync complete)
 Depends on:
 
 - frontend/docs/architecture/ws-combat-v2-frontend-alignment-concept.md
@@ -138,6 +138,13 @@ Primary tasks:
 1. Remove deprecated ad-hoc controls.
 2. Restrict raw envelope mode to DM advanced mode.
 3. Sync docs to final component and selector names.
+
+Implementation notes:
+
+- DM test surface now uses only `ActionCommandLab` in `frontend/packages/dm-view/src/components/ActionDeck.tsx`.
+- Raw envelope is exposed only when DM advanced mode is enabled.
+- Player harness remains feature-flagged (`frontendTesting.playerActionLab`) in `frontend/packages/player-view/src/pages/PlayerView.tsx`.
+- Request-correlation consumers use shared selectors `selectCommandOutcomeByRequestId` and `selectPendingCommandByRequestId`.
 
 Definition of done:
 

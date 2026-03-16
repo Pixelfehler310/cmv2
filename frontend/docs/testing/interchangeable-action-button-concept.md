@@ -1,6 +1,6 @@
 # Interchangeable Action Button Concept (DM + Player Test Harness)
 
-Status: implementation concept (phase-ready)
+Status: implemented through phase 7
 Related:
 
 - frontend/docs/architecture/ws-combat-v2-frontend-alignment-concept.md
@@ -198,6 +198,12 @@ Acceptance:
 - Single interchangeable command model remains.
 - All testing docs reflect final component paths.
 
+Implementation status:
+
+- Legacy DM parity console removed from `frontend/packages/dm-view/src/components/ActionDeck.tsx`.
+- `raw_envelope` preset is hidden unless DM advanced mode is enabled.
+- DM and player both use `ActionCommandLab` as the maintained shared harness path.
+
 ## 11. Manual Validation Matrix
 
 Core:
@@ -216,8 +222,8 @@ Resilience:
 
 - Unknown command through raw mode returns `error` and does not break UI state.
 
-## 12. Open Decisions (Must Close Before PR 6)
+## 12. Resolved Decisions
 
-- Player lab default visibility: always-on or debug-only.
-- DM dual-mode strategy: quick shortcuts + lab, or lab only.
-- Raw JSON exposure: DM-only strict vs broader debug audience.
+- Player lab visibility remains debug-gated behind `frontendTesting.playerActionLab`.
+- DM testing surface is lab-first; legacy duplicate controls are removed.
+- Raw JSON exposure is DM-only and gated by DM advanced mode.

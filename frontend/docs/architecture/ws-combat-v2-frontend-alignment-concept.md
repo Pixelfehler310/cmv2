@@ -1,6 +1,6 @@
 # WS Combat V2 Frontend Alignment Concept
 
-Status: implementation concept (phase-ready)
+Status: implemented (phase 7 cleanup applied)
 Owner: frontend
 Input contract: docs/architecture/backend/16_ws_event_frontend_contract_handover.md
 Companion docs:
@@ -167,6 +167,20 @@ Acceptance:
 
 - Command-like outbound envelopes always have `request_id`.
 - Correlation ids appear consistently in local bridge diagnostics.
+
+### Phase 7 / PR 7: Cleanup and Docs Sync
+
+Scope:
+
+- Remove temporary duplicate DM ad-hoc testing controls.
+- Keep raw envelope usage DM-only via advanced mode gate.
+- Sync final harness and selector naming in docs.
+
+Acceptance:
+
+- DM and player test harnesses use shared `ActionCommandLab` path.
+- Raw envelope is available only in DM advanced mode.
+- Correlation consumers use shared selectors (`selectCommandOutcomeByRequestId`, `selectPendingCommandByRequestId`).
 
 ## 7. Risks and Mitigations
 

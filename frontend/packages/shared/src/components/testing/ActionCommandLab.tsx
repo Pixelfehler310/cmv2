@@ -23,14 +23,21 @@ type ActionCommandLabProps = {
   allowRawMode?: boolean;
 };
 
+const RAW_ENVELOPE_PRESET_ID = "raw_envelope";
+
 export function ActionCommandLab({ role, actorId = null, title = "Action Command Lab", presets = ACTION_PRESETS, allowRawMode }: ActionCommandLabProps): JSX.Element {
   const isConnected = useCombatStore((state) => state.isConnected);
   const dispatchCommand = useCombatStore((state) => state.dispatchCommand);
+  const canUseRawMode = allowRawMode ?? role === "dm";
 
   const availablePresets = useMemo(() => {
     const filteredByRole = presets.filter((preset) => getActionPresetsForRole(role).some((allowed) => allowed.id === preset.id));
-    return filteredByRole;
-  }, [presets, role]);
+    if (canUseRawMode) {
+      return filteredByRole;
+    }
+
+    return filteredByRole.filter((preset) => preset.id !== RAW_ENVELOPE_PRESET_ID);
+  }, [canUseRawMode, presets, role]);
 
   const [selectedPresetId, setSelectedPresetId] = useState<string>(availablePresets[0]?.id ?? "");
   const [payload, setPayload] = useState<Record<string, unknown>>(() => {
@@ -72,7 +79,6 @@ export function ActionCommandLab({ role, actorId = null, title = "Action Command
   const outcome = useCombatStore((state) => (currentRequestId ? selectCommandOutcomeByRequestId(state, currentRequestId) : null));
   const pending = useCombatStore((state) => (currentRequestId ? selectPendingCommandByRequestId(state, currentRequestId) : null));
 
-  const canUseRawMode = allowRawMode ?? role === "dm";
   const commandReadyPayload = selectedPreset ? applyActorDefaults(payload, selectedPreset, actorId) : payload;
 
   const disabledReason = !isConnected ? "Transport disconnected" : availablePresets.length === 0 ? "No presets available for this role" : validationErrors.length > 0 ? validationErrors[0] : null;
