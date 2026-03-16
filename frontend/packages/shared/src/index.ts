@@ -4,3 +4,8 @@ export * from "./stores/useSelectionStore";
 export * from "./selectors/combatSelectors";
 export * from "./adapters/encounterAdapter";
 export * from "./adapters/wsEnvelopeAdapter";
+export * from "./testing/actionCatalog";
+export * from "./components/testing/ActionSelectButton";
+export * from "./components/testing/ActionPayloadEditor";
+export * from "./components/testing/ActionResultBadge";
+export * from "./components/testing/ActionCommandLab";
