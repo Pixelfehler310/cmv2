@@ -11,7 +11,10 @@ from __future__ import annotations
 
 import logging
 import re
+from uuid import uuid4
 from typing import Any, Optional
+
+from sqlalchemy import delete, select
 
 from src.config import settings
 from src.database import AsyncSessionLocal
@@ -42,10 +45,12 @@ from .event_types import (
 
 from .schemas.encounter import EncounterState
 from .schemas.encounter import MapToken
-from .schemas.instances import ActorInstance, ConditionInstance
-from .schemas.enums import Ability, ActionType, ConditionType, DamageType, ActorType
+from .schemas.instances import ActorInstance, ConditionInstance, EffectInstance
+from .schemas.enums import Ability, ActionType, ConditionType, DamageType, ActorType, DurationType
 from .schemas.common import AbilityScores, SaveRequirement, SpeedBlock, Position
 from .schemas.definitions import ActionDefinition
+from .schemas.contracts import EffectDefinition as CanonicalEffectDefinition
+from .lib.content_models import EffectDefinitionRecord, EffectInstanceRecord
 
 from .engine.combat_state import (
     start_combat,
@@ -55,6 +60,7 @@ from .engine.combat_state import (
 from .engine.initiative import InitiativeEntry
 from .engine.dice import DiceService
 from .engine.damage import apply_damage
+from .engine.effect_engine import add_effect, remove_effect, tick_effects
 from .engine.action_resolver import resolve_attack, resolve_healing, resolve_save_action
 from .services.combat_service import CombatService
 
@@ -751,6 +757,28 @@ class Dnd5eWsHandler(ISystemHandler):
         )
         events.extend(family_events)
 
+        effect_events = await self._resolve_effect_intent_events(
+            encounter,
+            encounter_session,
+            service.db,
+            actor,
+            targets,
+            action_name,
+            action_payload,
+            canonical_meta.effect_intents if canonical_meta.found else None,
+            request_id,
+        )
+        events.extend(effect_events)
+
+        if encounter_session is not None:
+            await self._sync_effect_instance_records(
+                service.db,
+                encounter_session,
+                encounter,
+                provenance_by_instance=self._collect_effect_provenance_by_instance(
+                    effect_events),
+            )
+
         if encounter_session is not None:
             await service.log_action_attempt(
                 encounter_session,
@@ -1226,6 +1254,504 @@ class Dnd5eWsHandler(ISystemHandler):
 
         return None
 
+    async def _resolve_effect_intent_events(
+        self,
+        encounter: EncounterState,
+        encounter_session,
+        db_session,
+        actor: ActorInstance,
+        targets: list[ActorInstance],
+        action_name: str,
+        action_payload: dict[str, Any],
+        canonical_effect_intents: list[dict[str, Any]] | None,
+        request_id: str | None,
+    ) -> list[WsOutbound]:
+        intents = canonical_effect_intents if isinstance(
+            canonical_effect_intents, list) else []
+        if not intents and isinstance(action_payload.get("effect_intents"), list):
+            intents = [intent for intent in action_payload.get(
+                "effect_intents", []) if isinstance(intent, dict)]
+
+        if not intents:
+            return []
+
+        events: list[WsOutbound] = []
+        for intent in intents:
+            effect_id = str(intent.get("effect_id") or "").strip()
+            if effect_id:
+                events.extend(
+                    await self._apply_canonical_effect_intent(
+                        encounter,
+                        encounter_session,
+                        db_session,
+                        actor,
+                        targets,
+                        action_name,
+                        intent,
+                        request_id,
+                    )
+                )
+                continue
+
+            operation = str(intent.get("operation") or "").strip().lower()
+            if operation not in {"apply_condition", "remove_condition"}:
+                continue
+
+            condition = self._parse_condition(
+                intent.get("condition") or intent.get("value"))
+            if condition is None:
+                continue
+
+            resolved_targets = self._resolve_effect_targets(
+                encounter, targets, intent.get("target_ids"))
+            for target in resolved_targets:
+                if operation == "remove_condition":
+                    target.conditions = [
+                        entry for entry in target.conditions
+                        if entry.condition != condition
+                    ]
+                    events.append(
+                        WsOutbound(
+                            type="condition_removed",
+                            payload={
+                                "actor_id": target.id,
+                                "condition": condition.value,
+                            },
+                            visibility=Visibility.ALL,
+                        )
+                    )
+                    events.append(
+                        WsOutbound(
+                            type="effect_removed",
+                            payload={
+                                "effect_id": f"inline:{operation}:{condition.value}",
+                                "target_actor_id": target.id,
+                                "source_actor_id": actor.id,
+                                "reason": "removed",
+                                "provenance": self._effect_provenance_payload(request_id, action_name, actor.id),
+                            },
+                            visibility=Visibility.ALL,
+                        )
+                    )
+                else:
+                    if not any(existing.condition == condition and existing.source_id == actor.id for existing in target.conditions):
+                        target.conditions.append(
+                            ConditionInstance(
+                                condition=condition,
+                                source_id=actor.id,
+                            )
+                        )
+                    events.append(
+                        WsOutbound(
+                            type="effect_applied",
+                            payload={
+                                "effect_id": f"inline:{operation}:{condition.value}",
+                                "target_actor_id": target.id,
+                                "source_actor_id": actor.id,
+                                "provenance": self._effect_provenance_payload(request_id, action_name, actor.id),
+                            },
+                            visibility=Visibility.ALL,
+                        )
+                    )
+                    events.append(
+                        WsOutbound(
+                            type="condition_added",
+                            payload={
+                                "actor_id": target.id,
+                                "condition": condition.value,
+                                "source": actor.id,
+                            },
+                            visibility=Visibility.ALL,
+                        )
+                    )
+
+        return events
+
+    def _resolve_effect_targets(
+        self,
+        encounter: EncounterState,
+        base_targets: list[ActorInstance],
+        explicit_target_ids: Any,
+    ) -> list[ActorInstance]:
+        if not isinstance(explicit_target_ids, list):
+            return base_targets
+
+        resolved: list[ActorInstance] = []
+        for target_id in explicit_target_ids:
+            if not isinstance(target_id, str):
+                continue
+            actor = self._find_actor(encounter, target_id)
+            if actor is not None:
+                resolved.append(actor)
+        return resolved
+
+    async def _apply_canonical_effect_intent(
+        self,
+        encounter: EncounterState,
+        encounter_session,
+        db_session,
+        actor: ActorInstance,
+        targets: list[ActorInstance],
+        action_name: str,
+        intent: dict[str, Any],
+        request_id: str | None,
+    ) -> list[WsOutbound]:
+        effect_id = str(intent.get("effect_id") or "").strip()
+        if not effect_id:
+            return []
+
+        stmt = select(EffectDefinitionRecord).where(
+            EffectDefinitionRecord.system == "dnd5e",
+            EffectDefinitionRecord.effect_id == effect_id,
+            EffectDefinitionRecord.enabled.is_(True),
+        )
+        result = await db_session.execute(stmt)
+        effect_record = result.scalar_one_or_none()
+
+        if effect_record is None:
+            return [
+                WsOutbound(
+                    type="effect_denied",
+                    payload={
+                        "effect_id": effect_id,
+                        "reason_code": "effect_not_found",
+                        "message": f"Unknown effect_id '{effect_id}'",
+                        "provenance": self._effect_provenance_payload(request_id, action_name, actor.id),
+                    },
+                    visibility=Visibility.ALL,
+                )
+            ]
+
+        definition = CanonicalEffectDefinition(
+            effect_id=effect_record.effect_id,
+            name=effect_record.name,
+            family=effect_record.family,
+            duration=effect_record.duration or {},
+            stacking=effect_record.stacking or {},
+            tags=effect_record.tags or [],
+            modifiers=effect_record.modifiers or [],
+            grants_conditions=effect_record.grants_conditions or [],
+            periodic=effect_record.periodic or [],
+            removal_triggers=effect_record.removal_triggers or [],
+            metadata=effect_record.metadata_json or {},
+        )
+
+        events: list[WsOutbound] = []
+        resolved_targets = self._resolve_effect_targets(
+            encounter, targets, intent.get("target_ids"))
+        if not resolved_targets:
+            return [
+                WsOutbound(
+                    type="effect_denied",
+                    payload={
+                        "effect_id": effect_id,
+                        "reason_code": "target_invalid",
+                        "message": "No valid targets for effect intent",
+                        "provenance": self._effect_provenance_payload(request_id, action_name, actor.id),
+                    },
+                    visibility=Visibility.ALL,
+                )
+            ]
+
+        duration_type = str(definition.duration.type)
+        requires_concentration = duration_type == "concentration"
+        duration_value = self._safe_int(intent.get(
+            "duration_override"), default=definition.duration.value)
+
+        for target in resolved_targets:
+            existing_instances = [
+                effect for effect in target.effects
+                if (effect.name == definition.effect_id)
+            ]
+
+            stack_mode = definition.stacking.mode
+            max_stacks = definition.stacking.max_stacks
+
+            if requires_concentration and actor.concentration.is_concentrating and actor.concentration.effect_id:
+                if all(effect.id != actor.concentration.effect_id for effect in existing_instances):
+                    previous_effect_id = actor.concentration.effect_id
+                    remove_effect(encounter, previous_effect_id)
+                    events.append(
+                        WsOutbound(
+                            type="effect_removed",
+                            payload={
+                                "effect_instance_id": previous_effect_id,
+                                "effect_id": "concentration",
+                                "source_actor_id": actor.id,
+                                "reason": "concentration_replaced",
+                                "provenance": self._effect_provenance_payload(request_id, action_name, actor.id),
+                            },
+                            visibility=Visibility.ALL,
+                        )
+                    )
+                    actor.concentration.is_concentrating = False
+                    actor.concentration.effect_id = None
+
+            if stack_mode == "stack" and existing_instances:
+                existing = existing_instances[0]
+                current_stacks = self._safe_int(existing.value, default=1) or 1
+                if max_stacks is not None and current_stacks >= max_stacks:
+                    events.append(
+                        WsOutbound(
+                            type="effect_denied",
+                            payload={
+                                "effect_id": definition.effect_id,
+                                "target_actor_id": target.id,
+                                "reason_code": "stacking_limit_reached",
+                                "message": "Effect stacking limit reached",
+                                "provenance": self._effect_provenance_payload(request_id, action_name, actor.id),
+                            },
+                            visibility=Visibility.ALL,
+                        )
+                    )
+                    continue
+
+                existing.value = current_stacks + 1
+                if duration_type in {"rounds", "turns"}:
+                    existing.remaining_rounds = duration_value
+                events.append(
+                    WsOutbound(
+                        type="effect_refreshed",
+                        payload={
+                            "effect_instance_id": existing.id,
+                            "effect_id": definition.effect_id,
+                            "target_actor_id": target.id,
+                            "source_actor_id": actor.id,
+                            "stack_count": existing.value,
+                            "remaining_duration": existing.remaining_rounds,
+                            "provenance": self._effect_provenance_payload(request_id, action_name, actor.id),
+                        },
+                        visibility=Visibility.ALL,
+                    )
+                )
+                continue
+
+            if stack_mode in {"replace", "highest_only"} and existing_instances:
+                for existing in existing_instances:
+                    remove_effect(encounter, existing.id)
+                    events.append(
+                        WsOutbound(
+                            type="effect_removed",
+                            payload={
+                                "effect_instance_id": existing.id,
+                                "effect_id": definition.effect_id,
+                                "target_actor_id": target.id,
+                                "source_actor_id": actor.id,
+                                "reason": "replaced",
+                                "provenance": self._effect_provenance_payload(request_id, action_name, actor.id),
+                            },
+                            visibility=Visibility.ALL,
+                        )
+                    )
+
+            if stack_mode == "refresh_duration" and existing_instances:
+                existing = existing_instances[0]
+                if duration_type in {"rounds", "turns"}:
+                    existing.remaining_rounds = duration_value
+                events.append(
+                    WsOutbound(
+                        type="effect_refreshed",
+                        payload={
+                            "effect_instance_id": existing.id,
+                            "effect_id": definition.effect_id,
+                            "target_actor_id": target.id,
+                            "source_actor_id": actor.id,
+                            "remaining_duration": existing.remaining_rounds,
+                            "provenance": self._effect_provenance_payload(request_id, action_name, actor.id),
+                        },
+                        visibility=Visibility.ALL,
+                    )
+                )
+                continue
+
+            instance_id = f"eff_{uuid4().hex}"
+            remaining_rounds: int | None = None
+            if duration_type in {"rounds", "turns"}:
+                remaining_rounds = duration_value
+
+            new_effect = EffectInstance(
+                id=instance_id,
+                name=definition.effect_id,
+                source_id=actor.id,
+                target_id=target.id,
+                duration_type=DurationType.ROUNDS if remaining_rounds is not None else DurationType.UNTIL_DISPELLED,
+                remaining_rounds=remaining_rounds,
+                requires_concentration=requires_concentration,
+                value=1,
+            )
+            add_effect(encounter, new_effect)
+
+            if requires_concentration:
+                actor.concentration.is_concentrating = True
+                actor.concentration.effect_id = new_effect.id
+
+            events.append(
+                WsOutbound(
+                    type="effect_applied",
+                    payload={
+                        "effect_instance_id": new_effect.id,
+                        "effect_id": definition.effect_id,
+                        "target_actor_id": target.id,
+                        "source_actor_id": actor.id,
+                        "remaining_duration": new_effect.remaining_rounds,
+                        "requires_concentration": requires_concentration,
+                        "provenance": self._effect_provenance_payload(request_id, action_name, actor.id),
+                    },
+                    visibility=Visibility.ALL,
+                )
+            )
+
+            for condition_name in definition.grants_conditions:
+                condition = self._parse_condition(condition_name)
+                if condition is None:
+                    continue
+                if any(entry.condition == condition and entry.source_effect_id == new_effect.id for entry in target.conditions):
+                    continue
+                target.conditions.append(
+                    ConditionInstance(
+                        condition=condition,
+                        source_id=actor.id,
+                        source_effect_id=new_effect.id,
+                    )
+                )
+                events.append(
+                    WsOutbound(
+                        type="condition_added",
+                        payload={
+                            "actor_id": target.id,
+                            "condition": condition.value,
+                            "source": actor.id,
+                        },
+                        visibility=Visibility.ALL,
+                    )
+                )
+
+        return events
+
+    @staticmethod
+    def _effect_provenance_payload(request_id: str | None, action_name: str | None, source_actor_id: str | None) -> dict[str, Any]:
+        return {
+            "command_request_id": request_id,
+            "action_id": action_name,
+            "source_actor_id": source_actor_id,
+        }
+
+    @staticmethod
+    def _collect_effect_provenance_by_instance(events: list[WsOutbound]) -> dict[str, dict[str, Any]]:
+        provenance_by_instance: dict[str, dict[str, Any]] = {}
+        for event in events:
+            if event.type not in {"effect_applied", "effect_refreshed", "effect_removed", "effect_tick_resolved"}:
+                continue
+            payload = event.payload if isinstance(event.payload, dict) else {}
+            instance_id = payload.get("effect_instance_id")
+            provenance = payload.get("provenance")
+            if isinstance(instance_id, str) and isinstance(provenance, dict):
+                provenance_by_instance[instance_id] = provenance
+        return provenance_by_instance
+
+    async def _sync_effect_instance_records(
+        self,
+        db_session,
+        encounter_session,
+        encounter: EncounterState,
+        provenance_by_instance: dict[str, dict[str, Any]] | None = None,
+    ) -> None:
+        existing_result = await db_session.execute(
+            select(EffectInstanceRecord).where(
+                EffectInstanceRecord.encounter_session_id == encounter_session.id,
+            )
+        )
+        existing_rows = list(existing_result.scalars().all())
+        existing_by_instance = {row.instance_id: row for row in existing_rows}
+
+        await db_session.execute(
+            delete(EffectInstanceRecord).where(
+                EffectInstanceRecord.encounter_session_id == encounter_session.id,
+            )
+        )
+
+        provenance_by_instance = provenance_by_instance or {}
+        for actor in encounter.combatants:
+            for effect in actor.effects:
+                previous = existing_by_instance.get(effect.id)
+                stack_count = self._safe_int(effect.value, default=1) or 1
+                concentration_owner_actor_id = None
+                if effect.requires_concentration:
+                    concentration_owner_actor_id = effect.source_id or actor.id
+
+                record = EffectInstanceRecord(
+                    instance_id=effect.id,
+                    effect_id=effect.name or effect.id,
+                    source_actor_id=effect.source_id or None,
+                    target_actor_id=actor.id,
+                    applied_at_round=previous.applied_at_round if previous else encounter.round_number,
+                    remaining_duration=effect.remaining_rounds,
+                    concentration_owner_actor_id=concentration_owner_actor_id,
+                    stack_count=stack_count,
+                    snapshot_payload=effect.model_dump(mode="json"),
+                    provenance=provenance_by_instance.get(effect.id)
+                    or (previous.provenance if previous else {})
+                    or {},
+                    encounter_session_id=encounter_session.id,
+                )
+                db_session.add(record)
+
+        await db_session.flush()
+
+    def _build_effect_tick_events(
+        self,
+        tick_outcome: dict[str, list[dict[str, int | str | None]]],
+        source_actor_id: str,
+        request_id: str | None,
+    ) -> list[WsOutbound]:
+        events: list[WsOutbound] = []
+        provenance = self._effect_provenance_payload(
+            request_id, None, source_actor_id)
+
+        for entry in tick_outcome.get("ticked", []):
+            events.append(
+                WsOutbound(
+                    type="effect_tick_resolved",
+                    payload={
+                        "effect_instance_id": entry.get("effect_instance_id"),
+                        "effect_id": entry.get("effect_id"),
+                        "target_actor_id": entry.get("target_actor_id"),
+                        "source_actor_id": source_actor_id,
+                        "remaining_duration": entry.get("remaining_duration"),
+                        "trigger": "end_turn",
+                        "provenance": provenance,
+                    },
+                    visibility=Visibility.ALL,
+                )
+            )
+
+        for entry in tick_outcome.get("expired", []):
+            events.append(
+                WsOutbound(
+                    type="effect_removed",
+                    payload={
+                        "effect_instance_id": entry.get("effect_instance_id"),
+                        "effect_id": entry.get("effect_id"),
+                        "target_actor_id": entry.get("target_actor_id"),
+                        "source_actor_id": source_actor_id,
+                        "reason": "expired",
+                        "provenance": provenance,
+                    },
+                    visibility=Visibility.ALL,
+                )
+            )
+
+        return events
+
+    def _clear_expired_concentration(self, encounter: EncounterState, expired_effect_instance_ids: set[str]) -> None:
+        if not expired_effect_instance_ids:
+            return
+
+        for combatant in encounter.combatants:
+            if combatant.concentration.effect_id in expired_effect_instance_ids:
+                combatant.concentration.is_concentrating = False
+                combatant.concentration.effect_id = None
+
     async def _handle_end_turn(
         self,
         encounter: EncounterState,
@@ -1275,6 +1801,19 @@ class Dnd5eWsHandler(ISystemHandler):
                 )
             ]
 
+        tick_outcome = tick_effects(encounter, source_id=active_actor.id)
+        expired_effect_ids = {
+            str(entry.get("effect_instance_id"))
+            for entry in tick_outcome.get("expired", [])
+            if entry.get("effect_instance_id")
+        }
+        self._clear_expired_concentration(encounter, expired_effect_ids)
+        tick_events = self._build_effect_tick_events(
+            tick_outcome,
+            source_actor_id=active_actor.id,
+            request_id=envelope.request_id,
+        )
+
         if encounter_session is None:
             next_turn(encounter)
             await service.on_turn_started(encounter_session, encounter)
@@ -1282,20 +1821,27 @@ class Dnd5eWsHandler(ISystemHandler):
             active_id = active.id if active else ""
         else:
             active_id, _ = await service.advance_turn(encounter_session, encounter)
+            await self._sync_effect_instance_records(
+                service.db,
+                encounter_session,
+                encounter,
+                provenance_by_instance=self._collect_effect_provenance_by_instance(
+                    tick_events),
+            )
 
         budget_snapshot = await service.get_turn_budget_snapshot(encounter_session, encounter)
 
-        return [
-            WsOutbound(
-                type="turn_advanced",
-                payload={
-                    "active_actor_id": active_id,
-                    "round": encounter.round_number,
-                    "turn_budget": budget_snapshot,
-                },
-                visibility=Visibility.ALL,
-            )
-        ]
+        turn_event = WsOutbound(
+            type="turn_advanced",
+            payload={
+                "active_actor_id": active_id,
+                "round": encounter.round_number,
+                "turn_budget": budget_snapshot,
+            },
+            visibility=Visibility.ALL,
+        )
+
+        return [*tick_events, turn_event]
 
     async def _handle_move_token(
         self,

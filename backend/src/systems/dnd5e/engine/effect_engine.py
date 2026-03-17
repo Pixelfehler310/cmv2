@@ -66,7 +66,7 @@ def has_effect(actor: ActorInstance, effect_id: str) -> bool:
     return any(e.id == effect_id for e in actor.effects)
 
 
-def tick_effects(encounter: EncounterState, *, source_id: str) -> None:
+def tick_effects(encounter: EncounterState, *, source_id: str) -> dict[str, list[dict[str, int | str | None]]]:
     """Tick effect durations for effects from a specific source.
 
     Called at the start/end of a turn. Only decrements effects whose
@@ -77,14 +77,38 @@ def tick_effects(encounter: EncounterState, *, source_id: str) -> None:
         encounter: The active encounter.
         source_id: The actor whose effects should be ticked.
     """
-    effects_to_remove: list[str] = []
+    effects_to_remove: list[tuple[str, str, str]] = []
+    ticked: list[dict[str, int | str | None]] = []
 
     for actor in encounter.combatants:
         for effect in actor.effects:
             if effect.source_id == source_id and effect.remaining_rounds is not None:
                 effect.remaining_rounds -= 1
+                ticked.append(
+                    {
+                        "effect_instance_id": effect.id,
+                        "effect_id": effect.name or effect.id,
+                        "target_actor_id": actor.id,
+                        "remaining_duration": effect.remaining_rounds,
+                    }
+                )
                 if effect.remaining_rounds <= 0:
-                    effects_to_remove.append(effect.id)
+                    effects_to_remove.append(
+                        (effect.id, effect.name or effect.id, actor.id))
 
-    for effect_id in effects_to_remove:
-        remove_effect(encounter, effect_id)
+    expired: list[dict[str, int | str | None]] = []
+    for effect_instance_id, effect_id, target_actor_id in effects_to_remove:
+        expired.append(
+            {
+                "effect_instance_id": effect_instance_id,
+                "effect_id": effect_id,
+                "target_actor_id": target_actor_id,
+                "remaining_duration": 0,
+            }
+        )
+        remove_effect(encounter, effect_instance_id)
+
+    return {
+        "ticked": ticked,
+        "expired": expired,
+    }

@@ -7,17 +7,23 @@ Uses the handler directly (no real WebSocket connection needed).
 
 import pytest
 from unittest.mock import AsyncMock
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.config import settings
+from src.database import Base
 from src.core.ws_protocol import WsEnvelope, WsOutbound, Visibility
 from src.core.sessions.models import SessionContext, UserRole
 from src.core.sessions.manager import SessionManager
 
+import src.systems.dnd5e.ws_handler as ws_handler_module
 from src.systems.dnd5e.ws_handler import Dnd5eWsHandler, set_encounter, clear_encounters
 from src.systems.dnd5e.schemas.encounter import EncounterState
-from src.systems.dnd5e.schemas.instances import ActorInstance, ConditionInstance
-from src.systems.dnd5e.schemas.enums import ActorType, ConditionType, DamageType
+from src.systems.dnd5e.schemas.instances import ActorInstance, ConditionInstance, EffectInstance
+from src.systems.dnd5e.schemas.enums import ActorType, ConditionType, DamageType, DurationType
 from src.systems.dnd5e.schemas.common import AbilityScores
+from src.systems.dnd5e.lib.combat_models import EncounterSession
+from src.systems.dnd5e.lib.content_models import EffectDefinitionRecord, EffectInstanceRecord
 from src.systems.dnd5e.services.combat_service import CombatService
 
 
@@ -1056,6 +1062,510 @@ class TestActionResolutionPhase3:
         event_types = {event.type for event in events}
         assert "action_authorized" in event_types
         assert "save_result" in event_types
+
+    @pytest.mark.anyio
+    async def test_request_action_applies_canonical_effect_intent_with_provenance(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase4_effect_apply_start"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+        target_actor_id = next(
+            c.id for c in combat_encounter.combatants if c.id != active_actor_id)
+
+        original_builder = CombatService._build_bound_action_candidates
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [
+                {
+                    "action_id": "canonical_burning_strike",
+                    "name": "Canonical Burning Strike",
+                    "label": "Canonical Burning Strike",
+                    "family": "utility",
+                    "action_type_cost": "action",
+                    "targeting_mode": "single_target",
+                    "range": 5,
+                    "save_context": None,
+                    "attack_context": None,
+                    "effect_intents": [{"operation": "apply_condition", "condition": "Poisoned"}],
+                    "tags": [],
+                    "source_ref": "custom",
+                    "content_version": "1",
+                    "enabled": True,
+                    "aoe_shape": None,
+                    "aoe_size": None,
+                }
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
+        try:
+            events = await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_phase4_effect_apply",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "action",
+                        "action_name": "canonical_burning_strike",
+                        "payload": {"target_ids": [target_actor_id]},
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+        finally:
+            monkeypatch.setattr(
+                CombatService, "_build_bound_action_candidates", original_builder)
+
+        applied = [
+            event for event in events
+            if event.type == "effect_applied" and event.payload.get("effect_id") == "inline:apply_condition:Poisoned"
+        ]
+        assert applied
+        assert applied[0].payload["provenance"]["command_request_id"] == "req_phase4_effect_apply"
+        assert applied[0].payload["provenance"]["action_id"] == "canonical_burning_strike"
+
+        event_types = {event.type for event in events}
+        assert "condition_added" in event_types
+
+    @pytest.mark.anyio
+    async def test_end_turn_emits_effect_tick_and_expiry_events(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase4_tick_start"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+        target_actor_id = next(
+            c.id for c in combat_encounter.combatants if c.id != active_actor_id)
+
+        target_actor = next(
+            c for c in combat_encounter.combatants if c.id == target_actor_id)
+        target_actor.effects.append(
+            EffectInstance(
+                id="phase4_tick_effect_1",
+                name="phase4_tick_effect",
+                source_id=active_actor_id,
+                target_id=target_actor_id,
+                duration_type=DurationType.ROUNDS,
+                remaining_rounds=1,
+            )
+        )
+
+        end_turn_events = await handler.handle(
+            WsEnvelope(
+                type="end_turn",
+                request_id="req_phase4_tick_end_turn",
+                payload={"actor_id": active_actor_id},
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        event_types = [event.type for event in end_turn_events]
+        assert "effect_tick_resolved" in event_types
+        assert "effect_removed" in event_types
+        assert "turn_advanced" in event_types
+
+        tick_event = next(
+            event for event in end_turn_events if event.type == "effect_tick_resolved")
+        removed_event = next(
+            event for event in end_turn_events if event.type == "effect_removed")
+
+        assert tick_event.request_id == "req_phase4_tick_end_turn"
+        assert tick_event.payload["provenance"]["command_request_id"] == "req_phase4_tick_end_turn"
+        assert tick_event.payload["provenance"]["action_id"] is None
+
+        assert removed_event.request_id == "req_phase4_tick_end_turn"
+        assert removed_event.payload["provenance"]["command_request_id"] == "req_phase4_tick_end_turn"
+        assert removed_event.payload["provenance"]["action_id"] is None
+
+
+class TestEffectExecutionPhase4DbMode:
+
+    @staticmethod
+    async def _configure_sqlite_db_mode(monkeypatch):
+        engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        session_factory = async_sessionmaker(
+            bind=engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autoflush=False,
+        )
+        monkeypatch.setattr(ws_handler_module,
+                            "AsyncSessionLocal", session_factory)
+        return session_factory, engine
+
+    @staticmethod
+    async def _insert_effect_definition(session_factory, effect_id: str, *, stacking: dict, duration: dict) -> None:
+        async with session_factory() as db:
+            await db.execute(
+                delete(EffectDefinitionRecord).where(
+                    EffectDefinitionRecord.system == "dnd5e",
+                    EffectDefinitionRecord.effect_id == effect_id,
+                )
+            )
+            db.add(
+                EffectDefinitionRecord(
+                    system="dnd5e",
+                    effect_id=effect_id,
+                    name=effect_id,
+                    family="utility",
+                    duration=duration,
+                    stacking=stacking,
+                    tags=[],
+                    modifiers=[],
+                    grants_conditions=[],
+                    periodic=[],
+                    removal_triggers=[],
+                    metadata_json={"source_system": "dnd5e",
+                                   "content_version": "1"},
+                    enabled=True,
+                )
+            )
+            await db.commit()
+
+    @staticmethod
+    async def _load_effect_rows(session_factory, campaign_id: str) -> list[EffectInstanceRecord]:
+        async with session_factory() as db:
+            session_stmt = select(EncounterSession).where(
+                EncounterSession.campaign_id == campaign_id)
+            encounter_session = (await db.execute(session_stmt)).scalar_one()
+            rows_stmt = select(EffectInstanceRecord).where(
+                EffectInstanceRecord.encounter_session_id == encounter_session.id)
+            return list((await db.execute(rows_stmt)).scalars().all())
+
+    @pytest.mark.anyio
+    async def test_db_mode_canonical_concentration_replacement_persists_and_emits_provenance(self, handler, mgr, monkeypatch):
+        session_factory, engine = await self._configure_sqlite_db_mode(monkeypatch)
+        campaign_id = "db_phase4_concentration"
+        dm_ctx = SessionContext(
+            campaign_id=campaign_id,
+            user_id="dm_user",
+            display_name="DM",
+            role=UserRole.DM,
+            game_system="dnd5e",
+        )
+
+        await self._insert_effect_definition(
+            session_factory,
+            "phase4_focus_a",
+            stacking={"mode": "replace"},
+            duration={"type": "concentration", "timing": "immediate"},
+        )
+        await self._insert_effect_definition(
+            session_factory,
+            "phase4_focus_b",
+            stacking={"mode": "replace"},
+            duration={"type": "concentration", "timing": "immediate"},
+        )
+
+        start = await handler.handle(
+            WsEnvelope(type="start_combat", request_id="req_db_focus_start"),
+            dm_ctx,
+            mgr,
+        )
+        active_actor_id = start[0].payload["initiative_order"][0]["actor_id"]
+        target_actor_id = "goblin_1" if active_actor_id != "goblin_1" else "hero_1"
+
+        original_builder = CombatService._build_bound_action_candidates
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [
+                {
+                    "action_id": "canonical_focus_action_a",
+                    "name": "Focus A",
+                    "label": "Focus A",
+                    "family": "utility",
+                    "action_type_cost": "free",
+                    "targeting_mode": "single_target",
+                    "range": 30,
+                    "save_context": None,
+                    "attack_context": None,
+                    "effect_intents": [{"effect_id": "phase4_focus_a"}],
+                    "tags": [],
+                    "source_ref": "custom",
+                    "content_version": "1",
+                    "enabled": True,
+                    "aoe_shape": None,
+                    "aoe_size": None,
+                },
+                {
+                    "action_id": "canonical_focus_action_b",
+                    "name": "Focus B",
+                    "label": "Focus B",
+                    "family": "utility",
+                    "action_type_cost": "free",
+                    "targeting_mode": "single_target",
+                    "range": 30,
+                    "save_context": None,
+                    "attack_context": None,
+                    "effect_intents": [{"effect_id": "phase4_focus_b"}],
+                    "tags": [],
+                    "source_ref": "custom",
+                    "content_version": "1",
+                    "enabled": True,
+                    "aoe_shape": None,
+                    "aoe_size": None,
+                },
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
+        try:
+            await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_db_focus_a",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "free",
+                        "action_name": "canonical_focus_action_a",
+                        "payload": {"target_ids": [target_actor_id]},
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+
+            second = await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_db_focus_b",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "free",
+                        "action_name": "canonical_focus_action_b",
+                        "payload": {"target_ids": [target_actor_id]},
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+        finally:
+            monkeypatch.setattr(
+                CombatService, "_build_bound_action_candidates", original_builder)
+
+        removed = next(
+            event for event in second if event.type == "effect_removed")
+        reapplied = next(
+            event for event in second
+            if event.type == "effect_applied" and event.payload.get("effect_id") == "phase4_focus_b"
+        )
+        assert removed.request_id == "req_db_focus_b"
+        assert removed.payload["reason"] == "concentration_replaced"
+        assert removed.payload["provenance"]["command_request_id"] == "req_db_focus_b"
+        assert removed.payload["provenance"]["action_id"] == "canonical_focus_action_b"
+
+        assert reapplied.request_id == "req_db_focus_b"
+        assert reapplied.payload["provenance"]["command_request_id"] == "req_db_focus_b"
+        assert reapplied.payload["provenance"]["action_id"] == "canonical_focus_action_b"
+
+        rows = await self._load_effect_rows(session_factory, campaign_id)
+        assert len(rows) == 1
+        assert rows[0].effect_id == "phase4_focus_b"
+        assert rows[0].provenance["command_request_id"] == "req_db_focus_b"
+        assert rows[0].provenance["action_id"] == "canonical_focus_action_b"
+        await engine.dispose()
+
+    @pytest.mark.anyio
+    async def test_db_mode_canonical_stack_limit_denial_emits_provenance_and_keeps_single_row(self, handler, mgr, monkeypatch):
+        session_factory, engine = await self._configure_sqlite_db_mode(monkeypatch)
+        campaign_id = "db_phase4_stack_limit"
+        dm_ctx = SessionContext(
+            campaign_id=campaign_id,
+            user_id="dm_user",
+            display_name="DM",
+            role=UserRole.DM,
+            game_system="dnd5e",
+        )
+
+        await self._insert_effect_definition(
+            session_factory,
+            "phase4_stack_once",
+            stacking={"mode": "stack", "max_stacks": 1},
+            duration={"type": "rounds", "value": 3, "timing": "end_of_turn"},
+        )
+
+        start = await handler.handle(
+            WsEnvelope(type="start_combat", request_id="req_db_stack_start"),
+            dm_ctx,
+            mgr,
+        )
+        active_actor_id = start[0].payload["initiative_order"][0]["actor_id"]
+        target_actor_id = "goblin_1" if active_actor_id != "goblin_1" else "hero_1"
+
+        original_builder = CombatService._build_bound_action_candidates
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [
+                {
+                    "action_id": "canonical_stack_action",
+                    "name": "Stack Action",
+                    "label": "Stack Action",
+                    "family": "utility",
+                    "action_type_cost": "free",
+                    "targeting_mode": "single_target",
+                    "range": 30,
+                    "save_context": None,
+                    "attack_context": None,
+                    "effect_intents": [{"effect_id": "phase4_stack_once"}],
+                    "tags": [],
+                    "source_ref": "custom",
+                    "content_version": "1",
+                    "enabled": True,
+                    "aoe_shape": None,
+                    "aoe_size": None,
+                }
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
+        try:
+            await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_db_stack_apply",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "free",
+                        "action_name": "canonical_stack_action",
+                        "payload": {"target_ids": [target_actor_id]},
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+
+            second = await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_db_stack_deny",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "free",
+                        "action_name": "canonical_stack_action",
+                        "payload": {"target_ids": [target_actor_id]},
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+        finally:
+            monkeypatch.setattr(
+                CombatService, "_build_bound_action_candidates", original_builder)
+
+        denied = next(event for event in second if event.type ==
+                      "effect_denied")
+        assert denied.request_id == "req_db_stack_deny"
+        assert denied.payload["reason_code"] == "stacking_limit_reached"
+        assert denied.payload["provenance"]["command_request_id"] == "req_db_stack_deny"
+        assert denied.payload["provenance"]["action_id"] == "canonical_stack_action"
+
+        rows = await self._load_effect_rows(session_factory, campaign_id)
+        assert len(rows) == 1
+        assert rows[0].effect_id == "phase4_stack_once"
+        assert rows[0].stack_count == 1
+        await engine.dispose()
+
+    @pytest.mark.anyio
+    async def test_db_mode_effect_refresh_emits_provenance(self, handler, mgr, monkeypatch):
+        session_factory, engine = await self._configure_sqlite_db_mode(monkeypatch)
+        campaign_id = "db_phase4_refresh"
+        dm_ctx = SessionContext(
+            campaign_id=campaign_id,
+            user_id="dm_user",
+            display_name="DM",
+            role=UserRole.DM,
+            game_system="dnd5e",
+        )
+
+        await self._insert_effect_definition(
+            session_factory,
+            "phase4_refresh_duration",
+            stacking={"mode": "refresh_duration"},
+            duration={"type": "rounds", "value": 2, "timing": "end_of_turn"},
+        )
+
+        start = await handler.handle(
+            WsEnvelope(type="start_combat", request_id="req_db_refresh_start"),
+            dm_ctx,
+            mgr,
+        )
+        active_actor_id = start[0].payload["initiative_order"][0]["actor_id"]
+        target_actor_id = "goblin_1" if active_actor_id != "goblin_1" else "hero_1"
+
+        original_builder = CombatService._build_bound_action_candidates
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [
+                {
+                    "action_id": "canonical_refresh_action",
+                    "name": "Refresh Action",
+                    "label": "Refresh Action",
+                    "family": "utility",
+                    "action_type_cost": "free",
+                    "targeting_mode": "single_target",
+                    "range": 30,
+                    "save_context": None,
+                    "attack_context": None,
+                    "effect_intents": [{"effect_id": "phase4_refresh_duration"}],
+                    "tags": [],
+                    "source_ref": "custom",
+                    "content_version": "1",
+                    "enabled": True,
+                    "aoe_shape": None,
+                    "aoe_size": None,
+                }
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
+        try:
+            await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_db_refresh_apply",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "free",
+                        "action_name": "canonical_refresh_action",
+                        "payload": {"target_ids": [target_actor_id]},
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+
+            second = await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_db_refresh_refresh",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "free",
+                        "action_name": "canonical_refresh_action",
+                        "payload": {"target_ids": [target_actor_id]},
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+        finally:
+            monkeypatch.setattr(
+                CombatService, "_build_bound_action_candidates", original_builder)
+
+        refreshed = next(
+            event for event in second if event.type == "effect_refreshed")
+        assert refreshed.request_id == "req_db_refresh_refresh"
+        assert refreshed.payload["provenance"]["command_request_id"] == "req_db_refresh_refresh"
+        assert refreshed.payload["provenance"]["action_id"] == "canonical_refresh_action"
+        await engine.dispose()
 
 
 # ---------------------------------------------------------------------------
