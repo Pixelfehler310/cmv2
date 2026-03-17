@@ -14,6 +14,20 @@ export type ActionDeniedReasonCode =
   | "bonus_action_exhausted"
   | "reaction_exhausted"
   | "unsupported_action"
+  | "effect_not_found"
+  | "target_immune"
+  | "target_invalid"
+  | "concentration_conflict"
+  | "stacking_limit_reached"
+  | "invalid_duration"
+  | "unsupported_effect_operation"
+  | "invalid_template_origin"
+  | "invalid_template_direction"
+  | "template_out_of_range"
+  | "no_resolved_targets"
+  | "target_not_in_template"
+  | "target_no_longer_eligible"
+  | "line_of_effect_blocked"
   | "unknown";
 
 export function normalizeActionDeniedReasonCode(code: string | undefined): ActionDeniedReasonCode {
@@ -35,6 +49,20 @@ export function normalizeActionDeniedReasonCode(code: string | undefined): Actio
     case "bonus_action_exhausted":
     case "reaction_exhausted":
     case "unsupported_action":
+    case "effect_not_found":
+    case "target_immune":
+    case "target_invalid":
+    case "concentration_conflict":
+    case "stacking_limit_reached":
+    case "invalid_duration":
+    case "unsupported_effect_operation":
+    case "invalid_template_origin":
+    case "invalid_template_direction":
+    case "template_out_of_range":
+    case "no_resolved_targets":
+    case "target_not_in_template":
+    case "target_no_longer_eligible":
+    case "line_of_effect_blocked":
       return normalized;
     default:
       return "unknown";
