@@ -497,6 +497,61 @@ class TestMovement:
         assert events[0].payload["reason_code"] == "invalid_target"
 
     @pytest.mark.anyio
+    async def test_request_action_aoe_rejects_target_hint_outside_derived_template(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        original_builder = CombatService._build_action_candidates
+
+        def fake_builder(self, actor, monster):
+            return [
+                {
+                    "action_id": "frost_burst",
+                    "label": "Frost Burst",
+                    "family": "save",
+                    "action_type_cost": "action",
+                    "targeting_mode": "aoe",
+                    "range": 8,
+                    "aoe_shape": "cube",
+                    "aoe_size": 1,
+                }
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_action_candidates", fake_builder)
+
+        try:
+            await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_aoe_hint_check"), dm_ctx, mgr)
+            active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+            target_actor = next(
+                c for c in combat_encounter.combatants if c.id != active_actor_id)
+
+            events = await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_action_aoe_invalid_hint",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "action",
+                        "action_name": "frost_burst",
+                        "payload": {
+                            "template_origin": {
+                                "x": int(target_actor.position.x),
+                                "y": int(target_actor.position.y),
+                            },
+                            "target_ids": ["unknown_target_hint"],
+                        },
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+        finally:
+            monkeypatch.setattr(
+                CombatService, "_build_action_candidates", original_builder)
+
+        assert len(events) == 1
+        assert events[0].type == "action_denied"
+        assert events[0].payload["reason_code"] == "target_not_in_template"
+
+    @pytest.mark.anyio
     async def test_request_action_aoe_template_origin_out_of_range_denied(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
         original_builder = CombatService._build_action_candidates
 
@@ -543,7 +598,7 @@ class TestMovement:
 
         assert len(events) == 1
         assert events[0].type == "action_denied"
-        assert events[0].payload["reason_code"] == "invalid_target"
+        assert events[0].payload["reason_code"] == "template_out_of_range"
 
     @pytest.mark.anyio
     async def test_request_executable_actions_returns_snapshot(self, handler, dm_ctx, mgr, combat_encounter):
@@ -1565,6 +1620,106 @@ class TestEffectExecutionPhase4DbMode:
         assert refreshed.request_id == "req_db_refresh_refresh"
         assert refreshed.payload["provenance"]["command_request_id"] == "req_db_refresh_refresh"
         assert refreshed.payload["provenance"]["action_id"] == "canonical_refresh_action"
+        await engine.dispose()
+
+    @pytest.mark.anyio
+    async def test_db_mode_aoe_effect_intent_uses_canonical_effect_id_for_derived_targets(self, handler, mgr, monkeypatch):
+        session_factory, engine = await self._configure_sqlite_db_mode(monkeypatch)
+        campaign_id = "db_phase5_aoe_effect_id"
+        dm_ctx = SessionContext(
+            campaign_id=campaign_id,
+            user_id="dm_user",
+            display_name="DM",
+            role=UserRole.DM,
+            game_system="dnd5e",
+        )
+
+        await self._insert_effect_definition(
+            session_factory,
+            "phase5_aoe_mark",
+            stacking={"mode": "replace"},
+            duration={"type": "rounds", "value": 2, "timing": "end_of_turn"},
+        )
+
+        start = await handler.handle(
+            WsEnvelope(type="start_combat", request_id="req_db_phase5_start"),
+            dm_ctx,
+            mgr,
+        )
+        active_actor_id = start[0].payload["initiative_order"][0]["actor_id"]
+        target_actor_id = "goblin_1" if active_actor_id != "goblin_1" else "hero_1"
+        async with session_factory() as db:
+            service = CombatService(db)
+            _, runtime_encounter = await service.load_or_create_encounter_state(campaign_id)
+        target_actor = next(
+            c for c in runtime_encounter.combatants if c.id == target_actor_id)
+        template_origin = {
+            "x": int(target_actor.position.x),
+            "y": int(target_actor.position.y),
+        }
+
+        original_builder = CombatService._build_bound_action_candidates
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [
+                {
+                    "action_id": "canonical_phase5_aoe_mark",
+                    "name": "Phase5 Aoe Mark",
+                    "label": "Phase5 Aoe Mark",
+                    "family": "utility",
+                    "action_type_cost": "free",
+                    "targeting_mode": "aoe",
+                    "range": 30,
+                    "save_context": None,
+                    "attack_context": {"aoe_shape": "cube", "aoe_size": 1},
+                    "effect_intents": [{"effect_id": "phase5_aoe_mark"}],
+                    "tags": [],
+                    "source_ref": "custom",
+                    "content_version": "1",
+                    "enabled": True,
+                    "aoe_shape": "cube",
+                    "aoe_size": 1,
+                }
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
+        try:
+            events = await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_db_phase5_execute",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "free",
+                        "action_name": "canonical_phase5_aoe_mark",
+                        "payload": {
+                            "template_origin": template_origin,
+                        },
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+        finally:
+            monkeypatch.setattr(
+                CombatService, "_build_bound_action_candidates", original_builder)
+
+        applied = [
+            event for event in events
+            if event.type == "effect_applied" and event.payload.get("effect_id") == "phase5_aoe_mark"
+        ]
+        assert applied
+        assert all(event.payload.get("effect_id") ==
+                   "phase5_aoe_mark" for event in applied)
+        assert any(event.payload.get("target_actor_id") ==
+                   target_actor_id for event in applied)
+
+        rows = await self._load_effect_rows(session_factory, campaign_id)
+        assert rows
+        assert all(row.effect_id == "phase5_aoe_mark" for row in rows)
         await engine.dispose()
 
 

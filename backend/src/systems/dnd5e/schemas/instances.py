@@ -36,6 +36,7 @@ class EffectInstance(BaseModel):
     """A live effect applied to an actor or the encounter."""
 
     id: str
+    effect_id: str = ""
     name: str = ""
     source_id: str = ""  # actor who created this effect
     target_id: str = ""  # actor affected by this effect

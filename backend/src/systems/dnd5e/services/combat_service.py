@@ -419,10 +419,10 @@ class CombatService:
                 selected_origin = {"x": origin_x, "y": origin_y}
 
             if not self._is_cell_in_bounds(encounter.map.width, encounter.map.height, selected_origin["x"], selected_origin["y"]):
-                return AttackPreviewResult(False, "invalid_target", "Template origin is out of map bounds")
+                return AttackPreviewResult(False, "invalid_template_origin", "Template origin is out of map bounds")
 
             if (selected_origin["x"], selected_origin["y"]) not in potential_origins:
-                return AttackPreviewResult(False, "invalid_target", "Template origin is out of action range")
+                return AttackPreviewResult(False, "template_out_of_range", "Template origin is out of action range")
 
             normalized_direction = self._normalize_direction(
                 template_direction)

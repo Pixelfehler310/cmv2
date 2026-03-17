@@ -18,6 +18,11 @@ from ..schemas.encounter import EncounterState
 # Core Functions
 # ---------------------------------------------------------------------------
 
+
+def _effect_canonical_id(effect: EffectInstance) -> str:
+    return effect.effect_id or effect.name or effect.id
+
+
 def add_effect(encounter: EncounterState, effect: EffectInstance) -> None:
     """Add an effect to the target actor in the encounter.
 
@@ -87,14 +92,14 @@ def tick_effects(encounter: EncounterState, *, source_id: str) -> dict[str, list
                 ticked.append(
                     {
                         "effect_instance_id": effect.id,
-                        "effect_id": effect.name or effect.id,
+                        "effect_id": _effect_canonical_id(effect),
                         "target_actor_id": actor.id,
                         "remaining_duration": effect.remaining_rounds,
                     }
                 )
                 if effect.remaining_rounds <= 0:
                     effects_to_remove.append(
-                        (effect.id, effect.name or effect.id, actor.id))
+                        (effect.id, _effect_canonical_id(effect), actor.id))
 
     expired: list[dict[str, int | str | None]] = []
     for effect_instance_id, effect_id, target_actor_id in effects_to_remove:

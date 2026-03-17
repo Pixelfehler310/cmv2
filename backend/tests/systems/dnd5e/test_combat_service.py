@@ -218,7 +218,7 @@ async def test_get_attack_preview_aoe_denies_template_origin_out_of_range(db_ses
         service._build_action_candidates = original_builder
 
     assert preview.allowed is False
-    assert preview.reason_code == "invalid_target"
+    assert preview.reason_code == "template_out_of_range"
 
 
 @pytest.mark.anyio

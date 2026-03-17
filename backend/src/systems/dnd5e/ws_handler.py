@@ -629,7 +629,16 @@ class Dnd5eWsHandler(ISystemHandler):
                         )
                     ]
 
-        should_validate_preview = bool(
+        targeting_mode = (
+            canonical_meta.targeting_mode
+            if canonical_meta.found and canonical_meta.targeting_mode
+            else None
+        )
+        is_authoritative_targeting = targeting_mode in {
+            "single_target", "aoe", "self"}
+        is_aoe_targeting = targeting_mode == "aoe"
+
+        should_validate_preview = is_authoritative_targeting or bool(
             target_ids) or requested_template_origin is not None
         if should_validate_preview:
             preview = await service.get_attack_preview(
@@ -642,31 +651,49 @@ class Dnd5eWsHandler(ISystemHandler):
                 template_direction=requested_template_direction,
             )
             if preview.allowed:
-                eligible_target_ids = set(preview.eligible_target_ids or [])
+                derived_target_ids = list(preview.eligible_target_ids or [])
+                eligible_target_ids = set(derived_target_ids)
+
+                if is_aoe_targeting and requested_template_origin is not None and not derived_target_ids:
+                    return [
+                        self._denied(
+                            "action",
+                            "No valid targets resolved for selected template",
+                            "no_resolved_targets",
+                            response_ctx,
+                            request_id,
+                            actor_id=actor_id,
+                            action_type=action_type,
+                        )
+                    ]
+
                 if target_ids:
                     invalid_targets = [
                         target_id for target_id in target_ids if target_id not in eligible_target_ids]
                     if invalid_targets:
+                        denial_reason = "target_not_in_template" if is_aoe_targeting else "invalid_target"
                         return [
                             self._denied(
                                 "action",
                                 f"Selected target is not eligible for action '{action_name}'",
-                                "invalid_target",
+                                denial_reason,
                                 response_ctx,
                                 request_id,
                                 actor_id=actor_id,
                                 action_type=action_type,
                             )
                         ]
+                if is_authoritative_targeting:
+                    target_ids = derived_target_ids
                 elif requested_template_origin is not None and eligible_target_ids:
-                    target_ids = list(preview.eligible_target_ids or [])
+                    target_ids = derived_target_ids
 
                 if requested_template_origin is not None and preview.template_projection is None:
                     return [
                         self._denied(
                             "action",
                             "Action template selection is not valid for this action",
-                            "invalid_target",
+                            "invalid_template_origin",
                             response_ctx,
                             request_id,
                             actor_id=actor_id,
@@ -678,7 +705,8 @@ class Dnd5eWsHandler(ISystemHandler):
                     self._denied(
                         "action",
                         preview.message or "Target eligibility check failed",
-                        preview.reason_code or "invalid_action",
+                        self._normalize_preview_denial_reason(
+                            preview.reason_code, preview.message),
                         response_ctx,
                         request_id,
                         actor_id=actor_id,
@@ -1461,7 +1489,7 @@ class Dnd5eWsHandler(ISystemHandler):
         for target in resolved_targets:
             existing_instances = [
                 effect for effect in target.effects
-                if (effect.name == definition.effect_id)
+                if (self._effect_instance_canonical_id(effect) == definition.effect_id)
             ]
 
             stack_mode = definition.stacking.mode
@@ -1571,7 +1599,8 @@ class Dnd5eWsHandler(ISystemHandler):
 
             new_effect = EffectInstance(
                 id=instance_id,
-                name=definition.effect_id,
+                effect_id=definition.effect_id,
+                name=definition.name,
                 source_id=actor.id,
                 target_id=target.id,
                 duration_type=DurationType.ROUNDS if remaining_rounds is not None else DurationType.UNTIL_DISPELLED,
@@ -1637,6 +1666,22 @@ class Dnd5eWsHandler(ISystemHandler):
         }
 
     @staticmethod
+    def _effect_instance_canonical_id(effect: EffectInstance) -> str:
+        return effect.effect_id or effect.name or effect.id
+
+    @staticmethod
+    def _normalize_preview_denial_reason(reason_code: str | None, message: str | None) -> str:
+        if reason_code and reason_code != "invalid_target":
+            return reason_code
+
+        lowered_message = str(message or "").lower()
+        if "out of map bounds" in lowered_message:
+            return "invalid_template_origin"
+        if "out of action range" in lowered_message:
+            return "template_out_of_range"
+        return reason_code or "invalid_action"
+
+    @staticmethod
     def _collect_effect_provenance_by_instance(events: list[WsOutbound]) -> dict[str, dict[str, Any]]:
         provenance_by_instance: dict[str, dict[str, Any]] = {}
         for event in events:
@@ -1681,7 +1726,7 @@ class Dnd5eWsHandler(ISystemHandler):
 
                 record = EffectInstanceRecord(
                     instance_id=effect.id,
-                    effect_id=effect.name or effect.id,
+                    effect_id=self._effect_instance_canonical_id(effect),
                     source_actor_id=effect.source_id or None,
                     target_actor_id=actor.id,
                     applied_at_round=previous.applied_at_round if previous else encounter.round_number,
