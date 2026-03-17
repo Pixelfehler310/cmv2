@@ -1220,3 +1220,85 @@ class TestUnknownEvent:
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert events[0].type == "error"
         assert "Unknown" in events[0].payload["message"]
+
+
+# ---------------------------------------------------------------------------
+# Stage E terminal guarantees
+# ---------------------------------------------------------------------------
+
+class TestCommandTerminalGuaranteesStageE:
+
+    @pytest.mark.anyio
+    async def test_preview_commands_emit_terminal_outbound_on_success(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_stage_e_start"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        snapshot_events = await handler.handle(
+            WsEnvelope(
+                type="request_executable_actions",
+                request_id="req_stage_e_actions_seed",
+                payload={"actor_id": active_actor_id},
+            ),
+            dm_ctx,
+            mgr,
+        )
+        assert len(snapshot_events) == 1
+        assert snapshot_events[0].type == "executable_actions_snapshot"
+        action_id = snapshot_events[0].payload["actions"][0]["action_id"]
+
+        checks = [
+            (
+                WsEnvelope(
+                    type="request_executable_actions",
+                    request_id="req_stage_e_actions",
+                    payload={"actor_id": active_actor_id},
+                ),
+                "executable_actions_snapshot",
+            ),
+            (
+                WsEnvelope(
+                    type="request_move_preview",
+                    request_id="req_stage_e_move_preview",
+                    payload={"actor_id": active_actor_id},
+                ),
+                "movement_preview",
+            ),
+            (
+                WsEnvelope(
+                    type="request_attack_preview",
+                    request_id="req_stage_e_attack_preview",
+                    payload={"actor_id": active_actor_id,
+                             "action_id": action_id},
+                ),
+                "attack_preview",
+            ),
+        ]
+
+        for envelope, expected_type in checks:
+            events = await handler.handle(envelope, dm_ctx, mgr)
+            assert len(events) >= 1
+            assert events[0].type == expected_type
+            assert events[0].request_id == envelope.request_id
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "event_type,payload",
+        [
+            ("request_executable_actions", {}),
+            ("request_move_preview", {}),
+            ("request_attack_preview", {"actor_id": "fighter_1"}),
+        ],
+    )
+    async def test_preview_commands_emit_error_on_invalid_payload(self, handler, dm_ctx, mgr, combat_encounter, event_type, payload):
+        request_id = f"req_stage_e_invalid_{event_type}"
+        events = await handler.handle(
+            WsEnvelope(type=event_type, request_id=request_id,
+                       payload=payload),
+            dm_ctx,
+            mgr,
+        )
+
+        assert len(events) == 1
+        assert events[0].type == "error"
+        assert events[0].payload["code"] == "invalid_message"
+        assert events[0].request_id == request_id

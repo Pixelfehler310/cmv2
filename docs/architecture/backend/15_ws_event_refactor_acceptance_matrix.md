@@ -42,6 +42,14 @@ Acceptance requirement:
 
 - M-02/M-03/M-04 must pass in every runtime mode (no in-memory bypass).
 
+Stage B lifecycle additions:
+
+| ID   | Event                  | Scenario                                         | Expected outbound                          | Expected state                                            |
+| ---- | ---------------------- | ------------------------------------------------ | ------------------------------------------ | --------------------------------------------------------- |
+| M-07 | `request_move_preview` | active actor requests movement highlight preview | `movement_preview` with non-empty envelope | no mutation (preview-only); reachable derived server-side |
+| M-08 | `request_move_preview` | actor is not active / unauthorized               | `command_denied` deterministic reason code | no mutation                                               |
+| M-09 | `request_move_preview` | malformed payload                                | `error` (`invalid_message`)                | no mutation                                               |
+
 ## 4. Action Authorization and Economy Family
 
 | ID   | Event            | Scenario                                            | Expected outbound                      | Expected state           |
@@ -54,6 +62,15 @@ Acceptance requirement:
 | A-06 | `action`         | non-active actor uses non-reaction action           | `action_denied` (`not_your_turn`)      | no mutation              |
 | A-07 | `action`         | reaction while non-active but valid trigger context | success terminal event                 | reaction consumed        |
 
+Stage A lifecycle additions:
+
+| ID   | Event                         | Scenario                                        | Expected outbound                                  | Expected state                    |
+| ---- | ----------------------------- | ----------------------------------------------- | -------------------------------------------------- | --------------------------------- |
+| A-08 | `request_executable_actions`  | active actor requests action deck snapshot      | `executable_actions_snapshot`                      | no mutation (projection-only)     |
+| A-09 | `request_executable_actions`  | non-owner or turn-ineligible actor request      | `command_denied` deterministic reason code         | no mutation                       |
+| A-10 | `request_executable_actions`  | malformed payload                               | `error` (`invalid_message`)                        | no mutation                       |
+| A-11 | `executable_actions_snapshot` | snapshot includes backend-computed availability | payload has `actions[]` and optional `turn_budget` | frontend can render without rules |
+
 ## 5. Action Resolution Family
 
 | ID   | Event                  | Scenario            | Expected outbound                   | Expected state             |
@@ -64,6 +81,16 @@ Acceptance requirement:
 | R-04 | `action` (heal)        | valid heal          | result + `actor_healed`             | hp increased capped at max |
 | R-05 | `action` (condition)   | apply condition     | result + `condition_added`          | condition present          |
 | R-06 | `action` (condition)   | remove condition    | result + `condition_removed`        | condition absent           |
+
+Stage C and D preview/validation additions:
+
+| ID   | Event                    | Scenario                                           | Expected outbound                           | Expected state             |
+| ---- | ------------------------ | -------------------------------------------------- | ------------------------------------------- | -------------------------- |
+| R-07 | `request_attack_preview` | single-target attack preview request               | `attack_preview` with `eligible_target_ids` | no mutation (preview-only) |
+| R-08 | `request_attack_preview` | non-owner / invalid actor request                  | `command_denied` deterministic reason code  | no mutation                |
+| R-09 | `request_attack_preview` | AoE preview request                                | `attack_preview` with `template_projection` | no mutation (preview-only) |
+| R-10 | `request_action`         | execute against target outside preview eligibility | `action_denied` (`invalid_target`)          | no mutation                |
+| R-11 | `request_action`         | execute AoE with invalid template origin/intersect | `action_denied` (`invalid_target`)          | no mutation                |
 
 Acceptance requirement:
 
@@ -140,5 +167,6 @@ Phase 5 handover status:
 Refactor is backend-ready for frontend integration only when:
 
 - All critical rows pass: L-03, L-04, M-02, M-03, M-04, A-03, A-06, R-01.
+- Stage A-D rows are green for implemented scope: A-08, A-09, A-10, A-11, M-07, M-08, M-09, R-07, R-08, R-09, R-10, R-11.
 - No silent command paths remain.
 - Event catalog is synchronized with implemented routing.

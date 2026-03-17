@@ -20,12 +20,21 @@ This handover freezes the current backend behavior for frontend migration.
 
 ## 2. Changelog (Baseline -> ws-combat-v2)
 
+## 2.0 Added inbound command-like keys
+
+- `request_executable_actions`
+- `request_move_preview`
+- `request_attack_preview`
+
 ## 2.1 Added outbound event keys
 
 - `command_denied`
 - `attack_result`
 - `save_result`
 - `effect_applied`
+- `executable_actions_snapshot`
+- `movement_preview`
+- `attack_preview`
 
 ## 2.2 Reintroduced from older architecture and now emitted
 
@@ -59,6 +68,10 @@ Still not emitted:
   - `action_denied` for action-family requests
   - `command_denied` for non-action command requests
 - Unknown inbound event keys return `error` (`invalid_message`).
+- Preview requests are deterministic command flows:
+  - `request_executable_actions` -> `executable_actions_snapshot` or terminal deny/error
+  - `request_move_preview` -> `movement_preview` or terminal deny/error
+  - `request_attack_preview` -> `attack_preview` or terminal deny/error
 - Previously declared-but-unrouted keys remain removed from active contract:
   - `update_hp`
   - `roll_initiative`
@@ -87,8 +100,14 @@ Still not emitted:
 - `combat_ended`
 - `turn_advanced`
 - `actor_moved`
+- `movement_preview`
 - `actor_added`
 - `actor_removed`
+
+## 3.5 Command deck and targeting previews
+
+- `executable_actions_snapshot`
+- `attack_preview`
 
 ## 3.4 Action resolution and direct effects
 
@@ -160,7 +179,18 @@ Transitional adapter guidance:
   - `pong`
   - `dice_rolled`
   - `chat_message`
+  - `executable_actions_snapshot`
+  - `movement_preview`
+  - `attack_preview`
+- Extend inbound command-like union with:
+  - `request_executable_actions`
+  - `request_move_preview`
+  - `request_attack_preview`
 - Add `turn_budget` snapshot field where emitted.
+- Add command-deck payload contracts:
+  - `ExecutableActionPayload` / `ExecutableActionsSnapshotPayload`
+  - `MovementPreviewPayload`
+  - `AttackPreviewPayload` / `AttackTemplateProjection`
 - Expand deny reason codes to include current backend reasons:
   - `invalid_turn_phase`
   - `no_active_actor`
