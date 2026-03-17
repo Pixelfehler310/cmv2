@@ -24,6 +24,19 @@ export interface RequestMovePreviewCommandPayload {
   acting_as_user_id?: string;
 }
 
+export interface RequestExecutableActionsCommandPayload {
+  actor_id: string;
+  acting_as_user_id?: string;
+}
+
+export interface RequestAttackPreviewCommandPayload {
+  actor_id: string;
+  action_id: string;
+  template_origin?: { x: number; y: number };
+  template_direction?: { x: number; y: number };
+  acting_as_user_id?: string;
+}
+
 export interface EndTurnCommandPayload {
   actor_id: string;
 }
@@ -88,6 +101,8 @@ export type RequestActionCommand = CommandLikeEnvelope<"request_action", Request
 export type LegacyActionCommand = CommandLikeEnvelope<"action", ActionCommandPayload>;
 export type MoveTokenCommand = CommandLikeEnvelope<"move_token", MoveTokenCommandPayload>;
 export type RequestMovePreviewCommand = CommandLikeEnvelope<"request_move_preview", RequestMovePreviewCommandPayload>;
+export type RequestExecutableActionsCommand = CommandLikeEnvelope<"request_executable_actions", RequestExecutableActionsCommandPayload>;
+export type RequestAttackPreviewCommand = CommandLikeEnvelope<"request_attack_preview", RequestAttackPreviewCommandPayload>;
 export type EndTurnCommand = CommandLikeEnvelope<"end_turn", EndTurnCommandPayload>;
 export type ApplyDamageCommand = CommandLikeEnvelope<"apply_damage", ApplyDamageCommandPayload>;
 export type ApplyHealingCommand = CommandLikeEnvelope<"apply_healing", ApplyHealingCommandPayload>;
@@ -106,6 +121,8 @@ export type ChatMessageCommand = CommandEnvelope<"chat_message", ChatMessageComm
 export type CommandLikeWsInboundEnvelope =
   | RequestActionCommand
   | LegacyActionCommand
+  | RequestExecutableActionsCommand
+  | RequestAttackPreviewCommand
   | RequestMovePreviewCommand
   | MoveTokenCommand
   | EndTurnCommand
@@ -127,6 +144,8 @@ export type WsInboundEnvelope = KnownWsInboundEnvelope | CommandEnvelope<string,
 export const COMMAND_LIKE_WS_INBOUND_TYPES = [
   "action",
   "request_action",
+  "request_executable_actions",
+  "request_attack_preview",
   "request_move_preview",
   "move_token",
   "add_actor",

@@ -20,6 +20,40 @@ export interface MovementPreviewPayload {
   reachable: Array<{ x: number; y: number }>;
 }
 
+export interface ExecutableActionPayload {
+  action_id: string;
+  label: string;
+  family: "attack" | "save" | "healing" | "utility" | string;
+  action_type_cost: "action" | "bonus_action" | "reaction" | "move" | string;
+  is_available: boolean;
+  unavailable_reason?: string | null;
+  targeting_mode: "single_target" | "aoe" | "self" | string;
+  range?: number | null;
+}
+
+export interface ExecutableActionsSnapshotPayload {
+  actor_id: string;
+  actions: ExecutableActionPayload[];
+  turn_budget?: TurnBudgetSnapshotPayload;
+}
+
+export interface AttackPreviewPayload {
+  actor_id: string;
+  action_id: string;
+  origin: { x: number; y: number };
+  eligible_target_ids: string[];
+  eligible_cells?: Array<{ x: number; y: number }>;
+  template_projection?: AttackTemplateProjection;
+}
+
+export interface AttackTemplateProjection {
+  shape: "line" | "cone" | "sphere" | "cube" | "cylinder" | string;
+  size: number;
+  origin: { x: number; y: number };
+  direction?: { x: number; y: number };
+  affected_cells: Array<{ x: number; y: number }>;
+}
+
 export interface ActorAddedPayload {
   actor: ActorInstanceWire;
   token?: MapTokenWire;
@@ -158,6 +192,8 @@ export interface TurnBudgetSnapshotPayload {
 export type StateSyncEvent = WsEnvelope<"state_sync", EncounterStateWire>;
 export type ActorMovedEvent = WsEnvelope<"actor_moved", ActorMovedPayload>;
 export type MovementPreviewEvent = WsEnvelope<"movement_preview", MovementPreviewPayload>;
+export type ExecutableActionsSnapshotEvent = WsEnvelope<"executable_actions_snapshot", ExecutableActionsSnapshotPayload>;
+export type AttackPreviewEvent = WsEnvelope<"attack_preview", AttackPreviewPayload>;
 export type ActorAddedEvent = WsEnvelope<"actor_added", ActorAddedPayload>;
 export type ActorRemovedEvent = WsEnvelope<"actor_removed", ActorRemovedPayload>;
 export type TurnAdvancedEvent = WsEnvelope<"turn_advanced", TurnAdvancedPayload>;
@@ -183,6 +219,8 @@ export type KnownWsOutboundEnvelope =
   | StateSyncEvent
   | ActorMovedEvent
   | MovementPreviewEvent
+  | ExecutableActionsSnapshotEvent
+  | AttackPreviewEvent
   | ActorAddedEvent
   | ActorRemovedEvent
   | TurnAdvancedEvent
@@ -210,6 +248,8 @@ export const KNOWN_WS_OUTBOUND_TYPES = [
   "state_sync",
   "actor_moved",
   "movement_preview",
+  "executable_actions_snapshot",
+  "attack_preview",
   "actor_added",
   "actor_removed",
   "turn_advanced",

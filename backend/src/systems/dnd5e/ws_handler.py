@@ -27,6 +27,8 @@ from .event_types import (
     ChatMessagePayload,
     EndTurnPayload,
     MoveTokenPayload,
+    RequestAttackPreviewPayload,
+    RequestExecutableActionsPayload,
     RequestMovePreviewPayload,
     RequestActionPayload,
     RemoveActorPayload,
@@ -60,6 +62,8 @@ logger = logging.getLogger(__name__)
 COMMAND_EVENT_TYPES = {
     "action",
     "request_action",
+    "request_executable_actions",
+    "request_attack_preview",
     "request_move_preview",
     "move_token",
     "add_actor",
@@ -257,6 +261,12 @@ class Dnd5eWsHandler(ISystemHandler):
 
             elif event_type == "request_action":
                 results = await self._handle_request_action(encounter, encounter_session, service, envelope, ctx)
+
+            elif event_type == "request_executable_actions":
+                results = await self._handle_request_executable_actions(encounter, encounter_session, service, envelope, ctx)
+
+            elif event_type == "request_attack_preview":
+                results = await self._handle_request_attack_preview(encounter, encounter_session, service, envelope, ctx)
 
             elif event_type == "request_move_preview":
                 results = await self._handle_request_move_preview(encounter, encounter_session, service, envelope, ctx)
@@ -534,6 +544,73 @@ class Dnd5eWsHandler(ISystemHandler):
                     action_type=action_type,
                 )
             ]
+
+        requested_template_origin = None
+        requested_template_direction = None
+        if isinstance(action_payload, dict):
+            raw_template_origin = action_payload.get("template_origin")
+            raw_template_direction = action_payload.get("template_direction")
+            if isinstance(raw_template_origin, dict):
+                requested_template_origin = raw_template_origin
+            if isinstance(raw_template_direction, dict):
+                requested_template_direction = raw_template_direction
+
+        should_validate_preview = bool(
+            target_ids) or requested_template_origin is not None
+        if should_validate_preview:
+            preview = await service.get_attack_preview(
+                encounter_session,
+                encounter,
+                ctx,
+                actor_id,
+                action_name,
+                template_origin=requested_template_origin,
+                template_direction=requested_template_direction,
+            )
+            if preview.allowed:
+                eligible_target_ids = set(preview.eligible_target_ids or [])
+                if target_ids:
+                    invalid_targets = [
+                        target_id for target_id in target_ids if target_id not in eligible_target_ids]
+                    if invalid_targets:
+                        return [
+                            self._denied(
+                                "action",
+                                f"Selected target is not eligible for action '{action_name}'",
+                                "invalid_target",
+                                response_ctx,
+                                request_id,
+                                actor_id=actor_id,
+                                action_type=action_type,
+                            )
+                        ]
+                elif requested_template_origin is not None and eligible_target_ids:
+                    target_ids = list(preview.eligible_target_ids or [])
+
+                if requested_template_origin is not None and preview.template_projection is None:
+                    return [
+                        self._denied(
+                            "action",
+                            "Action template selection is not valid for this action",
+                            "invalid_target",
+                            response_ctx,
+                            request_id,
+                            actor_id=actor_id,
+                            action_type=action_type,
+                        )
+                    ]
+            elif preview.reason_code != "invalid_action":
+                return [
+                    self._denied(
+                        "action",
+                        preview.message or "Target eligibility check failed",
+                        preview.reason_code or "invalid_action",
+                        response_ctx,
+                        request_id,
+                        actor_id=actor_id,
+                        action_type=action_type,
+                    )
+                ]
 
         targets: list[ActorInstance] = []
         for target_id in target_ids:
@@ -1277,6 +1354,108 @@ class Dnd5eWsHandler(ISystemHandler):
                     "origin": preview.origin,
                     "movement_remaining": preview.movement_remaining,
                     "reachable": preview.reachable or [],
+                },
+                visibility=Visibility.ALL,
+            )
+        ]
+
+    async def _handle_request_executable_actions(
+        self,
+        encounter: EncounterState,
+        encounter_session,
+        service: CombatService,
+        envelope: WsEnvelope,
+        ctx: SessionContext,
+    ) -> list[WsOutbound]:
+        try:
+            payload = RequestExecutableActionsPayload.model_validate(
+                envelope.payload)
+        except Exception:
+            return [self._error_raw("Invalid request_executable_actions payload", WsErrorCode.INVALID_MESSAGE)]
+
+        effective_ctx = self._resolve_impersonated_ctx(
+            ctx, payload.acting_as_user_id)
+        snapshot = await service.get_executable_actions_snapshot(
+            encounter_session,
+            encounter,
+            effective_ctx,
+            payload.actor_id,
+        )
+
+        if not snapshot.allowed:
+            return [
+                self._denied(
+                    "request_executable_actions",
+                    snapshot.message or "Executable actions request denied",
+                    snapshot.reason_code or "invalid_action",
+                    ctx,
+                    envelope.request_id,
+                    actor_id=payload.actor_id,
+                    action_type="action",
+                )
+            ]
+
+        return [
+            WsOutbound(
+                type="executable_actions_snapshot",
+                payload={
+                    "actor_id": snapshot.actor_id,
+                    "actions": snapshot.actions or [],
+                    "turn_budget": snapshot.turn_budget,
+                },
+                visibility=Visibility.ALL,
+            )
+        ]
+
+    async def _handle_request_attack_preview(
+        self,
+        encounter: EncounterState,
+        encounter_session,
+        service: CombatService,
+        envelope: WsEnvelope,
+        ctx: SessionContext,
+    ) -> list[WsOutbound]:
+        try:
+            payload = RequestAttackPreviewPayload.model_validate(
+                envelope.payload)
+        except Exception:
+            return [self._error_raw("Invalid request_attack_preview payload", WsErrorCode.INVALID_MESSAGE)]
+
+        effective_ctx = self._resolve_impersonated_ctx(
+            ctx, payload.acting_as_user_id)
+        preview = await service.get_attack_preview(
+            encounter_session,
+            encounter,
+            effective_ctx,
+            payload.actor_id,
+            payload.action_id,
+            template_origin=payload.template_origin,
+            template_direction=payload.template_direction,
+        )
+
+        if not preview.allowed:
+            return [
+                self._denied(
+                    "request_attack_preview",
+                    preview.message or "Attack preview denied",
+                    preview.reason_code or "invalid_action",
+                    ctx,
+                    envelope.request_id,
+                    actor_id=payload.actor_id,
+                    action_type="action",
+                )
+            ]
+
+        return [
+            WsOutbound(
+                type="attack_preview",
+                payload={
+                    "actor_id": preview.actor_id,
+                    "action_id": preview.action_id,
+                    "origin": preview.origin,
+                    "eligible_target_ids": preview.eligible_target_ids or [],
+                    "eligible_cells": preview.eligible_cells or [],
+                    "template_projection": preview.template_projection,
                 },
                 visibility=Visibility.ALL,
             )

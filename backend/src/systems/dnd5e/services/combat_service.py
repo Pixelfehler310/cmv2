@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.core.sessions.models import SessionContext, UserRole
+from src.data.lib.monster import Monster
 
 from ..engine.combat_state import get_active_combatant, next_turn, start_combat
 from ..engine.initiative import InitiativeEntry
@@ -34,6 +36,29 @@ class MovementPreviewResult:
     origin: dict[str, int] | None = None
     movement_remaining: int = 0
     reachable: list[dict[str, int]] | None = None
+
+
+@dataclass
+class ExecutableActionsSnapshotResult:
+    allowed: bool
+    reason_code: str | None = None
+    message: str | None = None
+    actor_id: str | None = None
+    actions: list[dict[str, Any]] | None = None
+    turn_budget: dict[str, Any] | None = None
+
+
+@dataclass
+class AttackPreviewResult:
+    allowed: bool
+    reason_code: str | None = None
+    message: str | None = None
+    actor_id: str | None = None
+    action_id: str | None = None
+    origin: dict[str, int] | None = None
+    eligible_target_ids: list[str] | None = None
+    eligible_cells: list[dict[str, int]] | None = None
+    template_projection: dict[str, Any] | None = None
 
 
 class CombatService:
@@ -232,6 +257,202 @@ class CombatService:
             origin={"x": origin_x, "y": origin_y},
             movement_remaining=movement_remaining,
             reachable=reachable,
+        )
+
+    async def get_executable_actions_snapshot(
+        self,
+        encounter_session: EncounterSession | None,
+        encounter: EncounterState,
+        ctx: SessionContext,
+        actor_id: str,
+    ) -> ExecutableActionsSnapshotResult:
+        actor = self._find_actor(encounter, actor_id)
+        if actor is None:
+            return ExecutableActionsSnapshotResult(False, "invalid_target", f"Actor {actor_id} not found")
+
+        if ctx.role == UserRole.SPECTATOR:
+            return ExecutableActionsSnapshotResult(False, "unauthorized", "Spectators cannot request executable actions")
+
+        combatant = None
+        if encounter_session is not None:
+            combatant = await self._load_combatant(encounter_session.id, actor_id)
+
+        owner_user_id = combatant.owner_user_id if combatant else actor.owner_user_id
+        if ctx.role == UserRole.PLAYER and owner_user_id and owner_user_id != ctx.user_id:
+            return ExecutableActionsSnapshotResult(False, "unauthorized", "Player does not own this actor")
+
+        monster = await self._load_monster_for_actor(actor)
+        candidates = self._build_action_candidates(actor, monster)
+
+        actions: list[dict[str, Any]] = []
+        for candidate in candidates:
+            action_type_cost = self.normalize_action_type(
+                str(candidate.get("action_type_cost") or "action")
+            )
+            availability = await self.check_can_act(
+                encounter_session,
+                encounter,
+                actor_id,
+                action_type_cost,
+                ctx,
+            )
+            actions.append(
+                {
+                    "action_id": candidate["action_id"],
+                    "label": candidate["label"],
+                    "family": candidate["family"],
+                    "action_type_cost": action_type_cost,
+                    "is_available": availability.allowed,
+                    "unavailable_reason": None if availability.allowed else availability.reason_code,
+                    "targeting_mode": candidate["targeting_mode"],
+                    "range": candidate["range"],
+                }
+            )
+
+        turn_budget = await self.get_turn_budget_snapshot(encounter_session, encounter)
+        return ExecutableActionsSnapshotResult(
+            allowed=True,
+            actor_id=actor_id,
+            actions=actions,
+            turn_budget=turn_budget,
+        )
+
+    async def get_attack_preview(
+        self,
+        encounter_session: EncounterSession | None,
+        encounter: EncounterState,
+        ctx: SessionContext,
+        actor_id: str,
+        action_id: str,
+        template_origin: dict[str, int] | None = None,
+        template_direction: dict[str, int] | None = None,
+    ) -> AttackPreviewResult:
+        actor = self._find_actor(encounter, actor_id)
+        if actor is None:
+            return AttackPreviewResult(False, "invalid_target", f"Actor {actor_id} not found")
+
+        monster = await self._load_monster_for_actor(actor)
+        candidates = self._build_action_candidates(actor, monster)
+        candidate = next((entry for entry in candidates if str(
+            entry.get("action_id")) == action_id), None)
+        if candidate is None:
+            return AttackPreviewResult(False, "invalid_action", f"Unknown action_id '{action_id}' for actor {actor_id}")
+
+        action_type_cost = self.normalize_action_type(
+            str(candidate.get("action_type_cost") or "action"))
+        checks = await self.check_can_act(
+            encounter_session,
+            encounter,
+            actor_id,
+            action_type_cost,
+            ctx,
+        )
+        if not checks.allowed:
+            return AttackPreviewResult(False, checks.reason_code, checks.message)
+
+        origin_x = int(actor.position.x)
+        origin_y = int(actor.position.y)
+
+        targeting_mode = str(candidate.get(
+            "targeting_mode") or "single_target")
+        raw_range = candidate.get("range")
+        action_range: int | None
+        if isinstance(raw_range, (int, float)):
+            action_range = int(raw_range)
+        elif isinstance(raw_range, str) and raw_range.strip().isdigit():
+            action_range = int(raw_range.strip())
+        else:
+            action_range = None
+
+        eligible_target_ids: list[str] = []
+        eligible_cells: list[dict[str, int]] = []
+        template_projection: dict[str, Any] | None = None
+
+        if targeting_mode == "self":
+            eligible_target_ids.append(actor_id)
+            eligible_cells.append({"x": origin_x, "y": origin_y})
+        elif targeting_mode == "aoe":
+            template_shape = str(candidate.get("aoe_shape")
+                                 or "sphere").strip().lower() or "sphere"
+            template_size = self._coerce_positive_int(
+                candidate.get("aoe_size"), fallback=1)
+
+            potential_origins = self._cells_within_range(
+                encounter.map.width,
+                encounter.map.height,
+                origin_x,
+                origin_y,
+                action_range,
+            )
+            eligible_cells = [{"x": x, "y": y} for (x, y) in potential_origins]
+
+            selected_origin = self._normalize_cell(template_origin)
+            if selected_origin is None:
+                selected_origin = {"x": origin_x, "y": origin_y}
+
+            if not self._is_cell_in_bounds(encounter.map.width, encounter.map.height, selected_origin["x"], selected_origin["y"]):
+                return AttackPreviewResult(False, "invalid_target", "Template origin is out of map bounds")
+
+            if (selected_origin["x"], selected_origin["y"]) not in potential_origins:
+                return AttackPreviewResult(False, "invalid_target", "Template origin is out of action range")
+
+            normalized_direction = self._normalize_direction(
+                template_direction)
+            if normalized_direction is None:
+                normalized_direction = self._direction_from_points(
+                    {"x": origin_x, "y": origin_y},
+                    selected_origin,
+                )
+
+            affected_points = self._project_template_cells(
+                encounter.map.width,
+                encounter.map.height,
+                template_shape,
+                template_size,
+                selected_origin,
+                normalized_direction,
+            )
+            affected_cells = [{"x": x, "y": y} for (x, y) in affected_points]
+
+            affected_set = set(affected_points)
+            for target in encounter.combatants:
+                if target.current_hp <= 0:
+                    continue
+                target_cell = (int(target.position.x), int(target.position.y))
+                if target_cell in affected_set:
+                    eligible_target_ids.append(target.id)
+
+            template_projection = {
+                "shape": template_shape,
+                "size": template_size,
+                "origin": {"x": selected_origin["x"], "y": selected_origin["y"]},
+                "direction": {"x": normalized_direction["x"], "y": normalized_direction["y"]},
+                "affected_cells": affected_cells,
+            }
+        else:
+            for target in encounter.combatants:
+                if target.id == actor_id:
+                    continue
+                if target.current_hp <= 0:
+                    continue
+
+                target_x = int(target.position.x)
+                target_y = int(target.position.y)
+                distance = abs(origin_x - target_x) + abs(origin_y - target_y)
+                if action_range is not None and distance > action_range:
+                    continue
+
+                eligible_target_ids.append(target.id)
+                eligible_cells.append({"x": target_x, "y": target_y})
+
+        return AttackPreviewResult(
+            allowed=True,
+            actor_id=actor_id,
+            action_id=action_id,
+            origin={"x": origin_x, "y": origin_y},
+            eligible_target_ids=eligible_target_ids,
+            eligible_cells=eligible_cells,
+            template_projection=template_projection,
         )
 
     async def check_can_act(
@@ -539,6 +760,309 @@ class CombatService:
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def _load_monster_for_actor(self, actor: ActorInstance) -> Monster | None:
+        candidates: list[str] = []
+        if actor.name.strip():
+            candidates.append(actor.name.strip())
+
+        definition_slug = actor.definition_slug.strip()
+        if definition_slug:
+            candidates.append(self._display_name_from_slug(definition_slug))
+
+        lowered_candidates = {value.lower() for value in candidates if value}
+        if not lowered_candidates:
+            return None
+
+        predicates = [func.lower(Monster.name).in_(list(lowered_candidates))]
+        if definition_slug:
+            lowered_slug = definition_slug.lower()
+            predicates.append(func.lower(func.replace(
+                Monster.name, " ", "_")) == lowered_slug)
+            predicates.append(func.lower(func.replace(
+                Monster.name, " ", "-")) == lowered_slug)
+
+        stmt = select(Monster).where(or_(*predicates)).limit(1)
+        try:
+            result = await self.db.execute(stmt)
+            return result.scalar_one_or_none()
+        except Exception:
+            # Snapshot projection must still work in in-memory/offline modes.
+            return None
+
+    def _build_action_candidates(self, actor: ActorInstance, monster: Monster | None) -> list[dict[str, Any]]:
+        candidates: list[dict[str, Any]] = []
+
+        if monster is not None:
+            for index, entry in enumerate(monster.actions or []):
+                if not isinstance(entry, dict):
+                    continue
+                label = str(entry.get("name") or "").strip(
+                ) or f"Action {index + 1}"
+                description = str(entry.get("description")
+                                  or entry.get("desc") or "")
+                aoe_template = self._infer_aoe_template(description)
+                candidates.append(
+                    {
+                        "action_id": f"action_{index + 1}_{self._slugify(label)}",
+                        "label": label,
+                        "family": self._infer_action_family(label, description),
+                        "action_type_cost": "action",
+                        "targeting_mode": self._infer_targeting_mode(description),
+                        "range": self._infer_action_range(description),
+                        "aoe_shape": aoe_template[0] if aoe_template else None,
+                        "aoe_size": aoe_template[1] if aoe_template else None,
+                    }
+                )
+
+            for index, entry in enumerate(monster.special_abilities or []):
+                if not isinstance(entry, dict):
+                    continue
+                label = str(entry.get("name") or "").strip(
+                ) or f"Special {index + 1}"
+                description = str(entry.get("description")
+                                  or entry.get("desc") or "")
+                lowered = description.lower()
+                action_type_cost = ""
+                if "bonus action" in lowered:
+                    action_type_cost = "bonus_action"
+                elif "reaction" in lowered:
+                    action_type_cost = "reaction"
+
+                if not action_type_cost:
+                    continue
+
+                aoe_template = self._infer_aoe_template(description)
+                candidates.append(
+                    {
+                        "action_id": f"special_{index + 1}_{self._slugify(label)}",
+                        "label": label,
+                        "family": self._infer_action_family(label, description),
+                        "action_type_cost": action_type_cost,
+                        "targeting_mode": self._infer_targeting_mode(description),
+                        "range": self._infer_action_range(description),
+                        "aoe_shape": aoe_template[0] if aoe_template else None,
+                        "aoe_size": aoe_template[1] if aoe_template else None,
+                    }
+                )
+
+        if candidates:
+            return candidates
+
+        return [
+            {
+                "action_id": "basic_attack",
+                "label": f"{actor.name or 'Actor'} Attack",
+                "family": "attack",
+                "action_type_cost": "action",
+                "targeting_mode": "single_target",
+                "range": 5,
+                "aoe_shape": None,
+                "aoe_size": None,
+            }
+        ]
+
+    @staticmethod
+    def _display_name_from_slug(definition_slug: str) -> str:
+        cleaned = re.sub(r"[_-]+", " ", definition_slug).strip()
+        if not cleaned:
+            return ""
+        return " ".join(part.capitalize() for part in cleaned.split())
+
+    @staticmethod
+    def _slugify(value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_") or "action"
+
+    @staticmethod
+    def _infer_action_family(label: str, description: str) -> str:
+        text = f"{label} {description}".lower()
+        if any(token in text for token in ("weapon attack", "spell attack", "to hit", "hit:")):
+            return "attack"
+        if "save" in text or "saving throw" in text:
+            return "save"
+        if any(token in text for token in ("heal", "regain", "restore")):
+            return "healing"
+        return "utility"
+
+    @staticmethod
+    def _infer_targeting_mode(description: str) -> str:
+        lowered = description.lower()
+        if "one target" in lowered:
+            return "single_target"
+        if "each creature" in lowered or "all creatures" in lowered:
+            return "aoe"
+        if "line" in lowered or "cone" in lowered or "sphere" in lowered or "cube" in lowered or "cylinder" in lowered:
+            return "aoe"
+        if "self" in lowered:
+            return "self"
+        return "single_target"
+
+    @staticmethod
+    def _infer_action_range(description: str) -> int | None:
+        reach_match = re.search(r"reach\s+(\d+)\s*ft",
+                                description, flags=re.IGNORECASE)
+        if reach_match:
+            return int(reach_match.group(1))
+
+        range_match = re.search(
+            r"range\s+(\d+)(?:\s*/\s*\d+)?\s*ft", description, flags=re.IGNORECASE)
+        if range_match:
+            return int(range_match.group(1))
+
+        return None
+
+    @staticmethod
+    def _infer_aoe_template(description: str) -> tuple[str, int] | None:
+        lowered = description.lower()
+
+        radius_match = re.search(
+            r"(\d+)\s*-\s*foot\s*-\s*radius\s*(sphere|cylinder)", lowered)
+        if radius_match:
+            feet = int(radius_match.group(1))
+            shape = radius_match.group(2)
+            return shape, max(1, feet // 5)
+
+        size_shape_match = re.search(
+            r"(\d+)\s*-\s*foot\s*(line|cone|sphere|cube|cylinder)", lowered)
+        if size_shape_match:
+            feet = int(size_shape_match.group(1))
+            shape = size_shape_match.group(2)
+            return shape, max(1, feet // 5)
+
+        if "line" in lowered:
+            return "line", 3
+        if "cone" in lowered:
+            return "cone", 3
+        if "sphere" in lowered:
+            return "sphere", 2
+        if "cube" in lowered:
+            return "cube", 2
+        if "cylinder" in lowered:
+            return "cylinder", 2
+
+        return None
+
+    @staticmethod
+    def _coerce_positive_int(value: Any, fallback: int) -> int:
+        if isinstance(value, (int, float)):
+            return max(1, int(value))
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped.isdigit():
+                return max(1, int(stripped))
+        return max(1, fallback)
+
+    @staticmethod
+    def _normalize_cell(value: Any) -> dict[str, int] | None:
+        if not isinstance(value, dict):
+            return None
+        raw_x = value.get("x")
+        raw_y = value.get("y")
+        if not isinstance(raw_x, (int, float)) or not isinstance(raw_y, (int, float)):
+            return None
+        return {"x": int(raw_x), "y": int(raw_y)}
+
+    @staticmethod
+    def _normalize_direction(value: Any) -> dict[str, int] | None:
+        cell = CombatService._normalize_cell(value)
+        if cell is None:
+            return None
+
+        dx = 0 if cell["x"] == 0 else (1 if cell["x"] > 0 else -1)
+        dy = 0 if cell["y"] == 0 else (1 if cell["y"] > 0 else -1)
+        if dx == 0 and dy == 0:
+            return None
+        return {"x": dx, "y": dy}
+
+    @staticmethod
+    def _direction_from_points(origin: dict[str, int], target: dict[str, int]) -> dict[str, int]:
+        dx = target["x"] - origin["x"]
+        dy = target["y"] - origin["y"]
+        nx = 0 if dx == 0 else (1 if dx > 0 else -1)
+        ny = 0 if dy == 0 else (1 if dy > 0 else -1)
+        if nx == 0 and ny == 0:
+            return {"x": 1, "y": 0}
+        return {"x": nx, "y": ny}
+
+    @staticmethod
+    def _is_cell_in_bounds(width: int, height: int, x: int, y: int) -> bool:
+        return 0 <= x < width and 0 <= y < height
+
+    @staticmethod
+    def _cells_within_range(
+        width: int,
+        height: int,
+        origin_x: int,
+        origin_y: int,
+        action_range: int | None,
+    ) -> set[tuple[int, int]]:
+        cells: set[tuple[int, int]] = set()
+        for x in range(width):
+            for y in range(height):
+                if action_range is not None:
+                    distance = abs(origin_x - x) + abs(origin_y - y)
+                    if distance > action_range:
+                        continue
+                cells.add((x, y))
+        return cells
+
+    @staticmethod
+    def _project_template_cells(
+        width: int,
+        height: int,
+        shape: str,
+        size: int,
+        origin: dict[str, int],
+        direction: dict[str, int],
+    ) -> list[tuple[int, int]]:
+        normalized_shape = (shape or "sphere").strip().lower()
+        ox = int(origin["x"])
+        oy = int(origin["y"])
+        dx = int(direction["x"])
+        dy = int(direction["y"])
+        points: set[tuple[int, int]] = set()
+
+        def add(x: int, y: int) -> None:
+            if 0 <= x < width and 0 <= y < height:
+                points.add((x, y))
+
+        if normalized_shape in {"sphere", "cylinder"}:
+            for x in range(ox - size, ox + size + 1):
+                for y in range(oy - size, oy + size + 1):
+                    if abs(x - ox) + abs(y - oy) <= size:
+                        add(x, y)
+        elif normalized_shape == "cube":
+            for x in range(ox - size, ox + size + 1):
+                for y in range(oy - size, oy + size + 1):
+                    if max(abs(x - ox), abs(y - oy)) <= size:
+                        add(x, y)
+        elif normalized_shape == "line":
+            step_x = 0 if dx == 0 else (1 if dx > 0 else -1)
+            step_y = 0 if dy == 0 else (1 if dy > 0 else -1)
+            for step in range(1, size + 1):
+                add(ox + (step_x * step), oy + (step_y * step))
+            add(ox, oy)
+        elif normalized_shape == "cone":
+            forward_x = 0 if dx == 0 else (1 if dx > 0 else -1)
+            forward_y = 0 if dy == 0 else (1 if dy > 0 else -1)
+            for step in range(1, size + 1):
+                center_x = ox + (forward_x * step)
+                center_y = oy + (forward_y * step)
+                if forward_x != 0 and forward_y == 0:
+                    for offset in range(-(step - 1), step):
+                        add(center_x, center_y + offset)
+                elif forward_y != 0 and forward_x == 0:
+                    for offset in range(-(step - 1), step):
+                        add(center_x + offset, center_y)
+                else:
+                    for offset in range(-(step - 1), step):
+                        add(center_x + offset, center_y)
+                        add(center_x, center_y + offset)
+            add(ox, oy)
+        else:
+            add(ox, oy)
+
+        return sorted(points)
 
     async def _base_actor_checks(
         self,

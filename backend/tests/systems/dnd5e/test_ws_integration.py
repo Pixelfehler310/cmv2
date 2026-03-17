@@ -17,6 +17,7 @@ from src.systems.dnd5e.schemas.encounter import EncounterState
 from src.systems.dnd5e.schemas.instances import ActorInstance, ConditionInstance
 from src.systems.dnd5e.schemas.enums import ActorType, ConditionType, DamageType
 from src.systems.dnd5e.schemas.common import AbilityScores
+from src.systems.dnd5e.services.combat_service import CombatService
 
 
 # ---------------------------------------------------------------------------
@@ -369,6 +370,184 @@ class TestCombat:
 # ---------------------------------------------------------------------------
 
 class TestMovement:
+
+    @pytest.mark.anyio
+    async def test_request_attack_preview_returns_eligible_targets(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_attack_preview"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        snapshot_events = await handler.handle(
+            WsEnvelope(
+                type="request_executable_actions",
+                request_id="req_actions_for_attack_preview",
+                payload={"actor_id": active_actor_id},
+            ),
+            dm_ctx,
+            mgr,
+        )
+        assert len(snapshot_events) == 1
+        assert snapshot_events[0].type == "executable_actions_snapshot"
+        action_id = snapshot_events[0].payload["actions"][0]["action_id"]
+
+        events = await handler.handle(
+            WsEnvelope(
+                type="request_attack_preview",
+                request_id="req_attack_preview_success",
+                payload={"actor_id": active_actor_id, "action_id": action_id},
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        assert len(events) == 1
+        assert events[0].type == "attack_preview"
+        assert events[0].payload["actor_id"] == active_actor_id
+        assert events[0].payload["action_id"] == action_id
+        assert isinstance(events[0].payload.get("eligible_target_ids"), list)
+
+    @pytest.mark.anyio
+    async def test_request_attack_preview_non_owner_denied(self, handler, player_ctx, mgr, combat_encounter):
+        events = await handler.handle(
+            WsEnvelope(
+                type="request_attack_preview",
+                request_id="req_attack_preview_denied",
+                payload={"actor_id": "goblin_1", "action_id": "basic_attack"},
+            ),
+            player_ctx,
+            mgr,
+        )
+
+        assert len(events) == 1
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "unauthorized"
+
+    @pytest.mark.anyio
+    async def test_request_action_ineligible_target_denied(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_ineligible_target"), dm_ctx, mgr)
+
+        active_actor = combat_encounter.combatants[combat_encounter.active_index]
+        target = next(
+            c for c in combat_encounter.combatants if c.id != active_actor.id)
+        target.position.x = active_actor.position.x + 20
+        target.position.y = active_actor.position.y
+
+        snapshot_events = await handler.handle(
+            WsEnvelope(
+                type="request_executable_actions",
+                request_id="req_actions_for_ineligible_target",
+                payload={"actor_id": active_actor.id},
+            ),
+            dm_ctx,
+            mgr,
+        )
+        assert len(snapshot_events) == 1
+        assert snapshot_events[0].type == "executable_actions_snapshot"
+        action_id = snapshot_events[0].payload["actions"][0]["action_id"]
+
+        events = await handler.handle(
+            WsEnvelope(
+                type="request_action",
+                request_id="req_action_ineligible_target",
+                payload={
+                    "actor_id": active_actor.id,
+                    "action_type": "action",
+                    "action_name": action_id,
+                    "payload": {"target_ids": [target.id]},
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        assert len(events) == 1
+        assert events[0].type == "action_denied"
+        assert events[0].payload["reason_code"] == "invalid_target"
+
+    @pytest.mark.anyio
+    async def test_request_action_aoe_template_origin_out_of_range_denied(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        original_builder = CombatService._build_action_candidates
+
+        def fake_builder(self, actor, monster):
+            return [
+                {
+                    "action_id": "burning_cone",
+                    "label": "Burning Cone",
+                    "family": "save",
+                    "action_type_cost": "action",
+                    "targeting_mode": "aoe",
+                    "range": 2,
+                    "aoe_shape": "cone",
+                    "aoe_size": 3,
+                }
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_action_candidates", fake_builder)
+
+        try:
+            await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_aoe_origin_check"), dm_ctx, mgr)
+            active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+            events = await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_action_aoe_origin_denied",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "action",
+                        "action_name": "burning_cone",
+                        "payload": {
+                            "template_origin": {"x": 30, "y": 30},
+                        },
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+        finally:
+            monkeypatch.setattr(
+                CombatService, "_build_action_candidates", original_builder)
+
+        assert len(events) == 1
+        assert events[0].type == "action_denied"
+        assert events[0].payload["reason_code"] == "invalid_target"
+
+    @pytest.mark.anyio
+    async def test_request_executable_actions_returns_snapshot(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_action_snapshot"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        events = await handler.handle(
+            WsEnvelope(
+                type="request_executable_actions",
+                request_id="req_executable_actions_success",
+                payload={"actor_id": active_actor_id},
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        assert len(events) == 1
+        assert events[0].type == "executable_actions_snapshot"
+        assert events[0].payload["actor_id"] == active_actor_id
+        assert isinstance(events[0].payload.get("actions"), list)
+        assert "turn_budget" in events[0].payload
+
+    @pytest.mark.anyio
+    async def test_request_executable_actions_non_owner_denied(self, handler, player_ctx, mgr, combat_encounter):
+        events = await handler.handle(
+            WsEnvelope(
+                type="request_executable_actions",
+                request_id="req_executable_actions_denied",
+                payload={"actor_id": "goblin_1"},
+            ),
+            player_ctx,
+            mgr,
+        )
+
+        assert len(events) == 1
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "unauthorized"
 
     @pytest.mark.anyio
     async def test_request_move_preview_returns_reachable_cells(self, handler, dm_ctx, mgr, combat_encounter):

@@ -46,6 +46,21 @@ class RequestMovePreviewPayload(BaseModel):
     acting_as_user_id: Optional[str] = None
 
 
+class RequestExecutableActionsPayload(BaseModel):
+    """Payload for `request_executable_actions` event."""
+    actor_id: str
+    acting_as_user_id: Optional[str] = None
+
+
+class RequestAttackPreviewPayload(BaseModel):
+    """Payload for `request_attack_preview` event."""
+    actor_id: str
+    action_id: str
+    template_origin: Optional[dict] = None
+    template_direction: Optional[dict] = None
+    acting_as_user_id: Optional[str] = None
+
+
 class RollDicePayload(BaseModel):
     """Payload for `roll_dice` event."""
     expression: str
@@ -133,6 +148,16 @@ class MovementPreviewPayload(BaseModel):
     origin: dict
     movement_remaining: int
     reachable: List[dict] = Field(default_factory=list)
+
+
+class AttackPreviewPayload(BaseModel):
+    """Payload for `attack_preview` event."""
+    actor_id: str
+    action_id: str
+    origin: dict
+    eligible_target_ids: List[str] = Field(default_factory=list)
+    eligible_cells: List[dict] = Field(default_factory=list)
+    template_projection: Optional[dict] = None
 
 
 class ActionAuthorizedPayload(BaseModel):

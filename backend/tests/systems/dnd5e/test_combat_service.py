@@ -134,3 +134,87 @@ async def test_apply_movement_denies_when_exceeds_budget(db_session: AsyncSessio
 
     assert result.allowed is False
     assert result.reason_code == "movement_exhausted"
+
+
+@pytest.mark.anyio
+async def test_get_attack_preview_aoe_returns_template_projection(db_session: AsyncSession, combat_encounter_state: EncounterState):
+    service = CombatService(db_session)
+    ctx = SessionContext(
+        campaign_id="camp_test",
+        user_id="player_1",
+        role=UserRole.PLAYER,
+        game_system="dnd5e",
+    )
+
+    original_builder = service._build_action_candidates
+    service._build_action_candidates = lambda actor, monster: [
+        {
+            "action_id": "dragon_breath",
+            "label": "Dragon Breath",
+            "family": "save",
+            "action_type_cost": "action",
+            "targeting_mode": "aoe",
+            "range": 6,
+            "aoe_shape": "cone",
+            "aoe_size": 3,
+        }
+    ]
+
+    try:
+        preview = await service.get_attack_preview(
+            encounter_session=None,
+            encounter=combat_encounter_state,
+            ctx=ctx,
+            actor_id="pc_1",
+            action_id="dragon_breath",
+            template_origin={"x": 4, "y": 1},
+        )
+    finally:
+        service._build_action_candidates = original_builder
+
+    assert preview.allowed is True
+    assert preview.template_projection is not None
+    assert preview.template_projection["shape"] == "cone"
+    assert preview.template_projection["size"] == 3
+    assert preview.template_projection["origin"] == {"x": 4, "y": 1}
+    assert len(preview.template_projection["affected_cells"]) > 0
+
+
+@pytest.mark.anyio
+async def test_get_attack_preview_aoe_denies_template_origin_out_of_range(db_session: AsyncSession, combat_encounter_state: EncounterState):
+    service = CombatService(db_session)
+    ctx = SessionContext(
+        campaign_id="camp_test",
+        user_id="player_1",
+        role=UserRole.PLAYER,
+        game_system="dnd5e",
+    )
+
+    original_builder = service._build_action_candidates
+    service._build_action_candidates = lambda actor, monster: [
+        {
+            "action_id": "thunder_wave",
+            "label": "Thunder Wave",
+            "family": "save",
+            "action_type_cost": "action",
+            "targeting_mode": "aoe",
+            "range": 2,
+            "aoe_shape": "cube",
+            "aoe_size": 2,
+        }
+    ]
+
+    try:
+        preview = await service.get_attack_preview(
+            encounter_session=None,
+            encounter=combat_encounter_state,
+            ctx=ctx,
+            actor_id="pc_1",
+            action_id="thunder_wave",
+            template_origin={"x": 9, "y": 9},
+        )
+    finally:
+        service._build_action_candidates = original_builder
+
+    assert preview.allowed is False
+    assert preview.reason_code == "invalid_target"

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type {
+  AttackPreviewPayload,
   ActionDeniedPayload,
   ActionFeedbackViewModel,
   ActorAddedPayload,
@@ -15,6 +16,7 @@ import type {
   DiceRolledPayload,
   EncounterStateWire,
   ErrorPayload,
+  ExecutableActionsSnapshotPayload,
   EffectAppliedPayload,
   GameStateViewModel,
   HpChangedPayload,
@@ -94,6 +96,8 @@ export interface CombatStore {
   commandOutcomesByRequestId: Record<string, CommandOutcome>;
   latestCommandOutcome: CommandOutcome | null;
   movementPreview: MovementPreviewPayload | null;
+  executableActionsSnapshot: ExecutableActionsSnapshotPayload | null;
+  attackPreview: AttackPreviewPayload | null;
   actionDispatcher: CombatActionDispatcher | null;
 
   connect: (campaignId: string, role: "dm" | "observer") => void;
@@ -109,6 +113,8 @@ export interface CombatStore {
 
   dispatchIntent: (action: string, payload: Record<string, unknown>) => void;
   requestAction: (actorId: string, actionType: string, actionName: string, payload?: Record<string, unknown>) => void;
+  requestExecutableActions: (actorId: string) => void;
+  requestAttackPreview: (actorId: string, actionId: string, templateOrigin?: { x: number; y: number }, templateDirection?: { x: number; y: number }) => void;
   requestMovePreview: (actorId: string) => void;
   moveToken: (targetId: string, path: [number, number][]) => void;
   removeActor: (actorId: string) => void;
@@ -416,6 +422,18 @@ function isTerminalOutboundTypeForSentType(sentType: string, outboundType: strin
     return outboundType === "chat_message";
   }
 
+  if (sentType === "request_executable_actions") {
+    return outboundType === "executable_actions_snapshot";
+  }
+
+  if (sentType === "request_move_preview") {
+    return outboundType === "movement_preview";
+  }
+
+  if (sentType === "request_attack_preview") {
+    return outboundType === "attack_preview";
+  }
+
   return (
     outboundType === "action_authorized" ||
     outboundType === "combat_started" ||
@@ -451,6 +469,8 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   commandOutcomesByRequestId: {},
   latestCommandOutcome: null,
   movementPreview: null,
+  executableActionsSnapshot: null,
+  attackPreview: null,
   actionDispatcher: null,
 
   connect: (_campaignId: string, role: "dm" | "observer") => {
@@ -477,6 +497,8 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       commandOutcomesByRequestId: {},
       latestCommandOutcome: null,
       movementPreview: null,
+      executableActionsSnapshot: null,
+      attackPreview: null,
     });
   },
 
@@ -599,13 +621,38 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
 
       case "state_sync": {
         const payload = envelope.payload as EncounterStateWire;
-        set({ gameState: mapEncounterWireToGameState(payload), movementPreview: null });
+        set({ gameState: mapEncounterWireToGameState(payload), movementPreview: null, executableActionsSnapshot: null, attackPreview: null });
+        return;
+      }
+
+      case "executable_actions_snapshot": {
+        const payload = envelope.payload as ExecutableActionsSnapshotPayload;
+        let mismatch = false;
+        set((current) => {
+          if (!current.gameState) {
+            return { executableActionsSnapshot: payload };
+          }
+
+          const applied = applyTurnBudgetSnapshot(current.gameState, payload.turn_budget);
+          mismatch = applied.hasMismatch;
+          return {
+            executableActionsSnapshot: payload,
+            gameState: applied.nextState,
+          };
+        });
+        maybeRequestSyncOnMismatch(mismatch);
         return;
       }
 
       case "movement_preview": {
         const payload = envelope.payload as MovementPreviewPayload;
         set({ movementPreview: payload });
+        return;
+      }
+
+      case "attack_preview": {
+        const payload = envelope.payload as AttackPreviewPayload;
+        set({ attackPreview: payload });
         return;
       }
 
@@ -638,6 +685,9 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
         const payload = envelope.payload as ActorRemovedPayload;
         set((current) => ({
           gameState: current.gameState && payload.actor_id ? applyActorRemoved(current.gameState, payload.actor_id) : current.gameState,
+          executableActionsSnapshot: current.executableActionsSnapshot?.actor_id === payload.actor_id ? null : current.executableActionsSnapshot,
+          attackPreview:
+            current.attackPreview && (current.attackPreview.actor_id === payload.actor_id || current.attackPreview.eligible_target_ids.includes(payload.actor_id)) ? null : current.attackPreview,
         }));
         return;
       }
@@ -673,6 +723,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
           return {
             actionFeedback: null,
             gameState: applied.nextState,
+            attackPreview: null,
           };
         });
         maybeRequestSyncOnMismatch(mismatch);
@@ -698,6 +749,9 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       case "command_denied": {
         const payload = envelope.payload as CommandDeniedPayload;
         const denied = buildDeniedFeedback("command_denied", payload, envelope.request_id);
+        const deniedEventType = (payload.event_type ?? "").trim();
+        const shouldClearMovementPreview = deniedEventType === "request_move_preview" || deniedEventType === "move_token";
+        const shouldClearAttackPreview = deniedEventType === "request_attack_preview";
         set({
           latestDenied: denied,
           actionFeedback: {
@@ -707,6 +761,8 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
             message: payload.message,
             at: denied.at,
           },
+          movementPreview: shouldClearMovementPreview ? null : get().movementPreview,
+          attackPreview: shouldClearAttackPreview ? null : get().attackPreview,
         });
         return;
       }
@@ -751,6 +807,8 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
           return {
             gameState: applied.nextState,
             movementPreview: null,
+            executableActionsSnapshot: null,
+            attackPreview: null,
           };
         });
         maybeRequestSyncOnMismatch(mismatch);
@@ -946,6 +1004,31 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
         action_type: actionType,
         action_name: actionName,
         payload,
+        ...(actingAsUserId ? { acting_as_user_id: actingAsUserId } : {}),
+      },
+    });
+  },
+
+  requestExecutableActions: (actorId: string) => {
+    const { actingAsUserId } = get();
+    void get().dispatchCommand({
+      type: "request_executable_actions",
+      payload: {
+        actor_id: actorId,
+        ...(actingAsUserId ? { acting_as_user_id: actingAsUserId } : {}),
+      },
+    });
+  },
+
+  requestAttackPreview: (actorId: string, actionId: string, templateOrigin?: { x: number; y: number }, templateDirection?: { x: number; y: number }) => {
+    const { actingAsUserId } = get();
+    void get().dispatchCommand({
+      type: "request_attack_preview",
+      payload: {
+        actor_id: actorId,
+        action_id: actionId,
+        ...(templateOrigin ? { template_origin: templateOrigin } : {}),
+        ...(templateDirection ? { template_direction: templateDirection } : {}),
         ...(actingAsUserId ? { acting_as_user_id: actingAsUserId } : {}),
       },
     });

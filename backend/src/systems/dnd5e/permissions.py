@@ -34,6 +34,8 @@ _DM_OR_OWNER_EVENTS: set[str] = {
     "move_token",
     "request_action",
     "request_move_preview",
+    "request_executable_actions",
+    "request_attack_preview",
 }
 
 # Events anyone can send
