@@ -13,6 +13,7 @@ from src.data.lib.monster import Monster
 
 from ..engine.combat_state import get_active_combatant, next_turn, start_combat
 from ..engine.initiative import InitiativeEntry
+from ..lib.content_models import AbilityBindingRecord, ActionDefinitionRecord
 from ..schemas.common import Position
 from ..schemas.encounter import EncounterState, MapState, MapToken
 from ..schemas.instances import ActorInstance
@@ -59,6 +60,20 @@ class AttackPreviewResult:
     eligible_target_ids: list[str] | None = None
     eligible_cells: list[dict[str, int]] | None = None
     template_projection: dict[str, Any] | None = None
+
+
+@dataclass
+class ActionExecutionMetadataResult:
+    found: bool
+    actor_id: str | None = None
+    action_id: str | None = None
+    action_type_cost: str | None = None
+    family: str | None = None
+    targeting_mode: str | None = None
+    range: int | None = None
+    save_context: dict[str, Any] | None = None
+    attack_context: dict[str, Any] | None = None
+    effect_intents: list[dict[str, Any]] | None = None
 
 
 class CombatService:
@@ -281,8 +296,10 @@ class CombatService:
         if ctx.role == UserRole.PLAYER and owner_user_id and owner_user_id != ctx.user_id:
             return ExecutableActionsSnapshotResult(False, "unauthorized", "Player does not own this actor")
 
-        monster = await self._load_monster_for_actor(actor)
-        candidates = self._build_action_candidates(actor, monster)
+        candidates = await self._build_bound_action_candidates(actor)
+        if not candidates:
+            monster = await self._load_monster_for_actor(actor)
+            candidates = self._build_action_candidates(actor, monster)
 
         actions: list[dict[str, Any]] = []
         for candidate in candidates:
@@ -306,6 +323,15 @@ class CombatService:
                     "unavailable_reason": None if availability.allowed else availability.reason_code,
                     "targeting_mode": candidate["targeting_mode"],
                     "range": candidate["range"],
+                    "name": str(candidate.get("name") or candidate["label"]),
+                    "save_context": candidate.get("save_context"),
+                    "attack_context": candidate.get("attack_context"),
+                    "resource_costs": list(candidate.get("resource_costs") or []),
+                    "effect_intents": list(candidate.get("effect_intents") or []),
+                    "tags": list(candidate.get("tags") or []),
+                    "source_ref": str(candidate.get("source_ref") or "custom"),
+                    "content_version": str(candidate.get("content_version") or "1"),
+                    "enabled": bool(candidate.get("enabled", True)),
                 }
             )
 
@@ -331,8 +357,10 @@ class CombatService:
         if actor is None:
             return AttackPreviewResult(False, "invalid_target", f"Actor {actor_id} not found")
 
-        monster = await self._load_monster_for_actor(actor)
-        candidates = self._build_action_candidates(actor, monster)
+        candidates = await self._build_bound_action_candidates(actor)
+        if not candidates:
+            monster = await self._load_monster_for_actor(actor)
+            candidates = self._build_action_candidates(actor, monster)
         candidate = next((entry for entry in candidates if str(
             entry.get("action_id")) == action_id), None)
         if candidate is None:
@@ -453,6 +481,59 @@ class CombatService:
             eligible_target_ids=eligible_target_ids,
             eligible_cells=eligible_cells,
             template_projection=template_projection,
+        )
+
+    async def get_action_execution_metadata(
+        self,
+        encounter: EncounterState,
+        actor_id: str,
+        action_id: str,
+    ) -> ActionExecutionMetadataResult:
+        actor = self._find_actor(encounter, actor_id)
+        if actor is None:
+            return ActionExecutionMetadataResult(found=False, actor_id=actor_id, action_id=action_id)
+
+        candidates = await self._build_bound_action_candidates(actor)
+        if not candidates:
+            monster = await self._load_monster_for_actor(actor)
+            candidates = self._build_action_candidates(actor, monster)
+
+        candidate = next((entry for entry in candidates if str(
+            entry.get("action_id")) == action_id), None)
+        if candidate is None:
+            return ActionExecutionMetadataResult(found=False, actor_id=actor_id, action_id=action_id)
+
+        raw_family = str(candidate.get("family") or "").strip().lower()
+        if raw_family not in {"attack", "save", "healing", "utility"}:
+            raw_family = "utility"
+
+        raw_range = candidate.get("range")
+        normalized_range: int | None = None
+        if isinstance(raw_range, (int, float)):
+            normalized_range = int(raw_range)
+        elif isinstance(raw_range, str) and raw_range.strip().isdigit():
+            normalized_range = int(raw_range.strip())
+
+        save_context = candidate.get("save_context")
+        attack_context = candidate.get("attack_context")
+        effect_intents = candidate.get("effect_intents")
+
+        return ActionExecutionMetadataResult(
+            found=True,
+            actor_id=actor_id,
+            action_id=action_id,
+            action_type_cost=self.normalize_action_type(
+                str(candidate.get("action_type_cost") or "action")),
+            family=raw_family,
+            targeting_mode=self._normalize_targeting_mode(
+                str(candidate.get("targeting_mode") or "single_target")),
+            range=normalized_range,
+            save_context=save_context if isinstance(
+                save_context, dict) else None,
+            attack_context=attack_context if isinstance(
+                attack_context, dict) else None,
+            effect_intents=list(effect_intents) if isinstance(
+                effect_intents, list) else [],
         )
 
     async def check_can_act(
@@ -790,6 +871,177 @@ class CombatService:
             # Snapshot projection must still work in in-memory/offline modes.
             return None
 
+    async def _build_bound_action_candidates(self, actor: ActorInstance) -> list[dict[str, Any]]:
+        definition_slug = actor.definition_slug.strip()
+        binding_filters = [AbilityBindingRecord.actor_id == actor.id]
+        if definition_slug:
+            binding_filters.append(
+                AbilityBindingRecord.actor_template_id == definition_slug)
+
+        stmt = select(AbilityBindingRecord).where(
+            AbilityBindingRecord.system == "dnd5e",
+            or_(*binding_filters),
+        )
+
+        try:
+            binding_result = await self.db.execute(stmt)
+            bindings = list(binding_result.scalars().all())
+        except Exception:
+            # Fallback is handled by legacy candidate projection.
+            return []
+
+        if not bindings:
+            return []
+
+        # Runtime actor-specific bindings win over template-level bindings.
+        bindings.sort(
+            key=lambda binding: (
+                1 if binding.actor_id == actor.id else 0,
+                1 if definition_slug and binding.actor_template_id == definition_slug else 0,
+            ),
+            reverse=True,
+        )
+
+        action_ids = [
+            binding.action_id for binding in bindings if binding.action_id]
+        if not action_ids:
+            return []
+
+        action_stmt = select(ActionDefinitionRecord).where(
+            ActionDefinitionRecord.system == "dnd5e",
+            ActionDefinitionRecord.enabled.is_(True),
+            ActionDefinitionRecord.action_id.in_(action_ids),
+        )
+
+        try:
+            action_result = await self.db.execute(action_stmt)
+            action_defs = list(action_result.scalars().all())
+        except Exception:
+            return []
+
+        action_by_id = {action.action_id: action for action in action_defs}
+        projected: list[dict[str, Any]] = []
+        seen_action_ids: set[str] = set()
+
+        for binding in bindings:
+            action = action_by_id.get(binding.action_id)
+            if action is None:
+                continue
+            if action.action_id in seen_action_ids:
+                continue
+
+            projected.append(
+                self._build_candidate_from_action_definition(
+                    action,
+                    binding.override_payload,
+                )
+            )
+            seen_action_ids.add(action.action_id)
+
+        return projected
+
+    def _build_candidate_from_action_definition(
+        self,
+        action: ActionDefinitionRecord,
+        override_payload: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        attack_context = action.attack_context if isinstance(
+            action.attack_context, dict) else None
+        save_context = action.save_context if isinstance(
+            action.save_context, dict) else None
+
+        template_shape: str | None = None
+        template_size: int | None = None
+        for context_payload in (attack_context, save_context):
+            if not isinstance(context_payload, dict):
+                continue
+            raw_shape = context_payload.get(
+                "aoe_shape") or context_payload.get("shape")
+            raw_size = context_payload.get(
+                "aoe_size") or context_payload.get("size")
+            if isinstance(raw_shape, str) and raw_shape.strip() and template_shape is None:
+                template_shape = raw_shape.strip().lower()
+            if raw_size is not None and template_size is None:
+                template_size = self._coerce_positive_int(raw_size, fallback=1)
+
+        candidate: dict[str, Any] = {
+            "action_id": action.action_id,
+            "name": action.name,
+            "label": action.name,
+            "family": action.family,
+            "action_type_cost": self.normalize_action_type(action.action_type_cost),
+            "targeting_mode": self._normalize_targeting_mode(action.targeting_mode),
+            "range": action.range,
+            "save_context": save_context,
+            "attack_context": attack_context,
+            "resource_costs": list(action.resource_costs or []),
+            "effect_intents": list(action.effect_intents or []),
+            "tags": list(action.tags or []),
+            "source_ref": action.source_ref,
+            "content_version": action.content_version,
+            "enabled": bool(action.enabled),
+            "aoe_shape": template_shape,
+            "aoe_size": template_size,
+        }
+
+        if isinstance(override_payload, dict):
+            override_name = override_payload.get("name")
+            if isinstance(override_name, str) and override_name.strip():
+                candidate["name"] = override_name.strip()
+                candidate["label"] = override_name.strip()
+
+            override_label = override_payload.get("label")
+            if isinstance(override_label, str) and override_label.strip():
+                candidate["label"] = override_label.strip()
+
+            override_family = override_payload.get("family")
+            if isinstance(override_family, str) and override_family.strip():
+                candidate["family"] = override_family.strip().lower()
+
+            override_action_type = override_payload.get("action_type_cost")
+            if isinstance(override_action_type, str) and override_action_type.strip():
+                candidate["action_type_cost"] = self.normalize_action_type(
+                    override_action_type)
+
+            override_targeting_mode = override_payload.get("targeting_mode")
+            if isinstance(override_targeting_mode, str) and override_targeting_mode.strip():
+                candidate["targeting_mode"] = self._normalize_targeting_mode(
+                    override_targeting_mode)
+
+            override_range = override_payload.get("range")
+            if isinstance(override_range, (int, float)):
+                candidate["range"] = int(override_range)
+
+            if isinstance(override_payload.get("save_context"), dict):
+                candidate["save_context"] = override_payload["save_context"]
+            if isinstance(override_payload.get("attack_context"), dict):
+                candidate["attack_context"] = override_payload["attack_context"]
+            if isinstance(override_payload.get("resource_costs"), list):
+                candidate["resource_costs"] = override_payload["resource_costs"]
+            if isinstance(override_payload.get("effect_intents"), list):
+                candidate["effect_intents"] = override_payload["effect_intents"]
+            if isinstance(override_payload.get("tags"), list):
+                candidate["tags"] = [str(tag)
+                                     for tag in override_payload["tags"]]
+
+            override_source_ref = override_payload.get("source_ref")
+            if isinstance(override_source_ref, str) and override_source_ref.strip():
+                candidate["source_ref"] = override_source_ref.strip()
+
+            override_version = override_payload.get("content_version")
+            if isinstance(override_version, str) and override_version.strip():
+                candidate["content_version"] = override_version.strip()
+
+            override_shape = override_payload.get(
+                "aoe_shape") or override_payload.get("shape")
+            if isinstance(override_shape, str) and override_shape.strip():
+                candidate["aoe_shape"] = override_shape.strip().lower()
+            if override_payload.get("aoe_size") is not None:
+                candidate["aoe_size"] = self._coerce_positive_int(
+                    override_payload.get("aoe_size"), fallback=1)
+
+        return candidate
+
     def _build_action_candidates(self, actor: ActorInstance, monster: Monster | None) -> list[dict[str, Any]]:
         candidates: list[dict[str, Any]] = []
 
@@ -895,6 +1147,13 @@ class CombatService:
             return "aoe"
         if "self" in lowered:
             return "self"
+        return "single_target"
+
+    @staticmethod
+    def _normalize_targeting_mode(value: str) -> str:
+        normalized = (value or "").strip().lower()
+        if normalized in {"single_target", "aoe", "self"}:
+            return normalized
         return "single_target"
 
     @staticmethod

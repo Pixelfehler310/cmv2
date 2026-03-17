@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     ADMIN_USERNAME: str | None = None
     LOAD_MOCK_DATA: bool = False
-    
+    ALLOW_LEGACY_ACTION_NAMES: bool = False
+
     # OAuth Settings
     GOOGLE_CLIENT_ID: str | None = None
     GOOGLE_CLIENT_SECRET: str | None = None

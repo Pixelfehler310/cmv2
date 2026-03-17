@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from src.core.sessions.models import SessionContext, UserRole
 from src.database import Base
+from src.systems.dnd5e.lib.content_models import AbilityBindingRecord, ActionDefinitionRecord
 from src.systems.dnd5e.schemas.common import AbilityScores, Position, SpeedBlock
 from src.systems.dnd5e.schemas.encounter import EncounterState
 from src.systems.dnd5e.schemas.enums import ActorType
@@ -218,3 +219,66 @@ async def test_get_attack_preview_aoe_denies_template_origin_out_of_range(db_ses
 
     assert preview.allowed is False
     assert preview.reason_code == "invalid_target"
+
+
+@pytest.mark.anyio
+async def test_get_executable_actions_snapshot_projects_canonical_bindings(db_session: AsyncSession, combat_encounter_state: EncounterState):
+    service = CombatService(db_session)
+    encounter_session, _ = await service.load_or_create_encounter_state(combat_encounter_state.campaign_id)
+    await service.save_full_state(encounter_session, combat_encounter_state)
+
+    db_session.add(
+        ActionDefinitionRecord(
+            system="dnd5e",
+            action_id="slash",
+            name="Slash",
+            family="attack",
+            action_type_cost="action",
+            targeting_mode="single_target",
+            range=5,
+            source_ref="monster",
+            content_version="3",
+            enabled=True,
+            attack_context={"to_hit_bonus": 5},
+            effect_intents=[{"operation": "apply_damage", "amount": "1d8+3"}],
+        )
+    )
+    db_session.add(
+        AbilityBindingRecord(
+            system="dnd5e",
+            binding_id="goblin_slash",
+            action_id="slash",
+            actor_id="goblin_1",
+            override_payload={"label": "Slash (Bound)", "tags": [
+                "melee", "weapon"]},
+        )
+    )
+    await db_session.commit()
+
+    ctx = SessionContext(
+        campaign_id="camp_test",
+        user_id="dm_1",
+        role=UserRole.DM,
+        game_system="dnd5e",
+    )
+
+    snapshot = await service.get_executable_actions_snapshot(
+        encounter_session,
+        combat_encounter_state,
+        ctx,
+        actor_id="goblin_1",
+    )
+
+    assert snapshot.allowed is True
+    assert snapshot.actions is not None
+    assert len(snapshot.actions) == 1
+    action = snapshot.actions[0]
+    assert action["action_id"] == "slash"
+    assert action["label"] == "Slash (Bound)"
+    assert action["name"] == "Slash"
+    assert action["source_ref"] == "monster"
+    assert action["content_version"] == "3"
+    assert action["family"] == "attack"
+    assert action["attack_context"] == {"to_hit_bonus": 5}
+    assert action["effect_intents"] == [
+        {"operation": "apply_damage", "amount": "1d8+3"}]

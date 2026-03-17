@@ -8,6 +8,7 @@ Uses the handler directly (no real WebSocket connection needed).
 import pytest
 from unittest.mock import AsyncMock
 
+from src.config import settings
 from src.core.ws_protocol import WsEnvelope, WsOutbound, Visibility
 from src.core.sessions.models import SessionContext, UserRole
 from src.core.sessions.manager import SessionManager
@@ -147,7 +148,8 @@ class TestPermissions:
         assert events[0].payload["reason_code"] == "unauthorized"
 
     @pytest.mark.anyio
-    async def test_player_request_action_is_routed(self, handler, dm_ctx, player_ctx, mgr, combat_encounter):
+    async def test_player_request_action_is_routed(self, handler, dm_ctx, player_ctx, mgr, combat_encounter, monkeypatch):
+        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_before_player_request"), dm_ctx, mgr)
         envelope = WsEnvelope(
             type="request_action",
@@ -159,6 +161,31 @@ class TestPermissions:
         assert len(events) >= 1
         event_types = {event.type for event in events}
         assert event_types & {"action_authorized", "action_denied", "error"}
+
+    @pytest.mark.anyio
+    async def test_request_action_unknown_action_id_denied_in_strict_mode(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", False)
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_strict_unknown_start"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        events = await handler.handle(
+            WsEnvelope(
+                type="request_action",
+                request_id="req_strict_unknown_action",
+                payload={
+                    "actor_id": active_actor_id,
+                    "action_type": "action",
+                    "action_name": "legacy_attack_name",
+                    "payload": {"target_ids": [c.id for c in combat_encounter.combatants if c.id != active_actor_id]},
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        assert len(events) == 1
+        assert events[0].type == "action_denied"
+        assert events[0].payload["reason_code"] == "invalid_action"
 
     @pytest.mark.anyio
     async def test_dm_can_impersonate_player_for_request_action(self, handler, dm_ctx, mgr, combat_encounter):
@@ -750,7 +777,8 @@ class TestActionEconomy:
         assert second[0].payload["reason_code"] == "action_exhausted"
 
     @pytest.mark.anyio
-    async def test_bonus_action_budget_exhaustion_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter):
+    async def test_bonus_action_budget_exhaustion_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_bonus_economy"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
 
@@ -790,7 +818,8 @@ class TestActionEconomy:
         assert second[0].payload["reason_code"] == "bonus_action_exhausted"
 
     @pytest.mark.anyio
-    async def test_reaction_budget_exhaustion_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter):
+    async def test_reaction_budget_exhaustion_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_reaction_economy"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
 
@@ -861,7 +890,8 @@ class TestActionResolutionPhase3:
         assert "attack_result" in event_types
 
     @pytest.mark.anyio
-    async def test_save_family_publishes_save_result(self, handler, dm_ctx, mgr, combat_encounter):
+    async def test_save_family_publishes_save_result(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase3_save_start"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
 
@@ -892,7 +922,8 @@ class TestActionResolutionPhase3:
         assert "save_result" in event_types
 
     @pytest.mark.anyio
-    async def test_healing_family_publishes_effect_and_heal(self, handler, dm_ctx, mgr, combat_encounter):
+    async def test_healing_family_publishes_effect_and_heal(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase3_heal_start"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
 
@@ -933,7 +964,8 @@ class TestActionResolutionPhase3:
         assert "actor_healed" in event_types
 
     @pytest.mark.anyio
-    async def test_utility_family_publishes_effect_and_condition(self, handler, dm_ctx, mgr, combat_encounter):
+    async def test_utility_family_publishes_effect_and_condition(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase3_utility_start"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
 
@@ -960,6 +992,70 @@ class TestActionResolutionPhase3:
         assert "action_authorized" in event_types
         assert "effect_applied" in event_types
         assert "condition_added" in event_types
+
+    @pytest.mark.anyio
+    async def test_request_action_uses_canonical_family_metadata(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase3_canonical_family_start"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+        target_actor_id = next(
+            c.id for c in combat_encounter.combatants if c.id != active_actor_id)
+
+        original_builder = CombatService._build_bound_action_candidates
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [
+                {
+                    "action_id": "canonical_fire_breath",
+                    "name": "Canonical Fire Breath",
+                    "label": "Canonical Fire Breath",
+                    "family": "save",
+                    "action_type_cost": "action",
+                    "targeting_mode": "single_target",
+                    "range": 30,
+                    "save_context": {"ability": "dexterity", "dc": 14, "damage_dice": "2d6", "damage_type": "fire"},
+                    "attack_context": None,
+                    "effect_intents": [],
+                    "tags": [],
+                    "source_ref": "custom",
+                    "content_version": "1",
+                    "enabled": True,
+                    "aoe_shape": None,
+                    "aoe_size": None,
+                }
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
+        try:
+            events = await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_phase3_canonical_family",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "action",
+                        "action_name": "canonical_fire_breath",
+                        "payload": {
+                            "target_ids": [target_actor_id],
+                            "save_ability": "dexterity",
+                            "save_dc": 14,
+                            "damage_dice": "2d6",
+                            "damage_type": "fire",
+                        },
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+        finally:
+            monkeypatch.setattr(
+                CombatService, "_build_bound_action_candidates", original_builder)
+
+        event_types = {event.type for event in events}
+        assert "action_authorized" in event_types
+        assert "save_result" in event_types
 
 
 # ---------------------------------------------------------------------------

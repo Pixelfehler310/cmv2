@@ -22,6 +22,7 @@ export interface MovementPreviewPayload {
 
 export interface ExecutableActionPayload {
   action_id: string;
+  name?: string;
   label: string;
   family: "attack" | "save" | "healing" | "utility" | string;
   action_type_cost: "action" | "bonus_action" | "reaction" | "move" | string;
@@ -29,6 +30,14 @@ export interface ExecutableActionPayload {
   unavailable_reason?: string | null;
   targeting_mode: "single_target" | "aoe" | "self" | string;
   range?: number | null;
+  save_context?: Record<string, unknown> | null;
+  attack_context?: Record<string, unknown> | null;
+  resource_costs?: Array<Record<string, unknown>>;
+  effect_intents?: Array<Record<string, unknown>>;
+  tags?: string[];
+  source_ref?: string;
+  content_version?: string;
+  enabled?: boolean;
 }
 
 export interface ExecutableActionsSnapshotPayload {

@@ -149,6 +149,39 @@ Budget-affecting events include `turn_budget` snapshots and should update UI act
 
 Recommendation: if a snapshot is missing unexpectedly, issue `request_sync` and reconcile.
 
+## 4.3 Executable action snapshot fields
+
+`executable_actions_snapshot.payload.actions[]` is projected by backend runtime from canonical `ActionDefinition` + `AbilityBinding` data and turn-state checks.
+
+Stable fields for frontend rendering:
+
+- `action_id`
+- `label`
+- `family`
+- `action_type_cost`
+- `is_available`
+- `unavailable_reason`
+- `targeting_mode`
+- `range`
+
+Canonical metadata fields (optional for first-pass UI, but part of stable contract):
+
+- `name`
+- `save_context`
+- `attack_context`
+- `resource_costs`
+- `effect_intents`
+- `tags`
+- `source_ref`
+- `content_version`
+- `enabled`
+
+`request_action` canonical mode policy:
+
+- `request_action.action_name` is treated as canonical `action_id`.
+- If no canonical action is found for the acting actor, backend returns deterministic `action_denied` with `reason_code=invalid_action`.
+- Legacy free-form action names are only allowed when backend setting `ALLOW_LEGACY_ACTION_NAMES=true`.
+
 ## 5. Compatibility and Transitional Alias Policy
 
 Backend decision for Phase 5:

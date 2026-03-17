@@ -13,6 +13,7 @@ import logging
 import re
 from typing import Any, Optional
 
+from src.config import settings
 from src.database import AsyncSessionLocal
 from src.core.ws_dispatcher import ISystemHandler
 from src.core.ws_protocol import WsEnvelope, WsOutbound, WsErrorCode, Visibility
@@ -483,6 +484,7 @@ class Dnd5eWsHandler(ISystemHandler):
             ctx=effective_ctx,
             response_ctx=ctx,
             raw_payload=payload.model_dump(mode="json"),
+            require_canonical_action_id=not settings.ALLOW_LEGACY_ACTION_NAMES,
         )
 
     async def _execute_action_command(
@@ -499,6 +501,7 @@ class Dnd5eWsHandler(ISystemHandler):
         ctx: SessionContext,
         response_ctx: SessionContext,
         raw_payload: dict,
+        require_canonical_action_id: bool = False,
     ) -> list[WsOutbound]:
         auth = await service.check_can_act(
             encounter_session,
@@ -554,6 +557,71 @@ class Dnd5eWsHandler(ISystemHandler):
                 requested_template_origin = raw_template_origin
             if isinstance(raw_template_direction, dict):
                 requested_template_direction = raw_template_direction
+
+        canonical_meta = await service.get_action_execution_metadata(
+            encounter,
+            actor_id,
+            action_name,
+        )
+        if require_canonical_action_id and not canonical_meta.found:
+            if encounter_session is not None:
+                await service.log_action_attempt(
+                    encounter_session,
+                    request_id=request_id,
+                    actor_id=actor_id,
+                    action_type=action_type,
+                    action_state="denied",
+                    payload=raw_payload,
+                    checks=auth.checks or {},
+                    denial_reason="invalid_action",
+                )
+            return [
+                self._denied(
+                    "action",
+                    "Unknown canonical action_id for actor",
+                    "invalid_action",
+                    response_ctx,
+                    request_id,
+                    actor_id=actor_id,
+                    action_type=action_type,
+                )
+            ]
+
+        resolved_action_type = action_type
+        if canonical_meta.found and canonical_meta.action_type_cost:
+            resolved_action_type = service.normalize_action_type(
+                canonical_meta.action_type_cost)
+            if resolved_action_type != action_type:
+                budget_check = await service.check_can_act(
+                    encounter_session,
+                    encounter,
+                    actor_id=actor_id,
+                    action_type=resolved_action_type,
+                    ctx=ctx,
+                )
+                if not budget_check.allowed:
+                    if encounter_session is not None:
+                        await service.log_action_attempt(
+                            encounter_session,
+                            request_id=request_id,
+                            actor_id=actor_id,
+                            action_type=resolved_action_type,
+                            action_state="denied",
+                            payload=raw_payload,
+                            checks=budget_check.checks or {},
+                            denial_reason=budget_check.reason_code,
+                        )
+                    return [
+                        self._denied(
+                            "action",
+                            budget_check.message or "Action denied",
+                            budget_check.reason_code or "invalid_action",
+                            response_ctx,
+                            request_id,
+                            actor_id=actor_id,
+                            action_type=resolved_action_type,
+                        )
+                    ]
 
         should_validate_preview = bool(
             target_ids) or requested_template_origin is not None
@@ -629,7 +697,7 @@ class Dnd5eWsHandler(ISystemHandler):
                 ]
             targets.append(target)
 
-        family = self._resolve_action_family(
+        family = canonical_meta.family if canonical_meta.found and canonical_meta.family else self._resolve_action_family(
             action_name, action_payload, targets)
         if family is None:
             if encounter_session is not None:
@@ -651,11 +719,11 @@ class Dnd5eWsHandler(ISystemHandler):
                     response_ctx,
                     request_id,
                     actor_id=actor_id,
-                    action_type=action_type,
+                    action_type=resolved_action_type,
                 )
             ]
 
-        await service.consume_budget(encounter_session, encounter, actor_id, action_type)
+        await service.consume_budget(encounter_session, encounter, actor_id, resolved_action_type)
 
         budget_snapshot = await service.get_turn_budget_snapshot(encounter_session, encounter)
 
@@ -664,7 +732,7 @@ class Dnd5eWsHandler(ISystemHandler):
                 type="action_authorized",
                 payload={
                     "actor_id": actor_id,
-                    "action_type": action_type,
+                    "action_type": resolved_action_type,
                     "action_name": action_name,
                     "family": family,
                     "turn_budget": budget_snapshot,
@@ -688,7 +756,7 @@ class Dnd5eWsHandler(ISystemHandler):
                 encounter_session,
                 request_id=request_id,
                 actor_id=actor_id,
-                action_type=action_type,
+                action_type=resolved_action_type,
                 action_state="resolved",
                 payload=raw_payload,
                 checks=auth.checks or {},
