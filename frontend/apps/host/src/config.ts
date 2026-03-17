@@ -7,5 +7,6 @@ export const config = {
   wsUrl: (import.meta as any).env.VITE_WS_URL || `${wsProtocol}//${host}/ws`,
   frontendTesting: {
     playerActionLab: (import.meta as any).env.VITE_FRONTEND_TESTING_PLAYER_ACTION_LAB === "true",
+    dmProxyDock: (import.meta as any).env.VITE_FRONTEND_TESTING_DM_PROXY_DOCK === "true",
   },
 };

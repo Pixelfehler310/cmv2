@@ -4,6 +4,7 @@ interface ImportMetaEnv {
   readonly VITE_USE_MOCKS: string;
   readonly VITE_LOG_LEVEL: string;
   readonly VITE_FRONTEND_TESTING_PLAYER_ACTION_LAB?: string;
+  readonly VITE_FRONTEND_TESTING_DM_PROXY_DOCK?: string;
   // more env variables...
 }
 

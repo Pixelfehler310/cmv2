@@ -9,3 +9,4 @@ export * from "./components/testing/ActionSelectButton";
 export * from "./components/testing/ActionPayloadEditor";
 export * from "./components/testing/ActionResultBadge";
 export * from "./components/testing/ActionCommandLab";
+export * from "./components/combat";

@@ -3,6 +3,7 @@ import { IHostBridge } from "@rpg/bridge";
 import { InitiativePanel } from "../components/InitiativePanel";
 import { MapBoard } from "../components/MapBoard";
 import { DmCommandDeck } from "../components/CommandDeck";
+import { DmProxyActionDock } from "../components/DmProxyActionDock";
 import { ActionDeck } from "../components/ActionDeck";
 import { CommandLogPanel } from "../components/CommandLogPanel";
 
@@ -11,6 +12,9 @@ export type DmPanelId = "initiative" | "map" | "command-deck" | "action-deck" | 
 type PanelRenderContext = {
   bridge?: IHostBridge;
   campaignId: string;
+  frontendTesting?: {
+    dmProxyDock?: boolean;
+  };
   selectedCombatantId: string | null;
   onSelectCombatant: (id: string | null) => void;
   clearSelectedCombatant: () => void;
@@ -40,7 +44,12 @@ const panelRegistry: Record<DmPanelId, DmPanelDefinition> = {
     id: "command-deck",
     displayName: "Command Deck",
     ariaLabel: "Command deck panel",
-    render: ({ selectedCombatantId, clearSelectedCombatant }) => <DmCommandDeck selectedCombatantId={selectedCombatantId} onRemoveSelected={clearSelectedCombatant} />,
+    render: ({ selectedCombatantId, clearSelectedCombatant, frontendTesting }) =>
+      frontendTesting?.dmProxyDock ? (
+        <DmProxyActionDock selectedCombatantId={selectedCombatantId} />
+      ) : (
+        <DmCommandDeck selectedCombatantId={selectedCombatantId} onRemoveSelected={clearSelectedCombatant} />
+      ),
   },
   "action-deck": {
     id: "action-deck",

@@ -35,6 +35,13 @@ It uses a **Hybrid Architecture** with a Python Backend and React Frontend in a 
 - When writing React components, assume data comes from props/context (View Model).
 - If you change a Backend Model, remind the user to update the Frontend Types.
 
+## MVP Legacy Policy (Strict)
+
+- Do not preserve legacy behavior unless explicitly requested.
+- Prefer removing obsolete code, compatibility layers, and fallback paths over extending them.
+- Favor clear structure and direct implementations, even if breaking changes occur.
+- Use tests to validate the current direction, not to protect deprecated systems.
+
 ## Project Structure
 
 - `backend/src/models`: The Source of Truth for data structures.

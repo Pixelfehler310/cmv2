@@ -27,7 +27,7 @@ export const ViewContainer = ({ viewType, bridge, campaignId }: ViewContainerPro
       case "player":
         return <PlayerView bridge={bridge} campaignId={campaignId} frontendTesting={config.frontendTesting} />;
       case "dm":
-        return <DMView bridge={bridge} campaignId={campaignId} />;
+        return <DMView bridge={bridge} campaignId={campaignId} frontendTesting={config.frontendTesting} />;
       case "campaign_creator":
         return <div>Campaign Creator</div>;
       default:

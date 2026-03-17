@@ -9,6 +9,9 @@ import { getDmPanelDefinition } from "./panelRegistry";
 interface DmWorkspaceProps {
   bridge?: IHostBridge;
   campaignId: string;
+  frontendTesting?: {
+    dmProxyDock?: boolean;
+  };
 }
 
 const getViewportWidth = (): number => {
@@ -18,9 +21,10 @@ const getViewportWidth = (): number => {
   return window.innerWidth;
 };
 
-export const DmWorkspace: React.FC<DmWorkspaceProps> = ({ bridge, campaignId }) => {
-  const { isConnected, gameState, actingAsUserId, setActingAsUserId } = useCombatStore();
+export const DmWorkspace: React.FC<DmWorkspaceProps> = ({ bridge, campaignId, frontendTesting }) => {
+  const { isConnected, gameState, setActingAsUserId } = useCombatStore();
   const [selectedCombatantId, setSelectedCombatantId] = useState<string | null>(null);
+  const [playAsSelection, setPlayAsSelection] = useState<string>("auto");
   const [model, setModel] = useState<Model>(() => {
     const defaultLayout = getDefaultDmLayout(getViewportWidth());
     const initialLayout = loadDmLayout(campaignId, defaultLayout);
@@ -32,8 +36,34 @@ export const DmWorkspace: React.FC<DmWorkspaceProps> = ({ bridge, campaignId }) 
     const nextLayout = loadDmLayout(campaignId, defaultLayout);
     setModel(Model.fromJson(nextLayout));
     setSelectedCombatantId(null);
+    setPlayAsSelection("auto");
     setActingAsUserId(null);
   }, [campaignId, setActingAsUserId]);
+
+  const selectedCombatant = useMemo(() => {
+    if (!selectedCombatantId) {
+      return null;
+    }
+
+    return gameState?.combatants.find((combatant) => combatant.id === selectedCombatantId) ?? null;
+  }, [gameState, selectedCombatantId]);
+
+  const autoProxyUserId = useMemo(() => {
+    const owner = (selectedCombatant?.owner_user_id ?? "").trim();
+    return owner.length > 0 ? owner : null;
+  }, [selectedCombatant]);
+
+  const effectiveActingAsUserId = useMemo(() => {
+    if (playAsSelection === "auto") {
+      return autoProxyUserId;
+    }
+
+    return playAsSelection.trim().length > 0 ? playAsSelection.trim() : null;
+  }, [autoProxyUserId, playAsSelection]);
+
+  useEffect(() => {
+    setActingAsUserId(effectiveActingAsUserId);
+  }, [effectiveActingAsUserId, setActingAsUserId]);
 
   const playableUserIds = useMemo(() => {
     if (!gameState) {
@@ -62,6 +92,7 @@ export const DmWorkspace: React.FC<DmWorkspaceProps> = ({ bridge, campaignId }) 
         {panel.render({
           bridge,
           campaignId,
+          frontendTesting,
           selectedCombatantId,
           onSelectCombatant: setSelectedCombatantId,
           clearSelectedCombatant: () => setSelectedCombatantId(null),
@@ -128,13 +159,13 @@ export const DmWorkspace: React.FC<DmWorkspaceProps> = ({ bridge, campaignId }) 
         </label>
         <select
           id="dm-play-as-select"
-          value={actingAsUserId ?? ""}
+          value={playAsSelection}
           onChange={(event) => {
-            const selected = event.target.value.trim();
-            setActingAsUserId(selected || null);
+            setPlayAsSelection(event.target.value);
           }}
           className="rounded border border-(--border-subtle) bg-surface-1 px-2 py-1 text-xs text-on-surface"
         >
+          <option value="auto">Auto (selected actor owner, else DM)</option>
           <option value="">DM (no impersonation)</option>
           {playableUserIds.map((userId) => (
             <option key={userId} value={userId}>
@@ -142,6 +173,9 @@ export const DmWorkspace: React.FC<DmWorkspaceProps> = ({ bridge, campaignId }) 
             </option>
           ))}
         </select>
+        <span className="rounded border border-(--border-subtle) bg-surface-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-on-muted">
+          Effective: {effectiveActingAsUserId ? `player:${effectiveActingAsUserId}` : "DM"}
+        </span>
       </div>
       <Layout
         model={model}

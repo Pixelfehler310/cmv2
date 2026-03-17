@@ -83,6 +83,7 @@ services:
     environment:
       - VITE_BACKEND_URL=http://backend:8000
       - VITE_HMR_PORT=3020
+      - VITE_FRONTEND_TESTING_DM_PROXY_DOCK=true
     command: sh -c "pnpm install --config.@civic:registry=http://host.docker.internal:4873 && pnpm dev"
     extra_hosts:
       - "host.docker.internal:host-gateway"
