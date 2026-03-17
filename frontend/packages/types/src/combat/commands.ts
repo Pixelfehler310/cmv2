@@ -19,6 +19,11 @@ export interface MoveTokenCommandPayload {
   acting_as_user_id?: string;
 }
 
+export interface RequestMovePreviewCommandPayload {
+  actor_id: string;
+  acting_as_user_id?: string;
+}
+
 export interface EndTurnCommandPayload {
   actor_id: string;
 }
@@ -82,6 +87,7 @@ export interface CommandLikeEnvelope<TType extends string, TPayload> extends Com
 export type RequestActionCommand = CommandLikeEnvelope<"request_action", RequestActionCommandPayload>;
 export type LegacyActionCommand = CommandLikeEnvelope<"action", ActionCommandPayload>;
 export type MoveTokenCommand = CommandLikeEnvelope<"move_token", MoveTokenCommandPayload>;
+export type RequestMovePreviewCommand = CommandLikeEnvelope<"request_move_preview", RequestMovePreviewCommandPayload>;
 export type EndTurnCommand = CommandLikeEnvelope<"end_turn", EndTurnCommandPayload>;
 export type ApplyDamageCommand = CommandLikeEnvelope<"apply_damage", ApplyDamageCommandPayload>;
 export type ApplyHealingCommand = CommandLikeEnvelope<"apply_healing", ApplyHealingCommandPayload>;
@@ -100,6 +106,7 @@ export type ChatMessageCommand = CommandEnvelope<"chat_message", ChatMessageComm
 export type CommandLikeWsInboundEnvelope =
   | RequestActionCommand
   | LegacyActionCommand
+  | RequestMovePreviewCommand
   | MoveTokenCommand
   | EndTurnCommand
   | ApplyDamageCommand
@@ -120,6 +127,7 @@ export type WsInboundEnvelope = KnownWsInboundEnvelope | CommandEnvelope<string,
 export const COMMAND_LIKE_WS_INBOUND_TYPES = [
   "action",
   "request_action",
+  "request_move_preview",
   "move_token",
   "add_actor",
   "remove_actor",

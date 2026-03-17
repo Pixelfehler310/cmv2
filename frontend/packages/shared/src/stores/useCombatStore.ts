@@ -18,6 +18,7 @@ import type {
   EffectAppliedPayload,
   GameStateViewModel,
   HpChangedPayload,
+  MovementPreviewPayload,
   KnownWsOutboundEnvelope,
   SaveResultPayload,
   TurnBudgetSnapshotPayload,
@@ -92,6 +93,7 @@ export interface CombatStore {
   pendingCommandsByRequestId: Record<string, CommandSendMetadata>;
   commandOutcomesByRequestId: Record<string, CommandOutcome>;
   latestCommandOutcome: CommandOutcome | null;
+  movementPreview: MovementPreviewPayload | null;
   actionDispatcher: CombatActionDispatcher | null;
 
   connect: (campaignId: string, role: "dm" | "observer") => void;
@@ -107,6 +109,7 @@ export interface CombatStore {
 
   dispatchIntent: (action: string, payload: Record<string, unknown>) => void;
   requestAction: (actorId: string, actionType: string, actionName: string, payload?: Record<string, unknown>) => void;
+  requestMovePreview: (actorId: string) => void;
   moveToken: (targetId: string, path: [number, number][]) => void;
   removeActor: (actorId: string) => void;
   endTurn: () => void;
@@ -447,6 +450,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   pendingCommandsByRequestId: {},
   commandOutcomesByRequestId: {},
   latestCommandOutcome: null,
+  movementPreview: null,
   actionDispatcher: null,
 
   connect: (_campaignId: string, role: "dm" | "observer") => {
@@ -472,6 +476,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       pendingCommandsByRequestId: {},
       commandOutcomesByRequestId: {},
       latestCommandOutcome: null,
+      movementPreview: null,
     });
   },
 
@@ -594,7 +599,13 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
 
       case "state_sync": {
         const payload = envelope.payload as EncounterStateWire;
-        set({ gameState: mapEncounterWireToGameState(payload) });
+        set({ gameState: mapEncounterWireToGameState(payload), movementPreview: null });
+        return;
+      }
+
+      case "movement_preview": {
+        const payload = envelope.payload as MovementPreviewPayload;
+        set({ movementPreview: payload });
         return;
       }
 
@@ -609,7 +620,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
           const movedState = applyActorMove(current.gameState, payload);
           const applied = applyTurnBudgetSnapshot(movedState, payload.turn_budget);
           mismatch = applied.hasMismatch;
-          return { gameState: applied.nextState };
+          return { gameState: applied.nextState, movementPreview: null };
         });
         maybeRequestSyncOnMismatch(mismatch);
         return;
@@ -739,6 +750,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
 
           return {
             gameState: applied.nextState,
+            movementPreview: null,
           };
         });
         maybeRequestSyncOnMismatch(mismatch);
@@ -934,6 +946,17 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
         action_type: actionType,
         action_name: actionName,
         payload,
+        ...(actingAsUserId ? { acting_as_user_id: actingAsUserId } : {}),
+      },
+    });
+  },
+
+  requestMovePreview: (actorId: string) => {
+    const { actingAsUserId } = get();
+    void get().dispatchCommand({
+      type: "request_move_preview",
+      payload: {
+        actor_id: actorId,
         ...(actingAsUserId ? { acting_as_user_id: actingAsUserId } : {}),
       },
     });

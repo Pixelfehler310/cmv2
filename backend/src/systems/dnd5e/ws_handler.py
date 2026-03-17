@@ -27,6 +27,7 @@ from .event_types import (
     ChatMessagePayload,
     EndTurnPayload,
     MoveTokenPayload,
+    RequestMovePreviewPayload,
     RequestActionPayload,
     RemoveActorPayload,
     ApplyDamagePayload,
@@ -59,6 +60,7 @@ logger = logging.getLogger(__name__)
 COMMAND_EVENT_TYPES = {
     "action",
     "request_action",
+    "request_move_preview",
     "move_token",
     "add_actor",
     "remove_actor",
@@ -255,6 +257,9 @@ class Dnd5eWsHandler(ISystemHandler):
 
             elif event_type == "request_action":
                 results = await self._handle_request_action(encounter, encounter_session, service, envelope, ctx)
+
+            elif event_type == "request_move_preview":
+                results = await self._handle_request_move_preview(encounter, encounter_session, service, envelope, ctx)
 
             elif event_type == "move_token":
                 events = await self._handle_move_token(encounter, encounter_session, service, envelope, ctx)
@@ -1223,6 +1228,55 @@ class Dnd5eWsHandler(ISystemHandler):
                     "path": validated_path,
                     "position": final_step,
                     "turn_budget": budget_snapshot,
+                },
+                visibility=Visibility.ALL,
+            )
+        ]
+
+    async def _handle_request_move_preview(
+        self,
+        encounter: EncounterState,
+        encounter_session,
+        service: CombatService,
+        envelope: WsEnvelope,
+        ctx: SessionContext,
+    ) -> list[WsOutbound]:
+        try:
+            payload = RequestMovePreviewPayload.model_validate(
+                envelope.payload)
+        except Exception:
+            return [self._error_raw("Invalid request_move_preview payload", WsErrorCode.INVALID_MESSAGE)]
+
+        effective_ctx = self._resolve_impersonated_ctx(
+            ctx, payload.acting_as_user_id)
+        preview = await service.get_movement_preview(
+            encounter_session,
+            encounter,
+            effective_ctx,
+            payload.actor_id,
+        )
+
+        if not preview.allowed:
+            return [
+                self._denied(
+                    "request_move_preview",
+                    preview.message or "Movement preview denied",
+                    preview.reason_code or "invalid_action",
+                    ctx,
+                    envelope.request_id,
+                    actor_id=payload.actor_id,
+                    action_type="move",
+                )
+            ]
+
+        return [
+            WsOutbound(
+                type="movement_preview",
+                payload={
+                    "actor_id": preview.actor_id,
+                    "origin": preview.origin,
+                    "movement_remaining": preview.movement_remaining,
+                    "reachable": preview.reachable or [],
                 },
                 visibility=Visibility.ALL,
             )

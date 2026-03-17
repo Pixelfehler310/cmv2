@@ -13,6 +13,13 @@ export interface ActorMovedPayload {
   turn_budget?: TurnBudgetSnapshotPayload;
 }
 
+export interface MovementPreviewPayload {
+  actor_id: string;
+  origin: { x: number; y: number };
+  movement_remaining: number;
+  reachable: Array<{ x: number; y: number }>;
+}
+
 export interface ActorAddedPayload {
   actor: ActorInstanceWire;
   token?: MapTokenWire;
@@ -150,6 +157,7 @@ export interface TurnBudgetSnapshotPayload {
 
 export type StateSyncEvent = WsEnvelope<"state_sync", EncounterStateWire>;
 export type ActorMovedEvent = WsEnvelope<"actor_moved", ActorMovedPayload>;
+export type MovementPreviewEvent = WsEnvelope<"movement_preview", MovementPreviewPayload>;
 export type ActorAddedEvent = WsEnvelope<"actor_added", ActorAddedPayload>;
 export type ActorRemovedEvent = WsEnvelope<"actor_removed", ActorRemovedPayload>;
 export type TurnAdvancedEvent = WsEnvelope<"turn_advanced", TurnAdvancedPayload>;
@@ -174,6 +182,7 @@ export type PongEvent = WsEnvelope<"pong", PongPayload>;
 export type KnownWsOutboundEnvelope =
   | StateSyncEvent
   | ActorMovedEvent
+  | MovementPreviewEvent
   | ActorAddedEvent
   | ActorRemovedEvent
   | TurnAdvancedEvent
@@ -200,6 +209,7 @@ export type WsOutboundEnvelope = KnownWsOutboundEnvelope | WsEnvelope<string, Re
 export const KNOWN_WS_OUTBOUND_TYPES = [
   "state_sync",
   "actor_moved",
+  "movement_preview",
   "actor_added",
   "actor_removed",
   "turn_advanced",

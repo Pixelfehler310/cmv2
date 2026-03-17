@@ -33,6 +33,7 @@ _DM_ONLY_EVENTS: set[str] = {
 _DM_OR_OWNER_EVENTS: set[str] = {
     "move_token",
     "request_action",
+    "request_move_preview",
 }
 
 # Events anyone can send

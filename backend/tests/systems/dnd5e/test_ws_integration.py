@@ -371,6 +371,48 @@ class TestCombat:
 class TestMovement:
 
     @pytest.mark.anyio
+    async def test_request_move_preview_returns_reachable_cells(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_move_preview"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        events = await handler.handle(
+            WsEnvelope(
+                type="request_move_preview",
+                request_id="req_move_preview_success",
+                payload={"actor_id": active_actor_id},
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        assert len(events) == 1
+        assert events[0].type == "movement_preview"
+        assert events[0].payload["actor_id"] == active_actor_id
+        assert isinstance(events[0].payload["reachable"], list)
+
+    @pytest.mark.anyio
+    async def test_request_move_preview_non_active_actor_denied(self, handler, dm_ctx, mgr, combat_encounter):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_move_preview_denied"), dm_ctx, mgr)
+
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+        non_active_actor_id = next(
+            c.id for c in combat_encounter.combatants if c.id != active_actor_id)
+
+        events = await handler.handle(
+            WsEnvelope(
+                type="request_move_preview",
+                request_id="req_move_preview_denied",
+                payload={"actor_id": non_active_actor_id},
+            ),
+            dm_ctx,
+            mgr,
+        )
+
+        assert len(events) == 1
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "not_your_turn"
+
+    @pytest.mark.anyio
     async def test_move_token_updates_actor_and_map_token(self, handler, dm_ctx, mgr, combat_encounter):
         envelope = WsEnvelope(
             type="move_token",

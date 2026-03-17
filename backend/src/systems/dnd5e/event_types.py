@@ -40,6 +40,12 @@ class MoveTokenPayload(BaseModel):
     acting_as_user_id: Optional[str] = None
 
 
+class RequestMovePreviewPayload(BaseModel):
+    """Payload for `request_move_preview` event."""
+    actor_id: str
+    acting_as_user_id: Optional[str] = None
+
+
 class RollDicePayload(BaseModel):
     """Payload for `roll_dice` event."""
     expression: str
@@ -119,6 +125,14 @@ class TurnAdvancedPayload(BaseModel):
     """Payload for `turn_advanced` event."""
     active_actor_id: str
     round: int
+
+
+class MovementPreviewPayload(BaseModel):
+    """Payload for `movement_preview` event."""
+    actor_id: str
+    origin: dict
+    movement_remaining: int
+    reachable: List[dict] = Field(default_factory=list)
 
 
 class ActionAuthorizedPayload(BaseModel):

@@ -25,6 +25,17 @@ class AuthorizationResult:
     checks: dict[str, Any] | None = None
 
 
+@dataclass
+class MovementPreviewResult:
+    allowed: bool
+    reason_code: str | None = None
+    message: str | None = None
+    actor_id: str | None = None
+    origin: dict[str, int] | None = None
+    movement_remaining: int = 0
+    reachable: list[dict[str, int]] | None = None
+
+
 class CombatService:
     """Authoritative combat lifecycle + persistence orchestration for DnD5e."""
 
@@ -171,6 +182,57 @@ class CombatService:
             )
 
         return AuthorizationResult(True, checks=checks.checks)
+
+    async def get_movement_preview(
+        self,
+        encounter_session: EncounterSession | None,
+        encounter: EncounterState,
+        ctx: SessionContext,
+        actor_id: str,
+    ) -> MovementPreviewResult:
+        actor = self._find_actor(encounter, actor_id)
+        if actor is None:
+            return MovementPreviewResult(False, "invalid_target", f"Actor {actor_id} not found")
+
+        checks = await self._base_actor_checks(encounter_session, encounter, actor_id, "move", ctx)
+        if not checks.allowed:
+            return MovementPreviewResult(False, checks.reason_code, checks.message)
+
+        if encounter_session is None:
+            budget_state = self._get_or_create_in_memory_budget(
+                encounter, actor_id)
+            movement_remaining = max(
+                int(budget_state.get("max_movement", actor.speed.walk)) -
+                int(budget_state.get("movement_used", 0)),
+                0,
+            )
+        else:
+            budget = await self._get_or_create_budget(
+                encounter_session,
+                actor_id,
+                encounter.round_number,
+                actor.speed.walk,
+            )
+            movement_remaining = max(
+                budget.max_movement - budget.movement_used, 0)
+
+        origin_x = int(actor.position.x)
+        origin_y = int(actor.position.y)
+
+        reachable: list[dict[str, int]] = []
+        for x in range(encounter.map.width):
+            for y in range(encounter.map.height):
+                distance = abs(origin_x - x) + abs(origin_y - y)
+                if distance <= movement_remaining:
+                    reachable.append({"x": x, "y": y})
+
+        return MovementPreviewResult(
+            allowed=True,
+            actor_id=actor_id,
+            origin={"x": origin_x, "y": origin_y},
+            movement_remaining=movement_remaining,
+            reachable=reachable,
+        )
 
     async def check_can_act(
         self,
