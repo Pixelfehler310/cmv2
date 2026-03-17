@@ -2,13 +2,14 @@ import json
 import logging
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.systems.dnd5e.schemas.encounter import EncounterState
 from src.systems.dnd5e.ws_handler import set_encounter
 from src.database import get_db
 from src.data.lib.loader import DataLoader
+from src.systems.dnd5e.services.content_pack_importer import ContentPackImporter, ConflictPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,12 @@ router = APIRouter(prefix="/api/dev", tags=["dev"])
 
 FIXTURES_DIR = Path(__file__).parent.parent.parent / "data" / "fixtures"
 ENCOUNTERS_DIR = FIXTURES_DIR / "encounters"
+
+
+class ContentPackImportRequest(BaseModel):
+    conflict_policy: ConflictPolicy = "reject_conflict"
+    namespace: str | None = None
+    pack: dict = Field(default_factory=dict)
 
 
 @router.post("/load-seeds")
@@ -96,3 +103,24 @@ async def load_seeds(session: AsyncSession = Depends(get_db)):
         "encounters_loaded_files": loaded_files,
         "errors": errors
     }
+
+
+@router.post("/import-content-pack")
+async def import_content_pack(
+    payload: ContentPackImportRequest,
+    session: AsyncSession = Depends(get_db),
+):
+    """Import one JSON content pack with configurable conflict policy."""
+    if not payload.pack:
+        raise HTTPException(status_code=400, detail="pack payload is required")
+
+    importer = ContentPackImporter()
+    result = await importer.import_content_pack(
+        session,
+        payload=payload.pack,
+        conflict_policy=payload.conflict_policy,
+        namespace=payload.namespace,
+    )
+    if result.get("status") == "failed":
+        raise HTTPException(status_code=422, detail=result)
+    return result

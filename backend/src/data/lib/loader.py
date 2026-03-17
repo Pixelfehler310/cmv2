@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import List, Type, TypeVar, Any
+from typing import List, Type, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -15,6 +15,7 @@ from src.data.lib.feat import Feat
 from src.data.lib.feature import Feature
 from src.campaigns.lib.campaign import Campaign
 from src.campaigns.lib.character import Character
+from src.systems.dnd5e.services.content_pack_importer import ContentPackImporter, ConflictPolicy
 from src.database import Base
 
 logger = logging.getLogger(__name__)
@@ -164,6 +165,44 @@ class DataLoader:
     async def import_characters(self, session: AsyncSession):
         return await self._import_generic(session, "characters", Character)
 
+    async def import_content_packs(
+        self,
+        session: AsyncSession,
+        directory: str = "content_packs",
+        conflict_policy: ConflictPolicy = "reject_conflict",
+    ):
+        summary = {
+            "directory": directory,
+            "discovered": 0,
+            "imported": 0,
+            "failed": 0,
+            "results": [],
+        }
+
+        packs = self.load_json_dir(directory)
+        summary["discovered"] = len(packs)
+        if not packs:
+            return summary
+
+        importer = ContentPackImporter()
+        for payload in packs:
+            try:
+                result = await importer.import_content_pack(
+                    session,
+                    payload,
+                    conflict_policy=conflict_policy,
+                )
+                summary["results"].append(result)
+                if result.get("status") == "failed":
+                    summary["failed"] += 1
+                else:
+                    summary["imported"] += 1
+            except Exception as e:
+                logger.error("Failed to import content pack: %s", e)
+                summary["failed"] += 1
+
+        return summary
+
     async def load_all(self, session: AsyncSession):
         summary = {
             "definitions": await self.import_definitions(session),
@@ -172,6 +211,7 @@ class DataLoader:
             "monsters": await self.import_monsters(session),
             "campaigns": await self.import_campaigns(session),
             "characters": await self.import_characters(session),
+            "content_packs": await self.import_content_packs(session),
         }
         logger.info(f"Completed DataLoader.load_all with summary: {summary}")
         return summary

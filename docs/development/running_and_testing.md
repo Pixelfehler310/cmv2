@@ -108,13 +108,15 @@ If dependencies changed, rebuild or reinstall before testing.
 From repo root:
 
 ```bash
-docker compose exec backend sh -lc "cd /app && pytest -q"
+docker compose --profile test run --rm backend-test
 ```
+
+This runs tests in the dedicated backend test container instead of coupling test execution to the long-running app container.
 
 ## Integration tests (explicit)
 
 ```bash
-docker compose exec backend sh -lc "cd /app && pytest -q tests/systems/dnd5e/integration"
+docker compose --profile test run --rm -e PYTEST_ARGS="tests/systems/dnd5e/integration -q" backend-test
 ```
 
 This explicit run is useful even if included in the full suite, because it isolates system-level WS/combat failures quickly.
@@ -122,9 +124,16 @@ This explicit run is useful even if included in the full suite, because it isola
 ## Useful targeted backend runs
 
 ```bash
-docker compose exec backend sh -lc "cd /app && pytest -q tests/systems/dnd5e/test_ws_integration.py"
-docker compose exec backend sh -lc "cd /app && pytest -q tests/systems/dnd5e/integration/test_ws_server_client.py"
-docker compose exec backend sh -lc "cd /app && pytest -q tests/systems/dnd5e/test_combat_service.py"
+docker compose --profile test run --rm -e PYTEST_ARGS="tests/systems/dnd5e/test_ws_integration.py -q" backend-test
+docker compose --profile test run --rm -e PYTEST_ARGS="tests/systems/dnd5e/integration/test_ws_server_client.py -q" backend-test
+docker compose --profile test run --rm -e PYTEST_ARGS="tests/systems/dnd5e/test_combat_service.py -q" backend-test
+```
+
+## Optional backend-test toggles
+
+```bash
+RUN_BACKEND_TESTS=false docker compose --profile test run --rm backend-test
+PYTEST_ARGS="tests/test_loader.py tests/systems/dnd5e/test_content_pack_importer.py -q" docker compose --profile test run --rm backend-test
 ```
 
 ## Why pytest config matters
@@ -227,29 +236,28 @@ After dependency or compose changes:
 
 ## Backend: `pytest: not found`
 
-Cause: test dependencies not installed in container image.
+Cause: stale image cache, or running tests in the wrong container.
 
 Fix:
 
 ```bash
-docker compose exec backend sh -lc "cd /app && pip install -r requirements.txt"
+docker compose build --no-cache backend-test
 ```
 
-If this is persistent across teammates/CI, rebuild image:
+Then run tests through the test service:
 
 ```bash
-docker compose build backend
-docker compose up -d backend
+docker compose --profile test run --rm backend-test
 ```
 
 ## Backend: `ModuleNotFoundError: src` during pytest
 
-Cause: incorrect working directory in container command.
+Cause: direct ad-hoc pytest invocation from an incorrect path.
 
-Fix: run from `/app`:
+Fix: use the dedicated test service command, which is already configured to run from the correct working directory:
 
 ```bash
-docker compose exec backend sh -lc "cd /app && pytest -q"
+docker compose --profile test run --rm backend-test
 ```
 
 ## Backend: flaky WS turn assertions
@@ -301,8 +309,8 @@ Example pseudo-pipeline:
 ```bash
 # backend
 docker compose up -d db redis backend
-docker compose exec backend sh -lc "cd /app && pytest -q"
-docker compose exec backend sh -lc "cd /app && pytest -q tests/systems/dnd5e/integration"
+docker compose --profile test run --rm backend-test
+docker compose --profile test run --rm -e PYTEST_ARGS="tests/systems/dnd5e/integration -q" backend-test
 
 # frontend
 cd frontend

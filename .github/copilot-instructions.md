@@ -43,6 +43,15 @@ It uses a **Hybrid Architecture** with a Python Backend and React Frontend in a 
 - Existing watch behavior is provided by mounted volumes plus app-level reload (uvicorn `--reload`, Vite HMR).
 - `Run Backend (Dev)` is a legacy hybrid fallback for targeted native backend debugging.
 
+### Containerized Backend Test Workflow
+
+- Use the dedicated `backend-test` Compose service for backend test execution.
+- Preferred test command: `docker compose --profile test run --rm backend-test`.
+- Optional environment switches:
+  - `RUN_BACKEND_TESTS=true|false` to run or skip tests in that one-shot service.
+  - `PYTEST_ARGS="tests -q"` (or any targeted subset) to control what pytest runs.
+- Keep normal `backend` service startup focused on app runtime; do not couple backend boot to full pytest execution.
+
 ## Agent Verification and Restart Rules
 
 - After implementing code changes, verify behavior using Docker logs before declaring success.

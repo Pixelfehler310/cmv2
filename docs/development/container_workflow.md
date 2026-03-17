@@ -15,6 +15,20 @@ Run one of the following tasks from "Tasks: Run Task":
 - Docker: Up Frontend
 - Docker: Down
 
+## Backend Tests in Containers
+
+Use the dedicated one-shot test service:
+
+```bash
+docker compose --profile test run --rm backend-test
+```
+
+For targeted runs:
+
+```bash
+docker compose --profile test run --rm -e PYTEST_ARGS="tests/systems/dnd5e/integration -q" backend-test
+```
+
 ## Logs
 
 Use these tasks when you need log tails:

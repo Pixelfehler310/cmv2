@@ -108,12 +108,19 @@ async def test_load_all_aggregates_all_sections():
     loader = DataLoader("dummy_dir")
     mock_session = AsyncMock()
 
-    loader.import_definitions = AsyncMock(return_value={"inserted": 10, "failed": 0})
+    loader.import_definitions = AsyncMock(
+        return_value={"inserted": 10, "failed": 0})
     loader.import_items = AsyncMock(return_value={"inserted": 50, "failed": 0})
-    loader.import_spells = AsyncMock(return_value={"inserted": 35, "failed": 0})
-    loader.import_monsters = AsyncMock(return_value={"inserted": 25, "failed": 0})
-    loader.import_campaigns = AsyncMock(return_value={"inserted": 5, "failed": 0})
-    loader.import_characters = AsyncMock(return_value={"inserted": 12, "failed": 0})
+    loader.import_spells = AsyncMock(
+        return_value={"inserted": 35, "failed": 0})
+    loader.import_monsters = AsyncMock(
+        return_value={"inserted": 25, "failed": 0})
+    loader.import_campaigns = AsyncMock(
+        return_value={"inserted": 5, "failed": 0})
+    loader.import_characters = AsyncMock(
+        return_value={"inserted": 12, "failed": 0})
+    loader.import_content_packs = AsyncMock(
+        return_value={"imported": 1, "failed": 0})
 
     summary = await loader.load_all(mock_session)
 
@@ -124,6 +131,7 @@ async def test_load_all_aggregates_all_sections():
         "monsters",
         "campaigns",
         "characters",
+        "content_packs",
     }
     assert summary["definitions"]["inserted"] == 10
     assert summary["items"]["inserted"] == 50
@@ -131,6 +139,7 @@ async def test_load_all_aggregates_all_sections():
     assert summary["monsters"]["inserted"] == 25
     assert summary["campaigns"]["inserted"] == 5
     assert summary["characters"]["inserted"] == 12
+    assert summary["content_packs"]["imported"] == 1
 
     loader.import_definitions.assert_awaited_once_with(mock_session)
     loader.import_items.assert_awaited_once_with(mock_session)
@@ -138,3 +147,4 @@ async def test_load_all_aggregates_all_sections():
     loader.import_monsters.assert_awaited_once_with(mock_session)
     loader.import_campaigns.assert_awaited_once_with(mock_session)
     loader.import_characters.assert_awaited_once_with(mock_session)
+    loader.import_content_packs.assert_awaited_once_with(mock_session)
