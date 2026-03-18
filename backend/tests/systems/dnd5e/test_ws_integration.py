@@ -106,6 +106,36 @@ def combat_encounter():
     return enc
 
 
+def _canonical_candidate(
+    action_id: str,
+    label: str,
+    *,
+    family: str = "attack",
+    action_type_cost: str = "action",
+    targeting_mode: str = "single_target",
+    range_value: int | None = 5,
+    save_context: dict | None = None,
+    attack_context: dict | None = None,
+    effect_intents: list | None = None,
+) -> dict:
+    return {
+        "action_id": action_id,
+        "name": label,
+        "label": label,
+        "family": family,
+        "action_type_cost": action_type_cost,
+        "targeting_mode": targeting_mode,
+        "range": range_value,
+        "save_context": save_context,
+        "attack_context": attack_context,
+        "effect_intents": list(effect_intents or []),
+        "tags": [],
+        "source_ref": "custom",
+        "content_version": "1",
+        "enabled": True,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Connection Tests
 # ---------------------------------------------------------------------------
@@ -155,7 +185,32 @@ class TestPermissions:
 
     @pytest.mark.anyio
     async def test_player_request_action_is_routed(self, handler, dm_ctx, player_ctx, mgr, combat_encounter, monkeypatch):
-        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
+        original_builder = CombatService._build_bound_action_candidates
+
+        async def canonical_only(self, actor):
+            if actor.id != "fighter_1":
+                return []
+            return [
+                {
+                    "action_id": "attack",
+                    "name": "Attack",
+                    "label": "Attack",
+                    "family": "attack",
+                    "action_type_cost": "action",
+                    "targeting_mode": "single_target",
+                    "range": 5,
+                    "save_context": None,
+                    "attack_context": None,
+                    "effect_intents": [],
+                    "tags": [],
+                    "source_ref": "custom",
+                    "content_version": "1",
+                    "enabled": True,
+                }
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_before_player_request"), dm_ctx, mgr)
         envelope = WsEnvelope(
             type="request_action",
@@ -163,14 +218,19 @@ class TestPermissions:
             payload={"actor_id": "fighter_1",
                      "action_type": "action", "action_name": "attack"},
         )
-        events = await handler.handle(envelope, player_ctx, mgr)
+        try:
+            events = await handler.handle(envelope, player_ctx, mgr)
+        finally:
+            monkeypatch.setattr(
+                CombatService, "_build_bound_action_candidates", original_builder)
+
         assert len(events) >= 1
         event_types = {event.type for event in events}
         assert event_types & {"action_authorized", "action_denied", "error"}
 
     @pytest.mark.anyio
     async def test_request_action_unknown_action_id_denied_in_strict_mode(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
-        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", False)
+        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_strict_unknown_start"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
 
@@ -405,9 +465,17 @@ class TestCombat:
 class TestMovement:
 
     @pytest.mark.anyio
-    async def test_request_attack_preview_returns_eligible_targets(self, handler, dm_ctx, mgr, combat_encounter):
+    async def test_request_attack_preview_returns_eligible_targets(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_attack_preview"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [_canonical_candidate("canonical_preview_attack", "Canonical Preview Attack")]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
 
         snapshot_events = await handler.handle(
             WsEnvelope(
@@ -439,12 +507,21 @@ class TestMovement:
         assert isinstance(events[0].payload.get("eligible_target_ids"), list)
 
     @pytest.mark.anyio
-    async def test_request_attack_preview_non_owner_denied(self, handler, player_ctx, mgr, combat_encounter):
+    async def test_request_attack_preview_non_owner_denied(self, handler, player_ctx, mgr, combat_encounter, monkeypatch):
+        async def canonical_only(self, actor):
+            if actor.id != "goblin_1":
+                return []
+            return [_canonical_candidate("canonical_goblin_attack", "Canonical Goblin Attack")]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
+
         events = await handler.handle(
             WsEnvelope(
                 type="request_attack_preview",
                 request_id="req_attack_preview_denied",
-                payload={"actor_id": "goblin_1", "action_id": "basic_attack"},
+                payload={"actor_id": "goblin_1",
+                         "action_id": "canonical_goblin_attack"},
             ),
             player_ctx,
             mgr,
@@ -455,42 +532,97 @@ class TestMovement:
         assert events[0].payload["reason_code"] == "unauthorized"
 
     @pytest.mark.anyio
-    async def test_request_action_ineligible_target_denied(self, handler, dm_ctx, mgr, combat_encounter):
-        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_ineligible_target"), dm_ctx, mgr)
+    async def test_request_attack_preview_unknown_action_id_denied_in_canonical_mode(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_unknown_attack_preview"), dm_ctx, mgr)
+        active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
 
-        active_actor = combat_encounter.combatants[combat_encounter.active_index]
-        target = next(
-            c for c in combat_encounter.combatants if c.id != active_actor.id)
-        target.position.x = active_actor.position.x + 20
-        target.position.y = active_actor.position.y
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [_canonical_candidate("canonical_preview_attack", "Canonical Preview Attack")]
 
-        snapshot_events = await handler.handle(
-            WsEnvelope(
-                type="request_executable_actions",
-                request_id="req_actions_for_ineligible_target",
-                payload={"actor_id": active_actor.id},
-            ),
-            dm_ctx,
-            mgr,
-        )
-        assert len(snapshot_events) == 1
-        assert snapshot_events[0].type == "executable_actions_snapshot"
-        action_id = snapshot_events[0].payload["actions"][0]["action_id"]
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
 
         events = await handler.handle(
             WsEnvelope(
-                type="request_action",
-                request_id="req_action_ineligible_target",
-                payload={
-                    "actor_id": active_actor.id,
-                    "action_type": "action",
-                    "action_name": action_id,
-                    "payload": {"target_ids": [target.id]},
-                },
+                type="request_attack_preview",
+                request_id="req_attack_preview_unknown_action",
+                payload={"actor_id": active_actor_id,
+                         "action_id": "legacy_attack_name"},
             ),
             dm_ctx,
             mgr,
         )
+
+        assert len(events) == 1
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "invalid_action"
+
+    @pytest.mark.anyio
+    async def test_request_action_ineligible_target_denied(self, handler, dm_ctx, mgr, combat_encounter):
+        original_builder = CombatService._build_bound_action_candidates
+
+        async def canonical_only(self, actor):
+            return [
+                {
+                    "action_id": "canonical_melee",
+                    "name": "Canonical Melee",
+                    "label": "Canonical Melee",
+                    "family": "attack",
+                    "action_type_cost": "action",
+                    "targeting_mode": "single_target",
+                    "range": 5,
+                    "save_context": None,
+                    "attack_context": None,
+                    "effect_intents": [],
+                    "tags": [],
+                    "source_ref": "custom",
+                    "content_version": "1",
+                    "enabled": True,
+                }
+            ]
+
+        setattr(CombatService, "_build_bound_action_candidates", canonical_only)
+        try:
+            await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_ineligible_target"), dm_ctx, mgr)
+
+            active_actor = combat_encounter.combatants[combat_encounter.active_index]
+            target = next(
+                c for c in combat_encounter.combatants if c.id != active_actor.id)
+            target.position.x = active_actor.position.x + 20
+            target.position.y = active_actor.position.y
+
+            snapshot_events = await handler.handle(
+                WsEnvelope(
+                    type="request_executable_actions",
+                    request_id="req_actions_for_ineligible_target",
+                    payload={"actor_id": active_actor.id},
+                ),
+                dm_ctx,
+                mgr,
+            )
+            assert len(snapshot_events) == 1
+            assert snapshot_events[0].type == "executable_actions_snapshot"
+            action_id = snapshot_events[0].payload["actions"][0]["action_id"]
+
+            events = await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_action_ineligible_target",
+                    payload={
+                        "actor_id": active_actor.id,
+                        "action_type": "action",
+                        "action_name": action_id,
+                        "payload": {"target_ids": [target.id]},
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+        finally:
+            setattr(CombatService, "_build_bound_action_candidates",
+                    original_builder)
 
         assert len(events) == 1
         assert events[0].type == "action_denied"
@@ -498,12 +630,13 @@ class TestMovement:
 
     @pytest.mark.anyio
     async def test_request_action_aoe_rejects_target_hint_outside_derived_template(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
-        original_builder = CombatService._build_action_candidates
+        original_builder = CombatService._build_bound_action_candidates
 
-        def fake_builder(self, actor, monster):
+        async def fake_builder(self, actor):
             return [
                 {
                     "action_id": "frost_burst",
+                    "name": "Frost Burst",
                     "label": "Frost Burst",
                     "family": "save",
                     "action_type_cost": "action",
@@ -511,11 +644,18 @@ class TestMovement:
                     "range": 8,
                     "aoe_shape": "cube",
                     "aoe_size": 1,
+                    "save_context": None,
+                    "attack_context": None,
+                    "effect_intents": [],
+                    "tags": [],
+                    "source_ref": "custom",
+                    "content_version": "1",
+                    "enabled": True,
                 }
             ]
 
         monkeypatch.setattr(
-            CombatService, "_build_action_candidates", fake_builder)
+            CombatService, "_build_bound_action_candidates", fake_builder)
 
         try:
             await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_aoe_hint_check"), dm_ctx, mgr)
@@ -545,7 +685,7 @@ class TestMovement:
             )
         finally:
             monkeypatch.setattr(
-                CombatService, "_build_action_candidates", original_builder)
+                CombatService, "_build_bound_action_candidates", original_builder)
 
         assert len(events) == 1
         assert events[0].type == "action_denied"
@@ -553,12 +693,13 @@ class TestMovement:
 
     @pytest.mark.anyio
     async def test_request_action_aoe_template_origin_out_of_range_denied(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
-        original_builder = CombatService._build_action_candidates
+        original_builder = CombatService._build_bound_action_candidates
 
-        def fake_builder(self, actor, monster):
+        async def fake_builder(self, actor):
             return [
                 {
                     "action_id": "burning_cone",
+                    "name": "Burning Cone",
                     "label": "Burning Cone",
                     "family": "save",
                     "action_type_cost": "action",
@@ -566,11 +707,18 @@ class TestMovement:
                     "range": 2,
                     "aoe_shape": "cone",
                     "aoe_size": 3,
+                    "save_context": None,
+                    "attack_context": None,
+                    "effect_intents": [],
+                    "tags": [],
+                    "source_ref": "custom",
+                    "content_version": "1",
+                    "enabled": True,
                 }
             ]
 
         monkeypatch.setattr(
-            CombatService, "_build_action_candidates", fake_builder)
+            CombatService, "_build_bound_action_candidates", fake_builder)
 
         try:
             await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_for_aoe_origin_check"), dm_ctx, mgr)
@@ -594,7 +742,7 @@ class TestMovement:
             )
         finally:
             monkeypatch.setattr(
-                CombatService, "_build_action_candidates", original_builder)
+                CombatService, "_build_bound_action_candidates", original_builder)
 
         assert len(events) == 1
         assert events[0].type == "action_denied"
@@ -619,6 +767,8 @@ class TestMovement:
         assert events[0].type == "executable_actions_snapshot"
         assert events[0].payload["actor_id"] == active_actor_id
         assert isinstance(events[0].payload.get("actions"), list)
+        assert all(str(action.get("action_id") or "").strip()
+                   for action in events[0].payload.get("actions", []))
         assert "turn_budget" in events[0].payload
 
     @pytest.mark.anyio
@@ -795,9 +945,19 @@ class TestMovement:
 class TestActionEconomy:
 
     @pytest.mark.anyio
-    async def test_action_budget_exhaustion_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter):
+    async def test_action_budget_exhaustion_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_action_economy"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+        target_actor_id = next(
+            c.id for c in combat_encounter.combatants if c.id != active_actor_id)
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [_canonical_candidate("canonical_longsword", "Canonical Longsword")]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
 
         first = await handler.handle(
             WsEnvelope(
@@ -806,8 +966,8 @@ class TestActionEconomy:
                 payload={
                     "actor_id": active_actor_id,
                     "action_type": "attack",
-                    "action_name": "Longsword",
-                    "target_ids": ["goblin_1"],
+                    "action_name": "canonical_longsword",
+                    "target_ids": [target_actor_id],
                 },
             ),
             dm_ctx,
@@ -825,8 +985,8 @@ class TestActionEconomy:
                 payload={
                     "actor_id": active_actor_id,
                     "action_type": "action",
-                    "action_name": "Second Attack",
-                    "target_ids": ["goblin_1"],
+                    "action_name": "canonical_longsword",
+                    "target_ids": [target_actor_id],
                 },
             ),
             dm_ctx,
@@ -839,9 +999,25 @@ class TestActionEconomy:
 
     @pytest.mark.anyio
     async def test_bonus_action_budget_exhaustion_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
-        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_bonus_economy"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [
+                _canonical_candidate(
+                    "canonical_second_wind",
+                    "Canonical Second Wind",
+                    family="healing",
+                    action_type_cost="bonus_action",
+                    targeting_mode="self",
+                    range_value=0,
+                )
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
 
         first = await handler.handle(
             WsEnvelope(
@@ -850,7 +1026,7 @@ class TestActionEconomy:
                 payload={
                     "actor_id": active_actor_id,
                     "action_type": "bonus",
-                    "action_name": "Second Wind",
+                    "action_name": "canonical_second_wind",
                 },
             ),
             dm_ctx,
@@ -867,7 +1043,7 @@ class TestActionEconomy:
                 payload={
                     "actor_id": active_actor_id,
                     "action_type": "bonus_action",
-                    "action_name": "Second Wind Again",
+                    "action_name": "canonical_second_wind",
                 },
             ),
             dm_ctx,
@@ -880,9 +1056,23 @@ class TestActionEconomy:
 
     @pytest.mark.anyio
     async def test_reaction_budget_exhaustion_in_memory_mode(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
-        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_start_reaction_economy"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [
+                _canonical_candidate(
+                    "canonical_opportunity_attack",
+                    "Canonical Opportunity Attack",
+                    family="utility",
+                    action_type_cost="reaction",
+                )
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
 
         first = await handler.handle(
             WsEnvelope(
@@ -891,7 +1081,7 @@ class TestActionEconomy:
                 payload={
                     "actor_id": active_actor_id,
                     "action_type": "reaction",
-                    "action_name": "Opportunity Attack",
+                    "action_name": "canonical_opportunity_attack",
                 },
             ),
             dm_ctx,
@@ -908,7 +1098,7 @@ class TestActionEconomy:
                 payload={
                     "actor_id": active_actor_id,
                     "action_type": "reaction",
-                    "action_name": "Second Opportunity Attack",
+                    "action_name": "canonical_opportunity_attack",
                 },
             ),
             dm_ctx,
@@ -927,9 +1117,19 @@ class TestActionEconomy:
 class TestActionResolutionPhase3:
 
     @pytest.mark.anyio
-    async def test_attack_family_publishes_result_and_damage(self, handler, dm_ctx, mgr, combat_encounter):
+    async def test_attack_family_publishes_result_and_damage(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase3_attack_start"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+        target_actor_id = next(
+            c.id for c in combat_encounter.combatants if c.id != active_actor_id)
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [_canonical_candidate("canonical_longsword_strike", "Canonical Longsword Strike")]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
 
         events = await handler.handle(
             WsEnvelope(
@@ -938,8 +1138,8 @@ class TestActionResolutionPhase3:
                 payload={
                     "actor_id": active_actor_id,
                     "action_type": "action",
-                    "action_name": "Longsword Strike",
-                    "target_ids": ["goblin_1"],
+                    "action_name": "canonical_longsword_strike",
+                    "target_ids": [target_actor_id],
                 },
             ),
             dm_ctx,
@@ -952,9 +1152,24 @@ class TestActionResolutionPhase3:
 
     @pytest.mark.anyio
     async def test_save_family_publishes_save_result(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
-        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase3_save_start"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [
+                _canonical_candidate(
+                    "canonical_fire_breath",
+                    "Canonical Fire Breath",
+                    family="save",
+                    save_context={"ability": "dexterity", "dc": 18,
+                                  "damage_dice": "3d6", "damage_type": "fire"},
+                )
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
 
         events = await handler.handle(
             WsEnvelope(
@@ -963,7 +1178,7 @@ class TestActionResolutionPhase3:
                 payload={
                     "actor_id": active_actor_id,
                     "action_type": "action",
-                    "action_name": "Fire Breath",
+                    "action_name": "canonical_fire_breath",
                     "payload": {
                         "family": "save",
                         "save_ability": "dexterity",
@@ -984,9 +1199,25 @@ class TestActionResolutionPhase3:
 
     @pytest.mark.anyio
     async def test_healing_family_publishes_effect_and_heal(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
-        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase3_heal_start"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [
+                _canonical_candidate(
+                    "canonical_second_wind_phase3",
+                    "Canonical Second Wind",
+                    family="healing",
+                    action_type_cost="bonus_action",
+                    targeting_mode="self",
+                    range_value=0,
+                )
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
 
         await handler.handle(
             WsEnvelope(
@@ -1006,7 +1237,7 @@ class TestActionResolutionPhase3:
                 payload={
                     "actor_id": active_actor_id,
                     "action_type": "bonus_action",
-                    "action_name": "Second Wind",
+                    "action_name": "canonical_second_wind_phase3",
                     "payload": {
                         "family": "healing",
                         "target_ids": [active_actor_id],
@@ -1026,9 +1257,25 @@ class TestActionResolutionPhase3:
 
     @pytest.mark.anyio
     async def test_utility_family_publishes_effect_and_condition(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
-        monkeypatch.setattr(settings, "ALLOW_LEGACY_ACTION_NAMES", True)
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_phase3_utility_start"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+        target_actor_id = next(
+            c.id for c in combat_encounter.combatants if c.id != active_actor_id)
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [
+                _canonical_candidate(
+                    "canonical_trip",
+                    "Canonical Trip",
+                    family="utility",
+                    action_type_cost="reaction",
+                )
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
 
         events = await handler.handle(
             WsEnvelope(
@@ -1037,11 +1284,11 @@ class TestActionResolutionPhase3:
                 payload={
                     "actor_id": active_actor_id,
                     "action_type": "reaction",
-                    "action_name": "Trip",
+                    "action_name": "canonical_trip",
                     "payload": {
                         "family": "utility",
                         "condition": "Prone",
-                        "target_ids": ["goblin_1"],
+                        "target_ids": [target_actor_id],
                     },
                 },
             ),
@@ -1990,9 +2237,17 @@ class TestUnknownEvent:
 class TestCommandTerminalGuaranteesStageE:
 
     @pytest.mark.anyio
-    async def test_preview_commands_emit_terminal_outbound_on_success(self, handler, dm_ctx, mgr, combat_encounter):
+    async def test_preview_commands_emit_terminal_outbound_on_success(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
         await handler.handle(WsEnvelope(type="start_combat", request_id="req_stage_e_start"), dm_ctx, mgr)
         active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+
+        async def canonical_only(self, actor):
+            if actor.id != active_actor_id:
+                return []
+            return [_canonical_candidate("canonical_stage_e_attack", "Canonical Stage E Attack")]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
 
         snapshot_events = await handler.handle(
             WsEnvelope(

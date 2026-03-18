@@ -10,6 +10,20 @@ import { useCombatStore } from "../../stores/useCombatStore";
 
 type ActionUiMode = "idle" | "action_selected" | "target_preview" | "executing";
 
+const ACTION_REFRESH_TRIGGER_SENT_TYPES = new Set([
+  "request_action",
+  "move_token",
+  "end_turn",
+  "start_combat",
+  "end_combat",
+  "add_actor",
+  "remove_actor",
+  "apply_damage",
+  "apply_healing",
+  "apply_condition",
+  "remove_condition",
+]);
+
 type ContractActionSurfaceProps = {
   actorId: string | null;
   actorName?: string | null;
@@ -60,6 +74,10 @@ export function ContractActionSurface({
 
   useEffect(() => {
     if (!isConnected || !actorId || !latestCommandOutcome?.ok) {
+      return;
+    }
+
+    if (!ACTION_REFRESH_TRIGGER_SENT_TYPES.has(latestCommandOutcome.sentType)) {
       return;
     }
 

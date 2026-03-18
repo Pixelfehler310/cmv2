@@ -25,3 +25,15 @@ Whenever you modify a Pydantic model in `backend/src/models/`:
 
 1.  Run `python backend/scripts/generate_schemas.py`
 2.  Run `pnpm --filter @rpg/types generate`
+
+## Data Backfill Utilities
+
+Backfill legacy monster action payloads to strict canonical `action_id` refs:
+
+```bash
+# From backend/ directory (dry-run by default)
+python scripts/backfill_monster_action_refs.py
+
+# Persist updates
+python scripts/backfill_monster_action_refs.py --apply
+```

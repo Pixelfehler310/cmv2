@@ -36,8 +36,7 @@
   ],
   "actions": [
     {
-      "name": "Basic Attack",
-      "description": "Melee Weapon Attack. Hit: 7 (1d8 + 3) damage."
+      "action_id": "monster.skeleton.basic_attack"
     }
   ],
   "legendary_actions": [],

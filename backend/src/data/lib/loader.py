@@ -2,6 +2,7 @@ import json
 import logging
 from pathlib import Path
 from typing import List, Type, Any
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -13,6 +14,7 @@ from src.data.lib.class_model import ClassModel
 from src.data.lib.background import Background
 from src.data.lib.feat import Feat
 from src.data.lib.feature import Feature
+from src.schemas.monster import MonsterCreate
 from src.campaigns.lib.campaign import Campaign
 from src.campaigns.lib.character import Character
 from src.systems.dnd5e.services.content_pack_importer import ContentPackImporter, ConflictPolicy
@@ -99,8 +101,94 @@ class DataLoader:
     async def import_spells(self, session: AsyncSession):
         return await self._import_generic(session, "spells", Spell)
 
+    def _validate_monster_action_refs(self, monster_data: dict) -> None:
+        monster_name = monster_data.get("name", "unknown")
+        actions = monster_data.get("actions", [])
+
+        if actions is None:
+            return
+
+        if not isinstance(actions, list):
+            raise ValueError(
+                f"Invalid monster actions for '{monster_name}': actions must be a list"
+            )
+
+        seen_action_ids = set()
+        for index, action in enumerate(actions):
+            if not isinstance(action, dict):
+                raise ValueError(
+                    f"Invalid monster action ref for '{monster_name}' at index {index}: action must be an object"
+                )
+
+            action_id = action.get("action_id")
+            if not isinstance(action_id, str) or not action_id.strip():
+                raise ValueError(
+                    f"Invalid monster action ref for '{monster_name}' at index {index}: action_id must be a non-empty string"
+                )
+
+            normalized_action_id = action_id.strip()
+            if normalized_action_id in seen_action_ids:
+                raise ValueError(
+                    f"Duplicate monster action ref for '{monster_name}': action_id '{normalized_action_id}'"
+                )
+            seen_action_ids.add(normalized_action_id)
+
     async def import_monsters(self, session: AsyncSession):
-        return await self._import_generic(session, "monsters", Monster)
+        summary = {
+            "directory": "monsters",
+            "model": Monster.__name__,
+            "discovered": 0,
+            "inserted": 0,
+            "skipped_existing": 0,
+            "failed": 0,
+        }
+        data = self.load_json_dir("monsters")
+        summary["discovered"] = len(data)
+
+        for monster_data in data:
+            monster_name = monster_data.get("name", "unknown")
+            if "name" not in monster_data:
+                logger.error(
+                    "Missing required key 'name' for Monster in directory 'monsters'"
+                )
+                summary["failed"] += 1
+                continue
+
+            self._validate_monster_action_refs(monster_data)
+
+            try:
+                validated_monster = MonsterCreate.model_validate(monster_data)
+            except ValidationError as e:
+                raise ValueError(
+                    f"Invalid monster payload for '{monster_name}': {e}"
+                ) from e
+
+            stmt = select(Monster).where(Monster.name == monster_data["name"])
+            result = await session.execute(stmt)
+            existing = result.scalar_one_or_none()
+
+            if existing:
+                summary["skipped_existing"] += 1
+                continue
+
+            try:
+                # Persist action refs as plain JSON-compatible objects.
+                monster_payload = validated_monster.model_dump()
+                instance = Monster(**monster_payload)
+                session.add(instance)
+                summary["inserted"] += 1
+            except Exception as e:
+                logger.error(
+                    f"Failed to instantiate Monster from data {monster_name}: {e}"
+                )
+                summary["failed"] += 1
+
+        await session.commit()
+        logger.info(
+            f"Import summary for monsters: discovered={summary['discovered']}, "
+            f"inserted={summary['inserted']}, skipped_existing={summary['skipped_existing']}, failed={summary['failed']}"
+        )
+        return summary
 
     async def import_definitions(self, session: AsyncSession):
         target_dir = self.data_dir / "definitions"

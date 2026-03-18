@@ -297,9 +297,6 @@ class CombatService:
             return ExecutableActionsSnapshotResult(False, "unauthorized", "Player does not own this actor")
 
         candidates = await self._build_bound_action_candidates(actor)
-        if not candidates:
-            monster = await self._load_monster_for_actor(actor)
-            candidates = self._build_action_candidates(actor, monster)
 
         actions: list[dict[str, Any]] = []
         for candidate in candidates:
@@ -358,9 +355,6 @@ class CombatService:
             return AttackPreviewResult(False, "invalid_target", f"Actor {actor_id} not found")
 
         candidates = await self._build_bound_action_candidates(actor)
-        if not candidates:
-            monster = await self._load_monster_for_actor(actor)
-            candidates = self._build_action_candidates(actor, monster)
         candidate = next((entry for entry in candidates if str(
             entry.get("action_id")) == action_id), None)
         if candidate is None:
@@ -494,9 +488,6 @@ class CombatService:
             return ActionExecutionMetadataResult(found=False, actor_id=actor_id, action_id=action_id)
 
         candidates = await self._build_bound_action_candidates(actor)
-        if not candidates:
-            monster = await self._load_monster_for_actor(actor)
-            candidates = self._build_action_candidates(actor, monster)
 
         candidate = next((entry for entry in candidates if str(
             entry.get("action_id")) == action_id), None)
@@ -872,11 +863,13 @@ class CombatService:
             return None
 
     async def _build_bound_action_candidates(self, actor: ActorInstance) -> list[dict[str, Any]]:
+        template_candidates = self._binding_template_candidates(actor)
         definition_slug = actor.definition_slug.strip()
         binding_filters = [AbilityBindingRecord.actor_id == actor.id]
-        if definition_slug:
+        if template_candidates:
             binding_filters.append(
-                AbilityBindingRecord.actor_template_id == definition_slug)
+                AbilityBindingRecord.actor_template_id.in_(template_candidates)
+            )
 
         stmt = select(AbilityBindingRecord).where(
             AbilityBindingRecord.system == "dnd5e",
@@ -897,7 +890,7 @@ class CombatService:
         bindings.sort(
             key=lambda binding: (
                 1 if binding.actor_id == actor.id else 0,
-                1 if definition_slug and binding.actor_template_id == definition_slug else 0,
+                1 if binding.actor_template_id and binding.actor_template_id in template_candidates else 0,
             ),
             reverse=True,
         )
@@ -939,6 +932,35 @@ class CombatService:
             seen_action_ids.add(action.action_id)
 
         return projected
+
+    @staticmethod
+    def _binding_template_candidates(actor: ActorInstance) -> list[str]:
+        candidates: list[str] = []
+
+        definition_slug = (actor.definition_slug or "").strip().lower()
+        if definition_slug:
+            candidates.append(definition_slug)
+
+        name = (actor.name or "").strip().lower()
+        if name:
+            name_slug = re.sub(r"[^a-z0-9]+", "_", name).strip("_")
+            if name_slug:
+                candidates.append(name_slug)
+
+            first_word_slug = re.sub(
+                r"[^a-z0-9]+", "_", name.split()[0]).strip("_")
+            if first_word_slug:
+                candidates.append(first_word_slug)
+
+        # Keep deterministic order while removing duplicates.
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for candidate in candidates:
+            if candidate in seen:
+                continue
+            deduped.append(candidate)
+            seen.add(candidate)
+        return deduped
 
     def _build_candidate_from_action_definition(
         self,

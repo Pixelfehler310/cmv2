@@ -16,7 +16,6 @@ from typing import Any, Optional
 
 from sqlalchemy import delete, select
 
-from src.config import settings
 from src.database import AsyncSessionLocal
 from src.core.ws_dispatcher import ISystemHandler
 from src.core.ws_protocol import WsEnvelope, WsOutbound, WsErrorCode, Visibility
@@ -452,6 +451,7 @@ class Dnd5eWsHandler(ISystemHandler):
             ctx=ctx,
             response_ctx=ctx,
             raw_payload=payload.model_dump(mode="json"),
+            require_canonical_action_id=True,
         )
 
     async def _handle_request_action(
@@ -490,7 +490,7 @@ class Dnd5eWsHandler(ISystemHandler):
             ctx=effective_ctx,
             response_ctx=ctx,
             raw_payload=payload.model_dump(mode="json"),
-            require_canonical_action_id=not settings.ALLOW_LEGACY_ACTION_NAMES,
+            require_canonical_action_id=True,
         )
 
     async def _execute_action_command(

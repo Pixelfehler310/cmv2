@@ -147,19 +147,23 @@ async def test_get_attack_preview_aoe_returns_template_projection(db_session: As
         game_system="dnd5e",
     )
 
-    original_builder = service._build_action_candidates
-    service._build_action_candidates = lambda actor, monster: [
-        {
-            "action_id": "dragon_breath",
-            "label": "Dragon Breath",
-            "family": "save",
-            "action_type_cost": "action",
-            "targeting_mode": "aoe",
-            "range": 6,
-            "aoe_shape": "cone",
-            "aoe_size": 3,
-        }
-    ]
+    original_builder = service._build_bound_action_candidates
+
+    async def _mock_bound_candidates(actor):
+        return [
+            {
+                "action_id": "dragon_breath",
+                "label": "Dragon Breath",
+                "family": "save",
+                "action_type_cost": "action",
+                "targeting_mode": "aoe",
+                "range": 6,
+                "aoe_shape": "cone",
+                "aoe_size": 3,
+            }
+        ]
+
+    service._build_bound_action_candidates = _mock_bound_candidates
 
     try:
         preview = await service.get_attack_preview(
@@ -171,7 +175,7 @@ async def test_get_attack_preview_aoe_returns_template_projection(db_session: As
             template_origin={"x": 4, "y": 1},
         )
     finally:
-        service._build_action_candidates = original_builder
+        service._build_bound_action_candidates = original_builder
 
     assert preview.allowed is True
     assert preview.template_projection is not None
@@ -191,19 +195,23 @@ async def test_get_attack_preview_aoe_denies_template_origin_out_of_range(db_ses
         game_system="dnd5e",
     )
 
-    original_builder = service._build_action_candidates
-    service._build_action_candidates = lambda actor, monster: [
-        {
-            "action_id": "thunder_wave",
-            "label": "Thunder Wave",
-            "family": "save",
-            "action_type_cost": "action",
-            "targeting_mode": "aoe",
-            "range": 2,
-            "aoe_shape": "cube",
-            "aoe_size": 2,
-        }
-    ]
+    original_builder = service._build_bound_action_candidates
+
+    async def _mock_bound_candidates(actor):
+        return [
+            {
+                "action_id": "thunder_wave",
+                "label": "Thunder Wave",
+                "family": "save",
+                "action_type_cost": "action",
+                "targeting_mode": "aoe",
+                "range": 2,
+                "aoe_shape": "cube",
+                "aoe_size": 2,
+            }
+        ]
+
+    service._build_bound_action_candidates = _mock_bound_candidates
 
     try:
         preview = await service.get_attack_preview(
@@ -215,7 +223,7 @@ async def test_get_attack_preview_aoe_denies_template_origin_out_of_range(db_ses
             template_origin={"x": 9, "y": 9},
         )
     finally:
-        service._build_action_candidates = original_builder
+        service._build_bound_action_candidates = original_builder
 
     assert preview.allowed is False
     assert preview.reason_code == "template_out_of_range"
@@ -282,3 +290,62 @@ async def test_get_executable_actions_snapshot_projects_canonical_bindings(db_se
     assert action["attack_context"] == {"to_hit_bonus": 5}
     assert action["effect_intents"] == [
         {"operation": "apply_damage", "amount": "1d8+3"}]
+
+
+@pytest.mark.anyio
+async def test_get_executable_actions_snapshot_resolves_template_binding_from_actor_name_when_definition_slug_empty(
+    db_session: AsyncSession,
+    combat_encounter_state: EncounterState,
+):
+    service = CombatService(db_session)
+    encounter_session, _ = await service.load_or_create_encounter_state(combat_encounter_state.campaign_id)
+
+    goblin = next(
+        actor for actor in combat_encounter_state.combatants if actor.id == "goblin_1")
+    goblin.definition_slug = ""
+    goblin.name = "Goblin Ghar"
+
+    await service.save_full_state(encounter_session, combat_encounter_state)
+
+    db_session.add(
+        ActionDefinitionRecord(
+            system="dnd5e",
+            action_id="monster.goblin.scimitar",
+            name="Goblin Scimitar",
+            family="attack",
+            action_type_cost="action",
+            targeting_mode="single_target",
+            range=5,
+            source_ref="fixtures.monsters",
+            content_version="1",
+            enabled=True,
+        )
+    )
+    db_session.add(
+        AbilityBindingRecord(
+            system="dnd5e",
+            binding_id="monster.goblin.scimitar.binding",
+            action_id="monster.goblin.scimitar",
+            actor_template_id="goblin",
+        )
+    )
+    await db_session.commit()
+
+    ctx = SessionContext(
+        campaign_id="camp_test",
+        user_id="dm_1",
+        role=UserRole.DM,
+        game_system="dnd5e",
+    )
+
+    snapshot = await service.get_executable_actions_snapshot(
+        encounter_session,
+        combat_encounter_state,
+        ctx,
+        actor_id="goblin_1",
+    )
+
+    assert snapshot.allowed is True
+    assert snapshot.actions is not None
+    assert any(action["action_id"] ==
+               "monster.goblin.scimitar" for action in snapshot.actions)

@@ -1,0 +1,823 @@
+{
+  "pack_id": "dnd5e.fixture.monster_actions",
+  "system": "dnd5e",
+  "version": "1",
+  "actions": [
+    {
+      "action_id": "monster.bandit.basic_attack",
+      "name": "Bandit Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.bandit_captain.basic_attack",
+      "name": "Bandit Captain Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.cultist.basic_attack",
+      "name": "Cultist Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.cult_fanatic.basic_attack",
+      "name": "Cult Fanatic Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.kobold.basic_attack",
+      "name": "Kobold Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.orc.basic_attack",
+      "name": "Orc Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.hobgoblin.basic_attack",
+      "name": "Hobgoblin Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.bugbear.basic_attack",
+      "name": "Bugbear Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.ogre.basic_attack",
+      "name": "Ogre Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.gnoll.basic_attack",
+      "name": "Gnoll Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.wight.basic_attack",
+      "name": "Wight Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.skeleton.basic_attack",
+      "name": "Skeleton Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.zombie.basic_attack",
+      "name": "Zombie Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.dire_wolf.basic_attack",
+      "name": "Dire Wolf Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.giant_spider.basic_attack",
+      "name": "Giant Spider Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.ghoul.basic_attack",
+      "name": "Ghoul Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.mimic.basic_attack",
+      "name": "Mimic Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.basilisk.basic_attack",
+      "name": "Basilisk Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.minotaur.basic_attack",
+      "name": "Minotaur Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.werewolf.basic_attack",
+      "name": "Werewolf Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.manticore.basic_attack",
+      "name": "Manticore Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.troll.basic_attack",
+      "name": "Troll Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.wyvern.basic_attack",
+      "name": "Wyvern Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.young_white_dragon.basic_attack",
+      "name": "Young White Dragon Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.young_green_dragon.basic_attack",
+      "name": "Young Green Dragon Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.stone_golem.basic_attack",
+      "name": "Stone Golem Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d8+2",
+          "type": "bludgeoning"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.goblin.scimitar",
+      "name": "Goblin Scimitar",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d6+2",
+          "type": "slashing"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.goblin.shortbow",
+      "name": "Goblin Shortbow",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 80,
+      "attack_context": {
+        "attack_bonus": 4,
+        "damage": {
+          "dice": "1d6+2",
+          "type": "piercing"
+        }
+      },
+      "tags": [
+        "monster",
+        "fixture"
+      ],
+      "source_ref": "fixtures.monsters",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.arannis.basic_attack",
+      "name": "Arannis Basic Attack",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 5,
+        "damage": {
+          "dice": "1d8+3",
+          "type": "slashing"
+        }
+      },
+      "tags": [
+        "hero",
+        "fixture"
+      ],
+      "source_ref": "fixtures.heroes",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "monster.arannis.longbow",
+      "name": "Arannis Longbow",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 150,
+      "attack_context": {
+        "attack_bonus": 5,
+        "damage": {
+          "dice": "1d8+3",
+          "type": "piercing"
+        }
+      },
+      "tags": [
+        "hero",
+        "fixture",
+        "ranged"
+      ],
+      "source_ref": "fixtures.heroes",
+      "content_version": "1",
+      "enabled": true
+    }
+  ],
+  "abilities": [
+    {
+      "binding_id": "monster.bandit.basic_attack.binding",
+      "action_id": "monster.bandit.basic_attack",
+      "actor_template_id": "bandit"
+    },
+    {
+      "binding_id": "monster.bandit_captain.basic_attack.binding",
+      "action_id": "monster.bandit_captain.basic_attack",
+      "actor_template_id": "bandit_captain"
+    },
+    {
+      "binding_id": "monster.cultist.basic_attack.binding",
+      "action_id": "monster.cultist.basic_attack",
+      "actor_template_id": "cultist"
+    },
+    {
+      "binding_id": "monster.cult_fanatic.basic_attack.binding",
+      "action_id": "monster.cult_fanatic.basic_attack",
+      "actor_template_id": "cult_fanatic"
+    },
+    {
+      "binding_id": "monster.kobold.basic_attack.binding",
+      "action_id": "monster.kobold.basic_attack",
+      "actor_template_id": "kobold"
+    },
+    {
+      "binding_id": "monster.orc.basic_attack.binding",
+      "action_id": "monster.orc.basic_attack",
+      "actor_template_id": "orc"
+    },
+    {
+      "binding_id": "monster.hobgoblin.basic_attack.binding",
+      "action_id": "monster.hobgoblin.basic_attack",
+      "actor_template_id": "hobgoblin"
+    },
+    {
+      "binding_id": "monster.bugbear.basic_attack.binding",
+      "action_id": "monster.bugbear.basic_attack",
+      "actor_template_id": "bugbear"
+    },
+    {
+      "binding_id": "monster.ogre.basic_attack.binding",
+      "action_id": "monster.ogre.basic_attack",
+      "actor_template_id": "ogre"
+    },
+    {
+      "binding_id": "monster.gnoll.basic_attack.binding",
+      "action_id": "monster.gnoll.basic_attack",
+      "actor_template_id": "gnoll"
+    },
+    {
+      "binding_id": "monster.wight.basic_attack.binding",
+      "action_id": "monster.wight.basic_attack",
+      "actor_template_id": "wight"
+    },
+    {
+      "binding_id": "monster.skeleton.basic_attack.binding",
+      "action_id": "monster.skeleton.basic_attack",
+      "actor_template_id": "skeleton"
+    },
+    {
+      "binding_id": "monster.zombie.basic_attack.binding",
+      "action_id": "monster.zombie.basic_attack",
+      "actor_template_id": "zombie"
+    },
+    {
+      "binding_id": "monster.dire_wolf.basic_attack.binding",
+      "action_id": "monster.dire_wolf.basic_attack",
+      "actor_template_id": "dire_wolf"
+    },
+    {
+      "binding_id": "monster.giant_spider.basic_attack.binding",
+      "action_id": "monster.giant_spider.basic_attack",
+      "actor_template_id": "giant_spider"
+    },
+    {
+      "binding_id": "monster.ghoul.basic_attack.binding",
+      "action_id": "monster.ghoul.basic_attack",
+      "actor_template_id": "ghoul"
+    },
+    {
+      "binding_id": "monster.mimic.basic_attack.binding",
+      "action_id": "monster.mimic.basic_attack",
+      "actor_template_id": "mimic"
+    },
+    {
+      "binding_id": "monster.basilisk.basic_attack.binding",
+      "action_id": "monster.basilisk.basic_attack",
+      "actor_template_id": "basilisk"
+    },
+    {
+      "binding_id": "monster.minotaur.basic_attack.binding",
+      "action_id": "monster.minotaur.basic_attack",
+      "actor_template_id": "minotaur"
+    },
+    {
+      "binding_id": "monster.werewolf.basic_attack.binding",
+      "action_id": "monster.werewolf.basic_attack",
+      "actor_template_id": "werewolf"
+    },
+    {
+      "binding_id": "monster.manticore.basic_attack.binding",
+      "action_id": "monster.manticore.basic_attack",
+      "actor_template_id": "manticore"
+    },
+    {
+      "binding_id": "monster.troll.basic_attack.binding",
+      "action_id": "monster.troll.basic_attack",
+      "actor_template_id": "troll"
+    },
+    {
+      "binding_id": "monster.wyvern.basic_attack.binding",
+      "action_id": "monster.wyvern.basic_attack",
+      "actor_template_id": "wyvern"
+    },
+    {
+      "binding_id": "monster.young_white_dragon.basic_attack.binding",
+      "action_id": "monster.young_white_dragon.basic_attack",
+      "actor_template_id": "young_white_dragon"
+    },
+    {
+      "binding_id": "monster.young_green_dragon.basic_attack.binding",
+      "action_id": "monster.young_green_dragon.basic_attack",
+      "actor_template_id": "young_green_dragon"
+    },
+    {
+      "binding_id": "monster.stone_golem.basic_attack.binding",
+      "action_id": "monster.stone_golem.basic_attack",
+      "actor_template_id": "stone_golem"
+    },
+    {
+      "binding_id": "monster.goblin.scimitar.binding",
+      "action_id": "monster.goblin.scimitar",
+      "actor_template_id": "goblin"
+    },
+    {
+      "binding_id": "monster.goblin.shortbow.binding",
+      "action_id": "monster.goblin.shortbow",
+      "actor_template_id": "goblin"
+    },
+    {
+      "binding_id": "monster.arannis.basic_attack.binding",
+      "action_id": "monster.arannis.basic_attack",
+      "actor_template_id": "arannis"
+    },
+    {
+      "binding_id": "monster.arannis.longbow.binding",
+      "action_id": "monster.arannis.longbow",
+      "actor_template_id": "arannis"
+    }
+  ],
+  "effects": [],
+  "dependencies": [],
+  "migration_notes": "Canonical action definitions and monster template bindings for fixture monster action_id references."
+}

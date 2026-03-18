@@ -148,3 +148,33 @@ async def test_load_all_aggregates_all_sections():
     loader.import_campaigns.assert_awaited_once_with(mock_session)
     loader.import_characters.assert_awaited_once_with(mock_session)
     loader.import_content_packs.assert_awaited_once_with(mock_session)
+
+
+@pytest.mark.asyncio
+async def test_load_all_fails_fast_when_monster_import_raises():
+    loader = DataLoader("dummy_dir")
+    mock_session = AsyncMock()
+
+    loader.import_definitions = AsyncMock(
+        return_value={"inserted": 1, "failed": 0})
+    loader.import_items = AsyncMock(return_value={"inserted": 1, "failed": 0})
+    loader.import_spells = AsyncMock(return_value={"inserted": 1, "failed": 0})
+    loader.import_monsters = AsyncMock(
+        side_effect=ValueError("strict canonical migration failed"))
+    loader.import_campaigns = AsyncMock(
+        return_value={"inserted": 1, "failed": 0})
+    loader.import_characters = AsyncMock(
+        return_value={"inserted": 1, "failed": 0})
+    loader.import_content_packs = AsyncMock(
+        return_value={"imported": 1, "failed": 0})
+
+    with pytest.raises(ValueError, match="strict canonical migration failed"):
+        await loader.load_all(mock_session)
+
+    loader.import_definitions.assert_awaited_once_with(mock_session)
+    loader.import_items.assert_awaited_once_with(mock_session)
+    loader.import_spells.assert_awaited_once_with(mock_session)
+    loader.import_monsters.assert_awaited_once_with(mock_session)
+    loader.import_campaigns.assert_not_awaited()
+    loader.import_characters.assert_not_awaited()
+    loader.import_content_packs.assert_not_awaited()

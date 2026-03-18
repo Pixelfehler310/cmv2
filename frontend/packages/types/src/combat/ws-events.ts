@@ -20,8 +20,12 @@ export interface MovementPreviewPayload {
   reachable: Array<{ x: number; y: number }>;
 }
 
+// Canonical IDs are backend-authoritative keys (for example "monster.goblin.scimitar").
+// The dot-delimited contract prevents treating display/freeform action text as an ID.
+export type CanonicalActionId = `${string}.${string}`;
+
 export interface ExecutableActionPayload {
-  action_id: string;
+  action_id: CanonicalActionId;
   name?: string;
   label: string;
   family: "attack" | "save" | "healing" | "utility" | string;
@@ -48,7 +52,7 @@ export interface ExecutableActionsSnapshotPayload {
 
 export interface AttackPreviewPayload {
   actor_id: string;
-  action_id: string;
+  action_id: CanonicalActionId;
   origin: { x: number; y: number };
   eligible_target_ids: string[];
   eligible_cells?: Array<{ x: number; y: number }>;
