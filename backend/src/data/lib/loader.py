@@ -49,12 +49,20 @@ class DataLoader:
         logger.info(f"Loaded {len(results)} JSON object(s) from {target_dir}")
         return results
 
-    async def _import_generic(self, session: AsyncSession, directory: str, model: Type[Base], name_field: str = "name"):
+    async def _import_generic(
+        self,
+        session: AsyncSession,
+        directory: str,
+        model: Type[Base],
+        name_field: str = "name",
+        overwrite: bool = False,
+    ):
         summary = {
             "directory": directory,
             "model": model.__name__,
             "discovered": 0,
             "inserted": 0,
+            "updated": 0,
             "skipped_existing": 0,
             "failed": 0,
         }
@@ -75,14 +83,21 @@ class DataLoader:
             result = await session.execute(stmt)
             existing = result.scalar_one_or_none()
 
-            if existing:
+            if existing and not overwrite:
                 summary["skipped_existing"] += 1
                 continue
 
             try:
-                instance = model(**item_data)
-                session.add(instance)
-                summary["inserted"] += 1
+                if existing:
+                    # Update existing
+                    for key, value in item_data.items():
+                        setattr(existing, key, value)
+                    summary["updated"] += 1
+                else:
+                    # Insert new
+                    instance = model(**item_data)
+                    session.add(instance)
+                    summary["inserted"] += 1
             except Exception as e:
                 logger.error(
                     f"Failed to instantiate {model.__name__} from data {item_name}: {e}"
@@ -91,15 +106,16 @@ class DataLoader:
         await session.commit()
         logger.info(
             f"Import summary for {directory}: discovered={summary['discovered']}, "
-            f"inserted={summary['inserted']}, skipped_existing={summary['skipped_existing']}, failed={summary['failed']}"
+            f"inserted={summary['inserted']}, updated={summary['updated']}, "
+            f"skipped_existing={summary['skipped_existing']}, failed={summary['failed']}"
         )
         return summary
 
-    async def import_items(self, session: AsyncSession):
-        return await self._import_generic(session, "items", Item)
+    async def import_items(self, session: AsyncSession, overwrite: bool = False):
+        return await self._import_generic(session, "items", Item, overwrite=overwrite)
 
-    async def import_spells(self, session: AsyncSession):
-        return await self._import_generic(session, "spells", Spell)
+    async def import_spells(self, session: AsyncSession, overwrite: bool = False):
+        return await self._import_generic(session, "spells", Spell, overwrite=overwrite)
 
     def _validate_monster_action_refs(self, monster_data: dict) -> None:
         monster_name = monster_data.get("name", "unknown")
@@ -133,12 +149,13 @@ class DataLoader:
                 )
             seen_action_ids.add(normalized_action_id)
 
-    async def import_monsters(self, session: AsyncSession):
+    async def import_monsters(self, session: AsyncSession, overwrite: bool = False):
         summary = {
             "directory": "monsters",
             "model": Monster.__name__,
             "discovered": 0,
             "inserted": 0,
+            "updated": 0,
             "skipped_existing": 0,
             "failed": 0,
         }
@@ -167,16 +184,23 @@ class DataLoader:
             result = await session.execute(stmt)
             existing = result.scalar_one_or_none()
 
-            if existing:
+            if existing and not overwrite:
                 summary["skipped_existing"] += 1
                 continue
 
             try:
                 # Persist action refs as plain JSON-compatible objects.
                 monster_payload = validated_monster.model_dump()
-                instance = Monster(**monster_payload)
-                session.add(instance)
-                summary["inserted"] += 1
+                if existing:
+                    # Update existing
+                    for key, value in monster_payload.items():
+                        setattr(existing, key, value)
+                    summary["updated"] += 1
+                else:
+                    # Insert new
+                    instance = Monster(**monster_payload)
+                    session.add(instance)
+                    summary["inserted"] += 1
             except Exception as e:
                 logger.error(
                     f"Failed to instantiate Monster from data {monster_name}: {e}"
@@ -186,16 +210,18 @@ class DataLoader:
         await session.commit()
         logger.info(
             f"Import summary for monsters: discovered={summary['discovered']}, "
-            f"inserted={summary['inserted']}, skipped_existing={summary['skipped_existing']}, failed={summary['failed']}"
+            f"inserted={summary['inserted']}, updated={summary['updated']}, "
+            f"skipped_existing={summary['skipped_existing']}, failed={summary['failed']}"
         )
         return summary
 
-    async def import_definitions(self, session: AsyncSession):
+    async def import_definitions(self, session: AsyncSession, overwrite: bool = False):
         target_dir = self.data_dir / "definitions"
         summary = {
             "directory": "definitions",
             "discovered": 0,
             "inserted": 0,
+            "updated": 0,
             "skipped_existing": 0,
             "failed": 0,
             "unknown_prefix": 0,
@@ -230,11 +256,18 @@ class DataLoader:
 
                 stmt = select(model).where(model.name == name)
                 result = await session.execute(stmt)
-                if not result.scalar_one_or_none():
+                existing = result.scalar_one_or_none()
+                
+                if existing:
+                    if overwrite:
+                        for key, value in data.items():
+                            setattr(existing, key, value)
+                        summary["updated"] += 1
+                    else:
+                        summary["skipped_existing"] += 1
+                else:
                     session.add(model(**data))
                     summary["inserted"] += 1
-                else:
-                    summary["skipped_existing"] += 1
             except Exception as e:
                 logger.error(
                     f"Failed to import definition {file_path.name}: {e}")
@@ -242,16 +275,17 @@ class DataLoader:
         await session.commit()
         logger.info(
             f"Import summary for definitions: discovered={summary['discovered']}, "
-            f"inserted={summary['inserted']}, skipped_existing={summary['skipped_existing']}, "
+            f"inserted={summary['inserted']}, updated={summary['updated']}, "
+            f"skipped_existing={summary['skipped_existing']}, "
             f"failed={summary['failed']}, unknown_prefix={summary['unknown_prefix']}"
         )
         return summary
 
-    async def import_campaigns(self, session: AsyncSession):
-        return await self._import_generic(session, "campaigns", Campaign)
+    async def import_campaigns(self, session: AsyncSession, overwrite: bool = False):
+        return await self._import_generic(session, "campaigns", Campaign, overwrite=overwrite)
 
-    async def import_characters(self, session: AsyncSession):
-        return await self._import_generic(session, "characters", Character)
+    async def import_characters(self, session: AsyncSession, overwrite: bool = False):
+        return await self._import_generic(session, "characters", Character, overwrite=overwrite)
 
     async def import_content_packs(
         self,
@@ -291,14 +325,14 @@ class DataLoader:
 
         return summary
 
-    async def load_all(self, session: AsyncSession):
+    async def load_all(self, session: AsyncSession, overwrite: bool = False):
         summary = {
-            "definitions": await self.import_definitions(session),
-            "items": await self.import_items(session),
-            "spells": await self.import_spells(session),
-            "monsters": await self.import_monsters(session),
-            "campaigns": await self.import_campaigns(session),
-            "characters": await self.import_characters(session),
+            "definitions": await self.import_definitions(session, overwrite=overwrite),
+            "items": await self.import_items(session, overwrite=overwrite),
+            "spells": await self.import_spells(session, overwrite=overwrite),
+            "monsters": await self.import_monsters(session, overwrite=overwrite),
+            "campaigns": await self.import_campaigns(session, overwrite=overwrite),
+            "characters": await self.import_characters(session, overwrite=overwrite),
             "content_packs": await self.import_content_packs(session),
         }
         logger.info(f"Completed DataLoader.load_all with summary: {summary}")

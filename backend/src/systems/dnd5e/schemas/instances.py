@@ -45,6 +45,7 @@ class EffectInstance(BaseModel):
     value: int | str = 0
     duration_type: DurationType = DurationType.INSTANTANEOUS
     remaining_rounds: Optional[int] = None
+    tick_intent: dict = Field(default_factory=dict)
     requires_concentration: bool = False
 
 

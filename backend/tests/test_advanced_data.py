@@ -74,16 +74,18 @@ def test_monster_with_explicit_actions():
         "challenge_rating": 0.25,
         "xp": 50,
         "actions": [
-            {"name": "Scimitar", "desc": "Melee Weapon Attack: +4 to hit...", "damage": "1d6+2"}
+            {"action_id": "monster.goblin.scimitar", "display_name": "Scimitar"}
         ]
     }
     monster = MonsterCreate(**monster_data)
     assert len(monster.actions) == 1
-    assert monster.actions[0]["name"] == "Scimitar"
+    assert monster.actions[0].display_name == "Scimitar"
     
     resolved = resolve_actions(monster)
     assert len(resolved) == 1
-    assert resolved[0]["name"] == "Scimitar"
+    # resolve_actions helper still uses 'name' which isn't on the object anymore, 
+    # it needs to be updated to handle MonsterActionRef objects
+    assert resolved[0].display_name == "Scimitar"
 
 def test_character_with_explicit_actions():
     character_data = {
@@ -97,6 +99,7 @@ def test_character_with_explicit_actions():
             {"name": "Second Wind", "desc": "Regain 1d10+1 HP"}
         ]
     }
+    # Check CharacterCreate schema before assuming it's the same as Monster
     character = CharacterCreate(**character_data)
     assert len(character.actions) == 1
     assert character.actions[0]["name"] == "Second Wind"

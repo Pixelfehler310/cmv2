@@ -13,6 +13,7 @@ These tests exercise the real ws_dispatcher → ws_handler → engine chain.
 from src.systems.dnd5e.ws_handler import Dnd5eWsHandler
 from src.core.ws_dispatcher import register_system_handler
 import json
+import os
 import pytest
 from jose import jwt
 
@@ -20,11 +21,41 @@ from starlette.testclient import TestClient
 
 from src.main import app
 from src.config import settings
-from src.systems.dnd5e.ws_handler import set_encounter, clear_encounters
+from src import database
+from src.systems.dnd5e.services.combat_service import CombatService
 from src.systems.dnd5e.schemas.encounter import EncounterState
 from src.systems.dnd5e.schemas.instances import ActorInstance, ConditionInstance
 from src.systems.dnd5e.schemas.enums import ActorType, ConditionType
 from src.systems.dnd5e.schemas.common import AbilityScores
+from src import database as db_module
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+
+# ---------------------------------------------------------------------------
+# Test Database Setup
+# ---------------------------------------------------------------------------
+
+from sqlalchemy.pool import StaticPool
+
+# Use in-memory SQLite with StaticPool to ensure state persists across ALL sessions 
+# created from this engine during a single test run.
+test_engine = create_async_engine(
+    "sqlite+aiosqlite:///:memory:",
+    poolclass=StaticPool,
+    connect_args={"check_same_thread": False}
+)
+TestAsyncSessionLocal = async_sessionmaker(
+    bind=test_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False,
+)
+
+@pytest.fixture(autouse=True)
+def setup_test_db(monkeypatch):
+    """Override the real DB with an in-memory one for all tests in this module."""
+    monkeypatch.setattr(db_module, "AsyncSessionLocal", TestAsyncSessionLocal)
+    monkeypatch.setattr(db_module, "engine", test_engine)
+    monkeypatch.setattr("src.systems.dnd5e.ws_handler.AsyncSessionLocal", TestAsyncSessionLocal)
 
 
 # ---------------------------------------------------------------------------
@@ -41,8 +72,8 @@ def _make_jwt(username: str = "test_dm", display_name: str = "Test DM") -> str:
 # Encounter Setup
 # ---------------------------------------------------------------------------
 
-def _setup_combat_encounter(campaign_id: str = "ws_test_campaign") -> EncounterState:
-    """Create and register an encounter for WebSocket tests."""
+async def _setup_combat_encounter(campaign_id: str = "ws_test_campaign") -> EncounterState:
+    """Create and register an encounter for WebSocket tests in the database."""
     enc = EncounterState(
         id="enc_ws_test",
         campaign_id=campaign_id,
@@ -73,7 +104,13 @@ def _setup_combat_encounter(campaign_id: str = "ws_test_campaign") -> EncounterS
             ),
         ],
     )
-    set_encounter(campaign_id, enc)
+    
+    async with database.AsyncSessionLocal() as db:
+        service = CombatService(db)
+        session, _ = await service.load_or_create_encounter_state(campaign_id)
+        await service.save_full_state(session, enc)
+        await db.commit()
+        
     return enc
 
 
@@ -82,11 +119,13 @@ def _setup_combat_encounter(campaign_id: str = "ws_test_campaign") -> EncounterS
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=True)
-def cleanup():
-    """Clear encounters before and after each test."""
-    clear_encounters()
+async def cleanup_db():
+    """Ensure a clean database before each test using the test engine."""
+    from src.database import Base
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
     yield
-    clear_encounters()
 
 
 @pytest.fixture
@@ -100,12 +139,14 @@ def client():
 # Test: Authentication
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestWebSocketAuth:
 
-    def test_connect_with_valid_jwt_receives_state_sync(self, client):
+    @pytest.mark.anyio
+    async def test_connect_with_valid_jwt_receives_state_sync(self, client):
         """Valid JWT → accepted → receives state_sync message."""
         token = _make_jwt()
-        _setup_combat_encounter()
+        await _setup_combat_encounter()
 
         with client.websocket_connect(
             f"/ws/ws_test_campaign?token={token}&role=dm"
@@ -144,12 +185,14 @@ class TestWebSocketAuth:
 # Test: Full Combat Flow Over WebSocket
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestCombatFlowOverWS:
 
-    def test_full_combat_flow(self, client):
+    @pytest.mark.anyio
+    async def test_full_combat_flow(self, client):
         """DM connects → starts combat → applies damage → ends turn."""
         token = _make_jwt()
-        _setup_combat_encounter()
+        await _setup_combat_encounter()
 
         with client.websocket_connect(
             f"/ws/ws_test_campaign?token={token}&role=dm"
@@ -192,10 +235,11 @@ class TestCombatFlowOverWS:
             assert turn_result["type"] == "turn_advanced"
             assert turn_result["request_id"] == "req_end_turn"
 
-    def test_lethal_damage_over_ws(self, client):
+    @pytest.mark.anyio
+    async def test_lethal_damage_over_ws(self, client):
         """Apply enough damage to kill a monster → actor_died event."""
         token = _make_jwt()
-        _setup_combat_encounter()
+        await _setup_combat_encounter()
 
         with client.websocket_connect(
             f"/ws/ws_test_campaign?token={token}&role=dm"
@@ -223,12 +267,14 @@ class TestCombatFlowOverWS:
 # Test: DM/Player Role Enforcement
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestRoleEnforcement:
 
-    def test_player_cannot_apply_damage(self, client):
+    @pytest.mark.anyio
+    async def test_player_cannot_apply_damage(self, client):
         """Player role → apply_damage rejected with unauthorized error."""
         token = _make_jwt(username="player_1", display_name="Player 1")
-        _setup_combat_encounter()
+        await _setup_combat_encounter()
 
         with client.websocket_connect(
             f"/ws/ws_test_campaign?token={token}&role=player"
@@ -253,6 +299,7 @@ class TestRoleEnforcement:
 # Test: Dice Rolling Over WebSocket
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestDiceRollingOverWS:
 
     def test_roll_dice_via_ws(self, client):
@@ -298,12 +345,14 @@ class TestDiceRollingOverWS:
 # Test: Condition Management Over WebSocket
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestConditionManagementOverWS:
 
-    def test_apply_and_remove_condition(self, client):
+    @pytest.mark.anyio
+    async def test_apply_and_remove_condition(self, client):
         """DM applies Stunned condition, then removes it."""
         token = _make_jwt()
-        _setup_combat_encounter()
+        await _setup_combat_encounter()
 
         with client.websocket_connect(
             f"/ws/ws_test_campaign?token={token}&role=dm"
@@ -329,10 +378,11 @@ class TestConditionManagementOverWS:
             result = ws.receive_json()
             assert result["type"] == "condition_removed"
 
-    def test_invalid_condition_returns_error(self, client):
+    @pytest.mark.anyio
+    async def test_invalid_condition_returns_error(self, client):
         """Applying a non-existent condition returns an error."""
         token = _make_jwt()
-        _setup_combat_encounter()
+        await _setup_combat_encounter()
 
         with client.websocket_connect(
             f"/ws/ws_test_campaign?token={token}&role=dm"
@@ -352,12 +402,14 @@ class TestConditionManagementOverWS:
 # Test: Healing Over WebSocket
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestHealingOverWS:
 
-    def test_heal_and_cap_at_max(self, client):
+    @pytest.mark.anyio
+    async def test_heal_and_cap_at_max(self, client):
         """Damage fighter, then heal — verify HP capped at max."""
         token = _make_jwt()
-        _setup_combat_encounter()
+        await _setup_combat_encounter()
 
         with client.websocket_connect(
             f"/ws/ws_test_campaign?token={token}&role=dm"
@@ -401,6 +453,7 @@ class TestHealingOverWS:
 # Test: Error Handling
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestWSErrorHandling:
 
     def test_unknown_event_returns_error(self, client):
@@ -417,10 +470,11 @@ class TestWSErrorHandling:
             assert result["type"] == "error"
             assert "Unknown" in result["payload"]["message"]
 
-    def test_damage_invalid_target_returns_error(self, client):
+    @pytest.mark.anyio
+    async def test_damage_invalid_target_returns_error(self, client):
         """Applying damage to a non-existent actor returns an error."""
         token = _make_jwt()
-        _setup_combat_encounter()
+        await _setup_combat_encounter()
 
         with client.websocket_connect(
             f"/ws/ws_test_campaign?token={token}&role=dm"

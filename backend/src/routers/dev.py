@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.systems.dnd5e.schemas.encounter import EncounterState
-from src.systems.dnd5e.ws_handler import set_encounter
+from src.systems.dnd5e.services.combat_service import CombatService
 from src.database import get_db
 from src.data.lib.loader import DataLoader
 from src.systems.dnd5e.services.content_pack_importer import ContentPackImporter, ConflictPolicy
@@ -26,7 +26,7 @@ class ContentPackImportRequest(BaseModel):
 
 
 @router.post("/load-seeds")
-async def load_seeds(session: AsyncSession = Depends(get_db)):
+async def load_seeds(overwrite: bool = False, session: AsyncSession = Depends(get_db)):
     """Load all JSON database seeds and memory encounters."""
     logger.info("POST /api/dev/load-seeds called. fixtures_dir=%s encounters_dir=%s",
                 FIXTURES_DIR, ENCOUNTERS_DIR)
@@ -46,7 +46,7 @@ async def load_seeds(session: AsyncSession = Depends(get_db)):
     # 1. Load Postgres Database Seeds (Campaigns, Characters, Definitions, Items, Spells, Monsters)
     loader = DataLoader(str(FIXTURES_DIR))
     try:
-        summary["db_import_summary"] = await loader.load_all(session)
+        summary["db_import_summary"] = await loader.load_all(session, overwrite=overwrite)
     except Exception as e:
         logger.error(f"Failed to load DB seeds: {e}")
         summary["db_seeds_loaded"] = False
@@ -66,11 +66,14 @@ async def load_seeds(session: AsyncSession = Depends(get_db)):
                     data = json.load(f)
 
                 encounter = EncounterState.model_validate(data)
-                set_encounter(encounter.campaign_id, encounter)
+                
+                service = CombatService(session)
+                enc_session, _ = await service.load_or_create_encounter_state(encounter.campaign_id)
+                await service.save_full_state(enc_session, encounter)
 
                 summary["encounters_loaded"] += 1
                 loaded_files.append(file_path.name)
-                logger.info("Loaded encounter fixture: %s (campaign_id=%s)",
+                logger.info("Loaded encounter fixture (persisted to DB): %s (campaign_id=%s)",
                             file_path.name, encounter.campaign_id)
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse JSON in {file_path.name}: {e}")
@@ -102,6 +105,19 @@ async def load_seeds(session: AsyncSession = Depends(get_db)):
         "summary": summary,
         "encounters_loaded_files": loaded_files,
         "errors": errors
+    }
+
+
+@router.post("/reset-encounter/{campaign_id}")
+async def reset_encounter(campaign_id: str, session: AsyncSession = Depends(get_db)):
+    """Deletes the existing combat encounter session for a campaign."""
+    service = CombatService(session)
+    existed = await service.reset_encounter_state(campaign_id)
+    return {
+        "status": "success",
+        "campaign_id": campaign_id,
+        "existed": existed,
+        "message": f"Encounter state for {campaign_id} has been reset." if existed else f"No existing encounter session found for {campaign_id}."
     }
 
 

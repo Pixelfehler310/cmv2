@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Integration tests for D&D 5e WebSocket handler.
 
@@ -9,7 +10,10 @@ import pytest
 from unittest.mock import AsyncMock
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
+import os
+import re
 from src.config import settings
 from src.database import Base
 from src.core.ws_protocol import WsEnvelope, WsOutbound, Visibility
@@ -17,7 +21,7 @@ from src.core.sessions.models import SessionContext, UserRole
 from src.core.sessions.manager import SessionManager
 
 import src.systems.dnd5e.ws_handler as ws_handler_module
-from src.systems.dnd5e.ws_handler import Dnd5eWsHandler, set_encounter, clear_encounters
+from src.systems.dnd5e.ws_handler import Dnd5eWsHandler
 from src.systems.dnd5e.schemas.encounter import EncounterState
 from src.systems.dnd5e.schemas.instances import ActorInstance, ConditionInstance, EffectInstance
 from src.systems.dnd5e.schemas.enums import ActorType, ConditionType, DamageType, DurationType
@@ -25,6 +29,34 @@ from src.systems.dnd5e.schemas.common import AbilityScores
 from src.systems.dnd5e.lib.combat_models import EncounterSession
 from src.systems.dnd5e.lib.content_models import EffectDefinitionRecord, EffectInstanceRecord
 from src.systems.dnd5e.services.combat_service import CombatService
+from src import database as db_module
+
+# Use a file-based DB instead of :memory: to ensure sharing works reliably on Windows
+db_path = os.path.abspath("test_ws_integration.db")
+if os.path.exists(db_path):
+    try:
+        os.remove(db_path)
+    except:
+        pass
+
+test_engine = create_async_engine(
+    f"sqlite+aiosqlite:///{db_path}",
+    connect_args={"check_same_thread": False}
+)
+TestAsyncSessionLocal = async_sessionmaker(
+    bind=test_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False,
+)
+
+@pytest.fixture(autouse=True)
+def setup_test_db(monkeypatch):
+    """Override the real DB with an in-memory one for all tests in this module."""
+    # Patch both the original and the one imported by ws_handler
+    monkeypatch.setattr(db_module, "AsyncSessionLocal", TestAsyncSessionLocal)
+    monkeypatch.setattr(db_module, "engine", test_engine)
+    monkeypatch.setattr("src.systems.dnd5e.ws_handler.AsyncSessionLocal", TestAsyncSessionLocal)
 
 
 # ---------------------------------------------------------------------------
@@ -32,11 +64,12 @@ from src.systems.dnd5e.services.combat_service import CombatService
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=True)
-def cleanup_encounters():
-    """Clear encounter storage before each test."""
-    clear_encounters()
+async def cleanup_db():
+    """Ensure a clean database before each test using the test engine."""
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
     yield
-    clear_encounters()
 
 
 @pytest.fixture
@@ -72,8 +105,8 @@ def mgr():
 
 
 @pytest.fixture
-def combat_encounter():
-    """An encounter with combatants ready for combat."""
+async def combat_encounter(dm_ctx):
+    """An encounter with combatants ready for combat, saved to the real DB."""
     enc = EncounterState(
         id="enc_test",
         campaign_id="test_campaign",
@@ -102,8 +135,20 @@ def combat_encounter():
             ),
         ],
     )
-    set_encounter("test_campaign", enc)
-    return enc
+
+    async with db_module.AsyncSessionLocal() as db:
+        service = CombatService(db)
+        # Use our updated service to save the state
+        session, _ = await service.load_or_create_encounter_state("test_campaign")
+        await service.save_full_state(session, enc)
+        await db.commit()
+        return enc
+
+async def refresh_encounter(campaign_id="test_campaign"):
+    async with TestAsyncSessionLocal() as db:
+        service = CombatService(db)
+        _, encounter = await service.load_or_create_encounter_state(campaign_id)
+        return encounter
 
 
 def _canonical_candidate(
@@ -140,6 +185,7 @@ def _canonical_candidate(
 # Connection Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestOnConnect:
 
     @pytest.mark.anyio
@@ -154,6 +200,7 @@ class TestOnConnect:
 # Ping/Pong Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestPingPong:
 
     @pytest.mark.anyio
@@ -168,6 +215,7 @@ class TestPingPong:
 # Permission Tests (via handler)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestPermissions:
 
     @pytest.mark.anyio
@@ -316,6 +364,7 @@ class TestPermissions:
 # Roll Dice Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestRollDice:
 
     @pytest.mark.anyio
@@ -336,6 +385,7 @@ class TestRollDice:
 # Chat Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestChat:
 
     @pytest.mark.anyio
@@ -382,6 +432,7 @@ class TestChat:
 # Combat Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestCombat:
 
     @pytest.mark.anyio
@@ -396,14 +447,24 @@ class TestCombat:
     @pytest.mark.anyio
     async def test_start_combat_no_combatants(self, handler, dm_ctx, mgr):
         """Starting combat with no combatants returns an error."""
-        set_encounter(
-            "test_campaign",
-            EncounterState(
-                id="enc_empty", campaign_id="test_campaign", combatants=[]),
-        )
+        from src.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
+            service = CombatService(db)
+            session, _ = await service.load_or_create_encounter_state("test_campaign_empty")
+            empty_enc = EncounterState(
+                id="enc_empty", campaign_id="test_campaign_empty", combatants=[])
+            await service.save_full_state(session, empty_enc)
+            await db.commit()
+
         envelope = WsEnvelope(type="start_combat",
                               request_id="req_start_combat_empty")
-        events = await handler.handle(envelope, dm_ctx, mgr)
+        ctx = SessionContext(
+            campaign_id="test_campaign_empty",
+            user_id="dm_user",
+            role=UserRole.DM,
+            game_system="dnd5e"
+        )
+        events = await handler.handle(envelope, ctx, mgr)
         assert len(events) == 1
         assert events[0].type == "error"
 
@@ -462,6 +523,7 @@ class TestCombat:
 # Movement Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestMovement:
 
     @pytest.mark.anyio
@@ -942,6 +1004,7 @@ class TestMovement:
 # Action Economy Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestActionEconomy:
 
     @pytest.mark.anyio
@@ -1114,6 +1177,7 @@ class TestActionEconomy:
 # Action Resolution Tests (Phase 3)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestActionResolutionPhase3:
 
     @pytest.mark.anyio
@@ -1437,18 +1501,24 @@ class TestActionResolutionPhase3:
         target_actor_id = next(
             c.id for c in combat_encounter.combatants if c.id != active_actor_id)
 
-        target_actor = next(
-            c for c in combat_encounter.combatants if c.id == target_actor_id)
-        target_actor.effects.append(
-            EffectInstance(
-                id="phase4_tick_effect_1",
-                name="phase4_tick_effect",
-                source_id=active_actor_id,
-                target_id=target_actor_id,
-                duration_type=DurationType.ROUNDS,
-                remaining_rounds=1,
+        async with db_module.AsyncSessionLocal() as db:
+            service = CombatService(db)
+            session, encounter = await service.load_or_create_encounter_state("test_campaign")
+            target = next(c for c in encounter.combatants if c.id == target_actor_id)
+            target.effects.append(
+                EffectInstance(
+                    id="phase4_tick_effect_1",
+                    effect_id="phase4_tick_effect",
+                    source_id=active_actor_id,
+                    target_id=target_actor_id,
+                    duration_type=DurationType.ROUNDS,
+                    remaining_rounds=1,
+                    tick_intent={"damage": 5}
+                )
             )
-        )
+            await service.sync_effect_instance_records(service.db, session, encounter)
+            await service.save_full_state(session, encounter)
+            await db.commit()
 
         end_turn_events = await handler.handle(
             WsEnvelope(
@@ -1479,11 +1549,13 @@ class TestActionResolutionPhase3:
         assert removed_event.payload["provenance"]["action_id"] is None
 
 
+@pytest.mark.anyio
 class TestEffectExecutionPhase4DbMode:
 
     @staticmethod
     async def _configure_sqlite_db_mode(monkeypatch):
-        engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+        DB_EFF_PATH = "test_effect_final.db"
+        engine = create_async_engine(f"sqlite+aiosqlite:///{DB_EFF_PATH}")
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
@@ -1974,6 +2046,7 @@ class TestEffectExecutionPhase4DbMode:
 # Actor Spawn Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestAddActor:
 
     @pytest.mark.anyio
@@ -1998,13 +2071,14 @@ class TestAddActor:
             "x": 9, "y": 10, "elevation": 0}
 
         added_actor_id = events[0].payload["actor"]["id"]
+        refreshed_encounter = await refresh_encounter()
         added_actor = next(
-            c for c in combat_encounter.combatants if c.id == added_actor_id)
+            c for c in refreshed_encounter.combatants if c.id == added_actor_id)
         assert added_actor.position.x == 9
         assert added_actor.position.y == 10
 
         added_token = next(
-            t for t in combat_encounter.map.tokens if t.actor_id == added_actor_id)
+            t for t in refreshed_encounter.map.tokens if t.actor_id == added_actor_id)
         assert added_token.position.x == 9
         assert added_token.position.y == 10
 
@@ -2045,6 +2119,7 @@ class TestAddActor:
 # Actor Removal Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestRemoveActor:
 
     @pytest.mark.anyio
@@ -2061,8 +2136,9 @@ class TestRemoveActor:
         assert events[0].type == "actor_removed"
         assert events[0].payload["actor_id"] == "goblin_1"
 
-        assert all(c.id != "goblin_1" for c in combat_encounter.combatants)
-        assert all(t.actor_id != "goblin_1" for t in combat_encounter.map.tokens)
+        refreshed_encounter = await refresh_encounter()
+        assert all(c.id != "goblin_1" for c in refreshed_encounter.combatants)
+        assert all(t.actor_id != "goblin_1" for t in refreshed_encounter.map.tokens)
 
     @pytest.mark.anyio
     async def test_remove_actor_invalid_target_returns_error(self, handler, dm_ctx, mgr, combat_encounter):
@@ -2097,6 +2173,7 @@ class TestRemoveActor:
 # Damage / Healing Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestDamageHealing:
 
     @pytest.mark.anyio
@@ -2170,6 +2247,7 @@ class TestDamageHealing:
 # Condition Tests
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestConditions:
 
     @pytest.mark.anyio
@@ -2184,7 +2262,8 @@ class TestConditions:
         assert events[0].payload["condition"] == "Stunned"
 
         # Verify it was actually applied
-        goblin = combat_encounter.combatants[1]
+        combat_encounter = await refresh_encounter()
+        goblin = next(c for c in combat_encounter.combatants if c.id == "goblin_1")
         assert any(c.condition ==
                    ConditionType.STUNNED for c in goblin.conditions)
 
@@ -2202,6 +2281,8 @@ class TestConditions:
         )
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert events[0].type == "condition_removed"
+        combat_encounter = await refresh_encounter()
+        goblin = next(c for c in combat_encounter.combatants if c.id == "goblin_1")
         assert not any(
             c.condition == ConditionType.PRONE for c in goblin.conditions)
 
@@ -2220,6 +2301,7 @@ class TestConditions:
 # Unknown event
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestUnknownEvent:
 
     @pytest.mark.anyio
@@ -2234,6 +2316,7 @@ class TestUnknownEvent:
 # Stage E terminal guarantees
 # ---------------------------------------------------------------------------
 
+@pytest.mark.anyio
 class TestCommandTerminalGuaranteesStageE:
 
     @pytest.mark.anyio
