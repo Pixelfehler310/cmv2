@@ -7,8 +7,7 @@ import {
   selectExecutableActionsForActor,
 } from "../../selectors/combatSelectors";
 import { useCombatStore } from "../../stores/useCombatStore";
-
-type ActionUiMode = "idle" | "action_selected" | "target_preview" | "executing";
+import { normalizeTargetingMode, parseCellKey, targetingModeToInteractionMode } from "../../combat/interaction";
 
 const ACTION_REFRESH_TRIGGER_SENT_TYPES = new Set([
   "request_action",
@@ -46,12 +45,21 @@ export function ContractActionSurface({
   const requestExecutableActions = useCombatStore((state) => state.requestExecutableActions);
   const requestAttackPreview = useCombatStore((state) => state.requestAttackPreview);
   const requestAction = useCombatStore((state) => state.requestAction);
+  const beginTargeting = useCombatStore((state) => state.beginTargeting);
+  const setInteractionMode = useCombatStore((state) => state.setInteractionMode);
+  const setSelectedTargetId = useCombatStore((state) => state.setSelectedTargetId);
+  const setSelectedTemplateCell = useCombatStore((state) => state.setSelectedTemplateCell);
+  const resetInteraction = useCombatStore((state) => state.resetInteraction);
 
-  const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
-  const [selectedTargetId, setSelectedTargetId] = useState<string>("");
-  const [selectedTemplateCell, setSelectedTemplateCell] = useState<string>("");
+  const interactionMode = useCombatStore((state) => state.interactionMode);
+  const interactionActorId = useCombatStore((state) => state.interactionActorId);
+  const interactionActionId = useCombatStore((state) => state.interactionActionId);
+  const selectedTargetId = useCombatStore((state) => state.selectedTargetId);
+  const selectedTemplateCell = useCombatStore((state) => state.selectedTemplateCell);
+
   const [actionHint, setActionHint] = useState<string | null>(null);
-  const [actionMode, setActionMode] = useState<ActionUiMode>("idle");
+
+  const selectedActionId = interactionActorId === actorId ? interactionActionId : null;
 
   const executableActions = useCombatStore((state) => selectExecutableActionsForActor(state, actorId));
   const selectedAction = useMemo(() => executableActions.find((action) => action.action_id === selectedActionId) ?? null, [executableActions, selectedActionId]);
@@ -85,30 +93,27 @@ export function ContractActionSurface({
   }, [actorId, isConnected, latestCommandOutcome, requestExecutableActions]);
 
   useEffect(() => {
-    setSelectedActionId(null);
-    setSelectedTargetId("");
-    setSelectedTemplateCell("");
+    resetInteraction();
     setActionHint(null);
-    setActionMode("idle");
-  }, [actorId]);
+  }, [actorId, resetInteraction]);
 
   useEffect(() => {
     if (!selectedAction) {
-      if (actionMode !== "executing") {
-        setActionMode("idle");
+      if (interactionMode !== "executing") {
+        setInteractionMode("idle");
       }
       return;
     }
 
-    if (attackPreview && actionMode !== "executing") {
-      setActionMode("target_preview");
+    if (attackPreview && interactionMode !== "executing") {
+      setInteractionMode(targetingModeToInteractionMode(selectedAction.targeting_mode));
       return;
     }
 
-    if (!attackPreview && actionMode !== "executing") {
-      setActionMode("action_selected");
+    if (!attackPreview && interactionMode !== "executing") {
+      setInteractionMode("action_selected");
     }
-  }, [actionMode, attackPreview, selectedAction]);
+  }, [attackPreview, interactionMode, selectedAction, setInteractionMode]);
 
   useEffect(() => {
     if (!latestCommandOutcome) {
@@ -116,53 +121,39 @@ export function ContractActionSurface({
     }
 
     if (latestCommandOutcome.sentType === "request_action") {
-      setActionMode("idle");
-      if (latestCommandOutcome.ok) {
-        setSelectedActionId(null);
-        setSelectedTargetId("");
-        setSelectedTemplateCell("");
-      }
+      resetInteraction();
       return;
     }
 
     if (latestCommandOutcome.sentType === "request_attack_preview" && !latestCommandOutcome.ok) {
-      setActionMode("idle");
-      setSelectedActionId(null);
-      setSelectedTargetId("");
-      setSelectedTemplateCell("");
+      resetInteraction();
     }
-  }, [latestCommandOutcome]);
+  }, [latestCommandOutcome, resetInteraction]);
 
   useEffect(() => {
     if (!latestDenied) {
       return;
     }
 
-    setActionMode("idle");
-    setSelectedActionId(null);
-    setSelectedTargetId("");
-    setSelectedTemplateCell("");
+    resetInteraction();
     setActionHint(latestDenied.message ?? `Denied (${latestDenied.reasonCode}).`);
-  }, [latestDenied]);
+  }, [latestDenied, resetInteraction]);
 
   const runAction = (actionId: string, actionTypeCost: string, targetingMode: string): void => {
     if (!actorId) {
       return;
     }
 
-    if (targetingMode !== "self") {
-      setActionMode("action_selected");
-      setSelectedActionId(actionId);
-      setSelectedTargetId("");
-      setSelectedTemplateCell("");
+    if (normalizeTargetingMode(targetingMode) !== "self") {
+      beginTargeting(actorId, actionId, targetingMode);
       requestAttackPreview(actorId, actionId);
       setActionHint(`Previewing ${actionId}.`);
       return;
     }
 
-    setActionMode("executing");
+    setInteractionMode("executing");
     requestAction(actorId, actionTypeCost, actionId, {});
-    setSelectedActionId(null);
+    resetInteraction();
     setActionHint(`Sent ${actionId}.`);
   };
 
@@ -176,7 +167,7 @@ export function ContractActionSurface({
       return;
     }
 
-    setActionMode("executing");
+    setInteractionMode("executing");
     requestAction(actorId, selectedAction.action_type_cost, selectedAction.action_id, {
       target_ids: [selectedTargetId],
     });
@@ -184,7 +175,7 @@ export function ContractActionSurface({
   };
 
   const commitAoeTemplateAction = (): void => {
-    if (!actorId || !selectedAction || selectedAction.targeting_mode !== "aoe" || !selectedTemplateCell) {
+    if (!actorId || !selectedAction || normalizeTargetingMode(selectedAction.targeting_mode) !== "aoe" || !selectedTemplateCell) {
       return;
     }
 
@@ -193,13 +184,13 @@ export function ContractActionSurface({
       return;
     }
 
-    const [xRaw, yRaw] = selectedTemplateCell.split(",");
-    const x = Number.parseInt(xRaw ?? "", 10);
-    const y = Number.parseInt(yRaw ?? "", 10);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    const cell = parseCellKey(selectedTemplateCell);
+    if (!cell) {
       setActionHint("Invalid template origin.");
       return;
     }
+
+    const { x, y } = cell;
 
     const projectedOrigin = attackPreview?.template_projection?.origin;
     const projectedOriginKey = projectedOrigin ? `${projectedOrigin.x},${projectedOrigin.y}` : null;
@@ -220,7 +211,7 @@ export function ContractActionSurface({
       })
       .map((combatant) => combatant.id);
 
-    setActionMode("executing");
+    setInteractionMode("executing");
     requestAction(actorId, selectedAction.action_type_cost, selectedAction.action_id, {
       target_ids: targetIds,
       template_origin: { x, y },
@@ -312,14 +303,14 @@ export function ContractActionSurface({
             Targeting {selectedAction.action_id} ({selectedAction.targeting_mode})
           </p>
 
-          {selectedAction.targeting_mode === "single" && (
+          {normalizeTargetingMode(selectedAction.targeting_mode) === "single_target" && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <label htmlFor="contract-target-select" className="text-cyan-200">
                 Target
               </label>
               <select
                 id="contract-target-select"
-                value={selectedTargetId}
+                value={selectedTargetId ?? ""}
                 onChange={(event) => setSelectedTargetId(event.target.value)}
                 className="min-w-44 rounded border border-cyan-700 bg-slate-950 px-2 py-1 text-xs text-slate-100"
               >
@@ -341,7 +332,7 @@ export function ContractActionSurface({
             </div>
           )}
 
-          {selectedAction.targeting_mode === "aoe" && (
+          {normalizeTargetingMode(selectedAction.targeting_mode) === "aoe" && (
             <div className="mt-2 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <label htmlFor="contract-cell-select" className="text-cyan-200">
@@ -349,7 +340,7 @@ export function ContractActionSurface({
                 </label>
                 <select
                   id="contract-cell-select"
-                  value={selectedTemplateCell}
+                  value={selectedTemplateCell ?? ""}
                   onChange={(event) => setSelectedTemplateCell(event.target.value)}
                   className="min-w-44 rounded border border-cyan-700 bg-slate-950 px-2 py-1 text-xs text-slate-100"
                 >
@@ -374,7 +365,7 @@ export function ContractActionSurface({
           )}
 
           <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-cyan-200/90">
-            <span>Mode: {actionMode}</span>
+            <span>Mode: {interactionMode}</span>
             <span>Eligible targets: {attackPreview?.eligible_target_ids.length ?? 0}</span>
             <span>Eligible cells: {attackPreview?.eligible_cells?.length ?? 0}</span>
             <span>Affected cells: {attackPreview?.template_projection?.affected_cells.length ?? 0}</span>
@@ -383,10 +374,7 @@ export function ContractActionSurface({
               type="button"
               className="rounded border border-slate-500 px-2 py-0.5 text-xs text-slate-100 hover:bg-slate-700"
               onClick={() => {
-                setSelectedActionId(null);
-                setSelectedTargetId("");
-                setSelectedTemplateCell("");
-                setActionMode("idle");
+                resetInteraction();
                 setActionHint("Cancelled targeting.");
               }}
             >

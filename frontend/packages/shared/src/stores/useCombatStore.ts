@@ -31,6 +31,7 @@ import { COMMAND_LIKE_WS_INBOUND_TYPES, KNOWN_WS_OUTBOUND_TYPES } from "@rpg/typ
 import { normalizeActionDeniedReasonCode } from "@rpg/types";
 import { mapActorWireToCombatant, mapEncounterWireToGameState } from "../adapters/encounterAdapter";
 import { parseWsOutboundEnvelope } from "../adapters/wsEnvelopeAdapter";
+import type { CombatInteractionMode } from "../combat/interaction";
 
 export type CombatantState = CombatantViewModel;
 export type GameState = GameStateViewModel;
@@ -98,6 +99,12 @@ export interface CombatStore {
   movementPreview: MovementPreviewPayload | null;
   executableActionsSnapshot: ExecutableActionsSnapshotPayload | null;
   attackPreview: AttackPreviewPayload | null;
+  interactionMode: CombatInteractionMode;
+  interactionActorId: string | null;
+  interactionActionId: string | null;
+  interactionTargetingMode: string | null;
+  selectedTargetId: string | null;
+  selectedTemplateCell: string | null;
   actionDispatcher: CombatActionDispatcher | null;
 
   connect: (campaignId: string, role: "dm" | "observer") => void;
@@ -121,6 +128,11 @@ export interface CombatStore {
   endTurn: () => void;
   applyDamage: (targetId: string, amount: number, damageType: string) => void;
   dispatchAction: (actionType: string, payload: Record<string, unknown>) => void;
+  beginTargeting: (actorId: string, actionId: string, targetingMode: string) => void;
+  setInteractionMode: (mode: CombatInteractionMode) => void;
+  setSelectedTargetId: (targetId: string | null) => void;
+  setSelectedTemplateCell: (cellKey: string | null) => void;
+  resetInteraction: () => void;
 }
 
 function applyActorMove(state: GameState, payload: ActorMovedPayload): GameState {
@@ -471,6 +483,12 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
   movementPreview: null,
   executableActionsSnapshot: null,
   attackPreview: null,
+  interactionMode: "idle",
+  interactionActorId: null,
+  interactionActionId: null,
+  interactionTargetingMode: null,
+  selectedTargetId: null,
+  selectedTemplateCell: null,
   actionDispatcher: null,
 
   connect: (_campaignId: string, role: "dm" | "observer") => {
@@ -499,6 +517,12 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       movementPreview: null,
       executableActionsSnapshot: null,
       attackPreview: null,
+      interactionMode: "idle",
+      interactionActorId: null,
+      interactionActionId: null,
+      interactionTargetingMode: null,
+      selectedTargetId: null,
+      selectedTemplateCell: null,
     });
   },
 
@@ -621,7 +645,18 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
 
       case "state_sync": {
         const payload = envelope.payload as EncounterStateWire;
-        set({ gameState: mapEncounterWireToGameState(payload), movementPreview: null, executableActionsSnapshot: null, attackPreview: null });
+        set({
+          gameState: mapEncounterWireToGameState(payload),
+          movementPreview: null,
+          executableActionsSnapshot: null,
+          attackPreview: null,
+          interactionMode: "idle",
+          interactionActorId: null,
+          interactionActionId: null,
+          interactionTargetingMode: null,
+          selectedTargetId: null,
+          selectedTemplateCell: null,
+        });
         return;
       }
 
@@ -724,6 +759,12 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
             actionFeedback: null,
             gameState: applied.nextState,
             attackPreview: null,
+            interactionMode: "idle",
+            interactionActorId: null,
+            interactionActionId: null,
+            interactionTargetingMode: null,
+            selectedTargetId: null,
+            selectedTemplateCell: null,
           };
         });
         maybeRequestSyncOnMismatch(mismatch);
@@ -742,6 +783,12 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
             message: payload.message,
             at: denied.at,
           },
+          interactionMode: "error_recover",
+          interactionActorId: null,
+          interactionActionId: null,
+          interactionTargetingMode: null,
+          selectedTargetId: null,
+          selectedTemplateCell: null,
         });
         return;
       }
@@ -763,6 +810,12 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
           },
           movementPreview: shouldClearMovementPreview ? null : get().movementPreview,
           attackPreview: shouldClearAttackPreview ? null : get().attackPreview,
+          interactionMode: "error_recover",
+          interactionActorId: null,
+          interactionActionId: null,
+          interactionTargetingMode: null,
+          selectedTargetId: null,
+          selectedTemplateCell: null,
         });
         return;
       }
@@ -809,6 +862,12 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
             movementPreview: null,
             executableActionsSnapshot: null,
             attackPreview: null,
+            interactionMode: "idle",
+            interactionActorId: null,
+            interactionActionId: null,
+            interactionTargetingMode: null,
+            selectedTargetId: null,
+            selectedTemplateCell: null,
           };
         });
         maybeRequestSyncOnMismatch(mismatch);
@@ -1091,5 +1150,39 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
 
   dispatchAction: (actionType: string, payload: Record<string, unknown>) => {
     get().dispatchIntent(actionType, payload);
+  },
+
+  beginTargeting: (actorId: string, actionId: string, targetingMode: string) => {
+    set({
+      interactionMode: "action_selected",
+      interactionActorId: actorId,
+      interactionActionId: actionId,
+      interactionTargetingMode: targetingMode,
+      selectedTargetId: null,
+      selectedTemplateCell: null,
+    });
+  },
+
+  setInteractionMode: (mode: CombatInteractionMode) => {
+    set({ interactionMode: mode });
+  },
+
+  setSelectedTargetId: (targetId: string | null) => {
+    set({ selectedTargetId: targetId && targetId.trim().length > 0 ? targetId : null });
+  },
+
+  setSelectedTemplateCell: (cellKey: string | null) => {
+    set({ selectedTemplateCell: cellKey && cellKey.trim().length > 0 ? cellKey : null });
+  },
+
+  resetInteraction: () => {
+    set({
+      interactionMode: "idle",
+      interactionActorId: null,
+      interactionActionId: null,
+      interactionTargetingMode: null,
+      selectedTargetId: null,
+      selectedTemplateCell: null,
+    });
   },
 }));

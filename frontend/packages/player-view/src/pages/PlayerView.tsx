@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import type { IHostBridge } from "@rpg/bridge";
-import { ActionCommandLab, ContractActionSurface, selectMovementPreviewForActor, selectReachableCellSetForActor, useCombatStore } from "@rpg/shared";
+import {
+  ActionCommandLab,
+  ContractActionSurface,
+  cellKeyFromCoordinates,
+  parseCellKey,
+  resolveCombatClick,
+  selectAttackAffectedCellSetForActorAction,
+  selectAttackEligibleCellSetForActorAction,
+  selectAttackEligibleTargetSetForActorAction,
+  selectMovementPreviewForActor,
+  selectReachableCellSetForActor,
+  useCombatStore,
+} from "@rpg/shared";
 
 type FrontendTestingConfig = {
   playerActionLab?: boolean;
@@ -10,15 +22,24 @@ type PlayerViewProps = {
   bridge?: IHostBridge;
   campaignId: string;
   frontendTesting?: FrontendTestingConfig;
+  forcedUserId?: string | null;
 };
 
-export function PlayerView({ bridge, campaignId, frontendTesting }: PlayerViewProps): JSX.Element {
+export function PlayerView({ bridge, campaignId, frontendTesting, forcedUserId }: PlayerViewProps): JSX.Element {
   const gameState = useCombatStore((state) => state.gameState);
   const isConnected = useCombatStore((state) => state.isConnected);
   const setActingAsUserId = useCombatStore((state) => state.setActingAsUserId);
   const requestMovePreview = useCombatStore((state) => state.requestMovePreview);
   const moveToken = useCombatStore((state) => state.moveToken);
+  const requestAttackPreview = useCombatStore((state) => state.requestAttackPreview);
+  const setSelectedTargetId = useCombatStore((state) => state.setSelectedTargetId);
+  const setSelectedTemplateCell = useCombatStore((state) => state.setSelectedTemplateCell);
   const latestDenied = useCombatStore((state) => state.latestDenied);
+  const interactionMode = useCombatStore((state) => state.interactionMode);
+  const interactionActorId = useCombatStore((state) => state.interactionActorId);
+  const interactionActionId = useCombatStore((state) => state.interactionActionId);
+  const selectedTargetId = useCombatStore((state) => state.selectedTargetId);
+  const selectedTemplateCell = useCombatStore((state) => state.selectedTemplateCell);
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [selectedActorId, setSelectedActorId] = useState<string>("");
@@ -29,6 +50,14 @@ export function PlayerView({ bridge, campaignId, frontendTesting }: PlayerViewPr
     let cancelled = false;
 
     const loadUser = async (): Promise<void> => {
+      const normalizedForcedUserId = (forcedUserId ?? "").trim();
+      if (normalizedForcedUserId.length > 0) {
+        if (!cancelled) {
+          setCurrentUserId(normalizedForcedUserId);
+        }
+        return;
+      }
+
       if (!bridge?.auth) {
         if (!cancelled) {
           setCurrentUserId(null);
@@ -54,7 +83,7 @@ export function PlayerView({ bridge, campaignId, frontendTesting }: PlayerViewPr
     return () => {
       cancelled = true;
     };
-  }, [bridge]);
+  }, [bridge, forcedUserId]);
 
   useEffect(() => {
     setActingAsUserId(currentUserId);
@@ -98,6 +127,9 @@ export function PlayerView({ bridge, campaignId, frontendTesting }: PlayerViewPr
 
   const movementPreview = useCombatStore((state) => selectMovementPreviewForActor(state, activeActorId));
   const reachableCellSet = useCombatStore((state) => selectReachableCellSetForActor(state, activeActorId));
+  const attackEligibleTargetSet = useCombatStore((state) => selectAttackEligibleTargetSetForActorAction(state, interactionActorId, interactionActionId));
+  const attackEligibleCellSet = useCombatStore((state) => selectAttackEligibleCellSetForActorAction(state, interactionActorId, interactionActionId));
+  const attackAffectedCellSet = useCombatStore((state) => selectAttackAffectedCellSetForActorAction(state, interactionActorId, interactionActionId));
 
   useEffect(() => {
     if (!movementPreview) {
@@ -154,6 +186,10 @@ export function PlayerView({ bridge, campaignId, frontendTesting }: PlayerViewPr
   }, [gameState]);
 
   const startMoveDrag = (actorId: string): void => {
+    if (interactionMode !== "idle") {
+      return;
+    }
+
     if (!activeActorId || actorId !== activeActorId) {
       return;
     }
@@ -163,6 +199,10 @@ export function PlayerView({ bridge, campaignId, frontendTesting }: PlayerViewPr
   };
 
   const commitMove = (x: number, y: number): void => {
+    if (interactionMode !== "idle") {
+      return;
+    }
+
     if (!draggingActorId) {
       return;
     }
@@ -177,6 +217,44 @@ export function PlayerView({ bridge, campaignId, frontendTesting }: PlayerViewPr
     setDraggingActorId(null);
   };
 
+  const hasTargetingContract = Boolean(interactionActorId && interactionActionId);
+  const showEntityTargeting = interactionMode === "target_pick_entity";
+  const showCellTargeting = interactionMode === "target_pick_cell" || interactionMode === "target_pick_direction" || interactionMode === "confirm";
+
+  const handleResolvedCombatClick = (tokenId: string | null, x: number, y: number): boolean => {
+    const cellKey = cellKeyFromCoordinates(x, y);
+    const resolution = resolveCombatClick({
+      mode: interactionMode,
+      tokenId,
+      cellKey,
+      hasContract: hasTargetingContract,
+      eligibleTargetSet: attackEligibleTargetSet,
+      eligibleCellSet: attackEligibleCellSet,
+    });
+
+    if (resolution.kind === "pass_to_selection") {
+      return false;
+    }
+
+    if (resolution.kind === "select_target") {
+      setSelectedTargetId(resolution.targetId);
+      return true;
+    }
+
+    if (resolution.kind === "select_cell") {
+      setSelectedTemplateCell(resolution.cellKey);
+      if (interactionActorId && interactionActionId) {
+        const parsed = parseCellKey(resolution.cellKey);
+        if (parsed) {
+          requestAttackPreview(interactionActorId, interactionActionId, parsed);
+        }
+      }
+      return true;
+    }
+
+    return true;
+  };
+
   if (!isConnected) {
     return <div className="flex h-full items-center justify-center bg-slate-950 text-sm text-slate-300">Waiting for combat feed for campaign {campaignId}...</div>;
   }
@@ -187,6 +265,7 @@ export function PlayerView({ bridge, campaignId, frontendTesting }: PlayerViewPr
         <header className="rounded-lg border border-slate-700 bg-slate-900 p-4">
           <h2 className="text-lg font-semibold text-cyan-300">Player Console</h2>
           <p className="mt-1 text-xs text-slate-400">Campaign {campaignId}</p>
+          {forcedUserId && <p className="mt-1 text-xs text-amber-300">Impersonating player identity: {forcedUserId}</p>}
           <p className="mt-2 text-xs text-slate-300">Owned actors: {ownedActors.length}</p>
           <p className="text-xs text-slate-400">DM-only presets are hidden in this view.</p>
         </header>
@@ -241,26 +320,52 @@ export function PlayerView({ bridge, campaignId, frontendTesting }: PlayerViewPr
                     const isReachable = reachableCellSet.has(key);
                     const isOrigin = movementPreview?.origin.x === x && movementPreview?.origin.y === y;
                     const isActiveToken = token?.id === activeActorId;
+                    const isEligibleCell = showCellTargeting && attackEligibleCellSet.has(key);
+                    const isAffectedCell = showCellTargeting && attackAffectedCellSet.has(key);
+                    const isSelectedTemplateCell = selectedTemplateCell === key;
+                    const isEligibleTarget = showEntityTargeting && token ? attackEligibleTargetSet.has(token.id) : false;
+                    const isSelectedTarget = token ? selectedTargetId === token.id : false;
 
                     return (
                       <button
                         key={key}
                         type="button"
                         className={`relative h-7 min-w-7 rounded-sm border text-[10px] transition ${
-                          isReachable
-                            ? "border-cyan-500 bg-cyan-900/60 text-cyan-100"
-                            : isOrigin
-                              ? "border-amber-500 bg-amber-900/40 text-amber-100"
-                              : "border-slate-700 bg-slate-900/80 text-slate-500"
+                          isSelectedTemplateCell
+                            ? "border-cyan-300 bg-cyan-500/35 text-cyan-100"
+                            : isEligibleCell
+                              ? "border-cyan-600 bg-cyan-900/45 text-cyan-100"
+                              : isAffectedCell
+                                ? "border-amber-700 bg-amber-900/35 text-amber-100"
+                                : isReachable
+                                  ? "border-cyan-500 bg-cyan-900/60 text-cyan-100"
+                                  : isOrigin
+                                    ? "border-amber-500 bg-amber-900/40 text-amber-100"
+                                    : "border-slate-700 bg-slate-900/80 text-slate-500"
                         }`}
                         onPointerUp={() => {
+                          const consumed = handleResolvedCombatClick(token?.id ?? null, x, y);
+                          if (consumed) {
+                            return;
+                          }
+
+                          if (token?.id) {
+                            setSelectedActorId(token.id);
+                          }
+
                           commitMove(x, y);
                         }}
                       >
                         {token ? (
                           <span
                             className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-semibold ${
-                              isActiveToken ? "bg-cyan-500 text-slate-950" : "bg-slate-500 text-slate-950"
+                              isSelectedTarget
+                                ? "bg-cyan-200 text-slate-950"
+                                : isEligibleTarget
+                                  ? "bg-cyan-500 text-slate-950"
+                                  : isActiveToken
+                                    ? "bg-cyan-500 text-slate-950"
+                                    : "bg-slate-500 text-slate-950"
                             }`}
                             onPointerDown={() => startMoveDrag(token.id)}
                           >

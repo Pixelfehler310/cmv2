@@ -15,9 +15,10 @@ interface ViewContainerProps {
   viewType: "player" | "dm" | "campaign_creator";
   bridge: IHostBridge;
   campaignId: string;
+  playerImpersonationUserId?: string | null;
 }
 
-export const ViewContainer = ({ viewType, bridge, campaignId }: ViewContainerProps) => {
+export const ViewContainer = ({ viewType, bridge, campaignId, playerImpersonationUserId }: ViewContainerProps) => {
   useEffect(() => {
     logger.info("ViewContainer rendering view: " + viewType + " for campaign: " + campaignId);
   }, [viewType, campaignId]);
@@ -25,7 +26,7 @@ export const ViewContainer = ({ viewType, bridge, campaignId }: ViewContainerPro
   const renderView = () => {
     switch (viewType) {
       case "player":
-        return <PlayerView bridge={bridge} campaignId={campaignId} frontendTesting={config.frontendTesting} />;
+        return <PlayerView bridge={bridge} campaignId={campaignId} frontendTesting={config.frontendTesting} forcedUserId={playerImpersonationUserId ?? null} />;
       case "dm":
         return <DMView bridge={bridge} campaignId={campaignId} frontendTesting={config.frontendTesting} />;
       case "campaign_creator":

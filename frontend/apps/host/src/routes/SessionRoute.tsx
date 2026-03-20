@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ViewContainer } from "../components/shell/ViewContainer";
 import { AuthService } from "../lib/auth";
 import { WsClient } from "@rpg/bridge";
@@ -19,10 +19,14 @@ interface SessionRouteProps {
 export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const [bridge, setBridge] = useState<IHostBridge | null>(null);
   const [user, setUser] = useState<any>(null); // Should be UserProfile
   const [role, setRole] = useState<string>(config.useMocks ? "PLAYER" : "DM");
   const [connection, setConnection] = useState(ws.state);
+
+  const requestedView = (searchParams.get("view") ?? "").trim().toLowerCase();
+  const requestedImpersonationUserId = (searchParams.get("as_user_id") ?? "").trim();
 
   useEffect(() => {
     let currentStoreRole: "dm" | "observer" = config.useMocks ? "observer" : "dm";
@@ -100,9 +104,13 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
 
         logger.info(`SessionRoute: User loaded: ${JSON.stringify(u)}`);
         logger.info(`SessionRoute: Role determined: ${currentRole}`);
-        currentStoreRole = currentRole.toLowerCase() === "dm" ? "dm" : "observer";
+
+        const canForcePlayerView = currentRole.toLowerCase() === "dm" && requestedView === "player";
+        const effectiveRole = canForcePlayerView ? "PLAYER" : currentRole;
+
+        currentStoreRole = effectiveRole.toLowerCase() === "dm" ? "dm" : "observer";
         setUser(u);
-        setRole(currentRole);
+        setRole(effectiveRole);
       } else {
         logger.warn("SessionRoute: No user found, redirecting to login");
         // If no user, we should probably redirect to login?
@@ -126,13 +134,18 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
       useCombatStore.getState().setConnectionStatus(false);
       ws.disconnect();
     };
-  }, [id, auth, ws, queryClient, navigate]);
+  }, [id, auth, ws, queryClient, navigate, requestedView]);
 
   if (!bridge) return <div>Initializing...</div>;
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <ViewContainer viewType={role.toLowerCase() === "dm" ? "dm" : "player"} bridge={bridge} campaignId={id || ""} />
+      <ViewContainer
+        viewType={role.toLowerCase() === "dm" ? "dm" : "player"}
+        bridge={bridge}
+        campaignId={id || ""}
+        playerImpersonationUserId={role.toLowerCase() === "player" && requestedImpersonationUserId.length > 0 ? requestedImpersonationUserId : null}
+      />
     </div>
   );
 };

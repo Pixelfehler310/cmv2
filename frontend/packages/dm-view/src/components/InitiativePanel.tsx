@@ -7,7 +7,7 @@ interface InitiativePanelProps {
 }
 
 export const InitiativePanel: React.FC<InitiativePanelProps> = ({ onSelectCombatant, selectedCombatantId }) => {
-  const { gameState, endTurn, actingAsUserId } = useCombatStore();
+  const { gameState, endTurn, actingAsUserId, interactionMode } = useCombatStore();
 
   if (!gameState) {
     return <div className="h-full w-full p-4 text-sm text-on-muted">Loading...</div>;
@@ -37,7 +37,11 @@ export const InitiativePanel: React.FC<InitiativePanelProps> = ({ onSelectCombat
               <button
                 key={combatant.id}
                 type="button"
-                onClick={() => onSelectCombatant(combatant.id)}
+                onClick={() => {
+                  if (interactionMode === "idle") {
+                    onSelectCombatant(combatant.id);
+                  }
+                }}
                 className={[
                   "w-full rounded-lg border px-3 py-2 text-left transition-colors",
                   "border-(--border-subtle) bg-surface-1 hover:bg-surface-3",
