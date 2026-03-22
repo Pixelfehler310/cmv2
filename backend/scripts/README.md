@@ -1,30 +1,48 @@
 # Type Generation Scripts
 
-This directory contains scripts to synchronize Backend Pydantic models with Frontend TypeScript interfaces.
+This directory contains scripts that lock the contract chain:
 
-## Usage
+- Backend schema models (`backend/src/schemas`) ->
+- Generated JSON schema (`backend/schema.json`) ->
+- Generated frontend TypeScript contracts (`frontend/packages/types/src/generated.ts`).
 
-1.  **Generate JSON Schemas**:
-    Run the Python script to export Pydantic models as JSON Schema files to `frontend/packages/types/schemas/`.
+## Canonical Commands
 
-    ```bash
-    # From backend/ directory
-    python scripts/generate_schemas.py
-    ```
+Generate/update canonical contract artifacts:
 
-2.  **Generate TypeScript Interfaces**:
-    Run the npm script in the frontend types package to convert JSON Schemas to `index.ts`.
-    ```bash
-    # From frontend/packages/types/ directory
-    pnpm generate
-    ```
+```bash
+python backend/scripts/generate_types.py
+```
+
+Verify contract artifacts are in sync (non-zero exit on drift):
+
+```bash
+python backend/scripts/generate_types.py --check
+```
+
+Optional helper for individual JSON files in `frontend/packages/types/schemas/`:
+
+```bash
+python backend/scripts/generate_schemas.py
+python backend/scripts/generate_schemas.py --check
+```
 
 ## Workflow
 
-Whenever you modify a Pydantic model in `backend/src/models/`:
+Whenever you modify backend schema contracts in `backend/src/schemas/`:
 
-1.  Run `python backend/scripts/generate_schemas.py`
-2.  Run `pnpm --filter @rpg/types generate`
+1. Run `python backend/scripts/generate_types.py`.
+2. Commit both generated artifacts (`backend/schema.json`, `frontend/packages/types/src/generated.ts`).
+3. Ensure `python backend/scripts/generate_types.py --check` passes.
+
+## CI/Test Gate
+
+`backend-test` runs `python scripts/generate_types.py --check` before pytest by default.
+Disable only when intentionally debugging unrelated failures:
+
+```bash
+RUN_CONTRACT_CHECKS=false docker compose --profile test run --rm backend-test
+```
 
 ## Data Backfill Utilities
 

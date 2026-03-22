@@ -4,3 +4,4 @@ export * from "./combat/ws-events";
 export * from "./combat/errors";
 export * from "./combat/contracts";
 export * from "./combat/version";
+export * from "./generated";

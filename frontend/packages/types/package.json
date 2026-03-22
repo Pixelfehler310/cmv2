@@ -9,6 +9,8 @@
         "./*": "./src/*"
     },
     "scripts": {
+        "generate": "python ../../../backend/scripts/generate_types.py",
+        "check": "python ../../../backend/scripts/generate_types.py --check",
         "build": "tsc",
         "lint": "tsc --noEmit"
     },

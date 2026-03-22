@@ -61,12 +61,20 @@ services:
       POSTGRES_DB: rpg_db
       REDIS_HOST: redis
       SECRET_KEY: "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+      FRONTEND_TYPES_DIR: /workspace/frontend/packages/types
+      RUN_CONTRACT_CHECKS: ${RUN_CONTRACT_CHECKS:-true}
       RUN_BACKEND_TESTS: ${RUN_BACKEND_TESTS:-true}
       PYTEST_ARGS: ${PYTEST_ARGS:-tests -q}
     volumes:
       - ./backend:/app
+      - ./frontend/packages/types:/workspace/frontend/packages/types
     command: >
-      sh -c "if [ \"$$RUN_BACKEND_TESTS\" = \"true\" ]; then
+      sh -c "if [ \"$$RUN_CONTRACT_CHECKS\" = \"true\" ]; then
+      python scripts/generate_types.py --check;
+      else
+      echo 'RUN_CONTRACT_CHECKS=false, skipping contract drift check.';
+      fi &&
+      if [ \"$$RUN_BACKEND_TESTS\" = \"true\" ]; then
       python -m pytest $$PYTEST_ARGS;
       else
       echo 'RUN_BACKEND_TESTS=false, skipping backend tests.';

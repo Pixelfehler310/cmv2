@@ -1,44 +1,4 @@
-export interface GameEntity {
-  id: string;
-  name: string;
-  description?: string;
-  effects: any[];
-}
-
-export interface MonsterResponse extends GameEntity {
-  size: string;
-  type: string;
-  alignment: string;
-  armor_class: number;
-  hit_points: number;
-  challenge_rating: number;
-}
-
-export interface SpellResponse extends GameEntity {
-  level: number;
-  school: string;
-  casting_time: string;
-  range: string;
-  duration: string;
-}
-
-export interface ItemResponse extends GameEntity {
-  type: string;
-  rarity: string;
-  weight: number;
-  price: number;
-}
-
-export interface SpeciesResponse extends GameEntity {
-  size: string;
-  speed: number;
-}
-
-export interface ClassResponse extends GameEntity {
-  hit_die: string;
-}
-
-export interface BackgroundResponse extends GameEntity {}
+import type { BackgroundResponse, ClassResponse, ItemResponse, MonsterResponse, SpeciesResponse, SpellResponse } from "@rpg/types";
 
 export interface PaginationParams {
   skip?: number;

@@ -1,30 +1,48 @@
 # Type Generator Workflow
 
 ## Overview
-We use an automated script to generate TypeScript interfaces from our Backend Pydantic models. This ensures the Frontend (`@rpg/types`) is always in sync with the Backend.
+
+We use a contract-first generation flow to keep Frontend types in sync with Backend schema models:
+
+- Backend schema models (`backend/src/schemas/`) ->
+- Generated JSON schema (`backend/schema.json`) ->
+- Generated frontend contracts (`frontend/packages/types/src/generated.ts`).
+
+The single source of truth is backend schema models.
 
 ## How to Run
 
-### Command
+### Generate Artifacts
+
 From the root of the repository:
 
 ```bash
 python backend/scripts/generate_types.py
 ```
 
+### Verify No Drift (Fail on Mismatch)
+
+```bash
+python backend/scripts/generate_types.py --check
+```
+
 ### Prerequisites
+
 - Python environment active.
 - Dependencies installed (`pip install -r backend/requirements.txt`).
-- Node.js environment (for `json-schema-to-typescript`).
+- Node.js available in PATH and `json-schema-to-typescript` accessible (`json2ts` or `npx`).
 
 ## Workflow FAQ
 
 ### Does it run automatically?
-**No.** Currently, you must run the script manually. You should run it after the backend models have been modified.
+
+**In tests/CI: yes.** The `backend-test` Docker profile runs `python scripts/generate_types.py --check` before pytest and fails fast on drift.
+
+**In local editing flow: manual regenerate is still expected** after schema model changes.
 
 ### Should it run automatically?
-**Recommendation: Manual (for now).**
 
-- **Why?** Running it automatically on every file save can trigger frequent, unnecessary frontend rebuilds/reloads if you are just experimenting with backend code.
-- **Best Practice:** Run the generator when you have **finished** modifying your Pydantic models and are ready to work on the frontend.
-- **Future:** We can add this to a `pre-commit` hook to ensure you never commit mismatched types. (not recommended)
+**Recommendation: Keep generation manual, keep verification automatic in test/CI.**
+
+- **Why?** Auto-generation on each save creates noisy rebuild churn during exploratory backend work.
+- **Best Practice:** Regenerate when schema edits are complete, then rely on check mode to prevent drift from reaching CI.
