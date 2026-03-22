@@ -6,6 +6,7 @@ from src.campaigns.lib.character import Character
 from src.systems.dnd5e.services.combat_service import CombatService
 from src.systems.dnd5e.schemas.enums import ActorType
 
+
 @pytest.fixture
 async def db_session():
     # Use a fresh in-memory database for each test
@@ -20,16 +21,17 @@ async def db_session():
 
     await engine.dispose()
 
+
 @pytest.mark.anyio
 async def test_load_or_create_encounter_loads_campaign_characters(db_session: AsyncSession):
     # 1. Setup Campaign and Characters in DB
     campaign = Campaign(id="camp_123", name="Test Campaign")
     char1 = Character(
-        id="char_1", 
-        name="Aelar", 
-        campaign_id="camp_123", 
-        max_hp=20, 
-        current_hp=20, 
+        id="char_1",
+        name="Aelar",
+        campaign_id="camp_123",
+        max_hp=20,
+        current_hp=20,
         level=1,
         strength=10, dexterity=14, constitution=12, intelligence=16, wisdom=10, charisma=8,
         speed=30,
@@ -53,19 +55,12 @@ async def test_load_or_create_encounter_loads_campaign_characters(db_session: As
     assert actor.actor_type == ActorType.PLAYER_CHARACTER
     assert actor.max_hp == 20
     assert actor.abilities.dexterity == 14
-    
-    # Verify Arannis is NOT there
-    assert not any(a.name == "Arannis" for a in encounter.combatants)
+    assert not any(a.name in {"Arannis", "Goblin"}
+                   for a in encounter.combatants)
+
 
 @pytest.mark.anyio
-async def test_load_or_create_encounter_falls_back_to_default_when_no_campaign(db_session: AsyncSession):
-    # Call with a campaign_id that doesn't exist in the DB
+async def test_load_or_create_encounter_requires_existing_campaign(db_session: AsyncSession):
     service = CombatService(db_session)
-    session, encounter = await service.load_or_create_encounter_state("non_existent_camp")
-
-    # Assertions - should contain Arannis and Goblin
-    assert encounter.campaign_id == "non_existent_camp"
-    assert len(encounter.combatants) == 2
-    names = [a.name for a in encounter.combatants]
-    assert "Arannis" in names
-    assert "Goblin" in names
+    with pytest.raises(ValueError):
+        await service.load_or_create_encounter_state("non_existent_camp")

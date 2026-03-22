@@ -16,17 +16,23 @@ export type Name = string;
 export type SkillProficiencies = string[];
 export type ToolProficiencies = string[];
 export type Backgrounds = BackgroundResponse[];
+export type CampaignId = string;
+export type ContextVersion = number;
+export type EncounterId = string | null;
+export type SceneId = string | null;
+export type CampaignContext = CampaignContextResponse[];
 export type Description1 = string | null;
 export type DmId = string | null;
 export type Name1 = string;
 export type CampaignCreate = CampaignCreate1[];
+export type ActiveEncounterId = string | null;
 export type Actions = {
   [k: string]: unknown;
 }[];
 export type Alignment = string | null;
 export type ArmorClass = number;
 export type BackgroundId = string | null;
-export type CampaignId = string | null;
+export type CampaignId1 = string | null;
 export type Description2 = string;
 export type Effects1 = EffectConfig[];
 export type HitDie = string;
@@ -92,6 +98,8 @@ export type TempHp = number;
 export type Wisdom = number;
 export type Xp = number;
 export type Characters = CharacterResponse[];
+export type ContextVersion1 = number;
+export type CurrentScene = string | null;
 export type Description6 = string | null;
 export type DmId1 = string | null;
 export type Id6 = string;
@@ -104,7 +112,7 @@ export type Actions1 = {
 export type Alignment1 = string | null;
 export type ArmorClass1 = number;
 export type BackgroundId1 = string | null;
-export type CampaignId1 = string | null;
+export type CampaignId2 = string | null;
 export type Charisma1 = number;
 export type ClassId1 = string;
 export type Constitution1 = number;
@@ -131,9 +139,13 @@ export type Xp1 = number;
 export type CharacterCreate = CharacterCreate1[];
 export type Characters1 = CharacterResponse[];
 export type Classes = ClassResponse[];
+export type EncounterId1 = string;
+export type Name9 = string;
+export type SceneId1 = string;
+export type EncounterOptions = EncounterOptionResponse[];
 export type Description7 = string | null;
 export type Effects6 = Effect[];
-export type Name9 = string;
+export type Name10 = string;
 export type Price1 = number;
 export type Rarity1 = string;
 export type Type2 = string;
@@ -161,7 +173,7 @@ export type Languages1 = string;
 export type LegendaryActions = {
   [k: string]: unknown;
 }[];
-export type Name10 = string;
+export type Name11 = string;
 export type Proficiencies1 = {
   [k: string]: unknown;
 }[];
@@ -194,7 +206,7 @@ export type Languages2 = string;
 export type LegendaryActions1 = {
   [k: string]: unknown;
 }[];
-export type Name11 = string;
+export type Name12 = string;
 export type Proficiencies2 = {
   [k: string]: unknown;
 }[];
@@ -207,13 +219,19 @@ export type Type4 = string;
 export type Wisdom3 = number;
 export type Xp3 = number;
 export type Monsters = MonsterResponse[];
+export type Name13 = string;
+export type SceneId2 = string;
+export type SceneOptions = SceneOptionResponse[];
+export type EncounterId2 = string;
+export type SceneId3 = string;
+export type SelectCampaignContextRequest = SelectCampaignContextRequest1[];
 export type Species = SpeciesResponse[];
 export type CastingTime = string;
 export type Description10 = string | null;
 export type Duration = string;
 export type Effects9 = EffectConfig[];
 export type Level2 = number;
-export type Name12 = string;
+export type Name14 = string;
 export type Range = string;
 export type School = string;
 export type SpellCreate = SpellCreate1[];
@@ -223,22 +241,26 @@ export type Duration1 = string;
 export type Effects10 = EffectConfig[];
 export type Id8 = string;
 export type Level3 = number;
-export type Name13 = string;
+export type Name15 = string;
 export type Range1 = string;
 export type School1 = string;
 export type Spells2 = SpellResponse[];
 
 export interface ExportModel {
   backgrounds: Backgrounds;
+  campaign_context: CampaignContext;
   campaign_create: CampaignCreate;
   campaigns: Campaigns;
   character_create: CharacterCreate;
   characters: Characters1;
   classes: Classes;
+  encounter_options: EncounterOptions;
   item_create: ItemCreate;
   items: Items;
   monster_create: MonsterCreate;
   monsters: Monsters;
+  scene_options: SceneOptions;
+  select_campaign_context_request: SelectCampaignContextRequest;
   species: Species;
   spell_create: SpellCreate;
   spells: Spells2;
@@ -281,6 +303,17 @@ export interface Feature {
 }
 /**
  * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "CampaignContextResponse".
+ */
+export interface CampaignContextResponse {
+  campaign_id: CampaignId;
+  context_version?: ContextVersion;
+  encounter_id?: EncounterId;
+  scene_id?: SceneId;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
  * via the `definition` "CampaignCreate".
  */
 export interface CampaignCreate1 {
@@ -294,7 +327,10 @@ export interface CampaignCreate1 {
  * via the `definition` "CampaignResponse".
  */
 export interface CampaignResponse {
+  active_encounter_id?: ActiveEncounterId;
   characters?: Characters;
+  context_version?: ContextVersion1;
+  current_scene?: CurrentScene;
   description?: Description6;
   dm_id?: DmId1;
   id: Id6;
@@ -312,7 +348,7 @@ export interface CharacterResponse {
   armor_class?: ArmorClass;
   background?: BackgroundResponse | null;
   background_id?: BackgroundId;
-  campaign_id?: CampaignId;
+  campaign_id?: CampaignId1;
   char_class?: ClassResponse | null;
   charisma?: Charisma;
   class_id: ClassId;
@@ -439,7 +475,7 @@ export interface CharacterCreate1 {
   alignment?: Alignment1;
   armor_class?: ArmorClass1;
   background_id?: BackgroundId1;
-  campaign_id?: CampaignId1;
+  campaign_id?: CampaignId2;
   charisma?: Charisma1;
   class_id: ClassId1;
   constitution?: Constitution1;
@@ -469,12 +505,22 @@ export interface SpellSlots1 {
 }
 /**
  * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "EncounterOptionResponse".
+ */
+export interface EncounterOptionResponse {
+  encounter_id: EncounterId1;
+  name: Name9;
+  scene_id: SceneId1;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
  * via the `definition` "ItemCreate".
  */
 export interface ItemCreate1 {
   description?: Description7;
   effects?: Effects6;
-  name: Name9;
+  name: Name10;
   price?: Price1;
   properties?: Properties1;
   rarity: Rarity1;
@@ -505,7 +551,7 @@ export interface MonsterCreate1 {
   inventory?: Inventory2;
   languages: Languages1;
   legendary_actions?: LegendaryActions;
-  name: Name10;
+  name: Name11;
   proficiencies?: Proficiencies1;
   senses?: Senses;
   size: Size1;
@@ -552,7 +598,7 @@ export interface MonsterResponse {
   inventory?: Inventory3;
   languages: Languages2;
   legendary_actions?: LegendaryActions1;
-  name: Name11;
+  name: Name12;
   proficiencies?: Proficiencies2;
   senses?: Senses1;
   size: Size2;
@@ -572,6 +618,24 @@ export interface Speed4 {
 }
 /**
  * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "SceneOptionResponse".
+ */
+export interface SceneOptionResponse {
+  name: Name13;
+  scene_id: SceneId2;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "SelectCampaignContextRequest".
+ */
+export interface SelectCampaignContextRequest1 {
+  encounter_id: EncounterId2;
+  scene_id: SceneId3;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
  * via the `definition` "SpellCreate".
  */
 export interface SpellCreate1 {
@@ -581,7 +645,7 @@ export interface SpellCreate1 {
   duration: Duration;
   effects?: Effects9;
   level: Level2;
-  name: Name12;
+  name: Name14;
   range: Range;
   school: School;
   [k: string]: unknown;
@@ -601,7 +665,7 @@ export interface SpellResponse {
   effects?: Effects10;
   id: Id8;
   level: Level3;
-  name: Name13;
+  name: Name15;
   range: Range1;
   school: School1;
   [k: string]: unknown;

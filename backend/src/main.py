@@ -10,8 +10,10 @@ from .core.ws_dispatcher import router as ws_dispatcher_router, register_system_
 from .systems.dnd5e.ws_handler import Dnd5eWsHandler
 from .systems.dnd5e.encounter_router import router as dnd5e_encounter_router
 from .systems.dnd5e.lib import combat_models as _dnd5e_combat_models  # noqa: F401
+from .systems.dnd5e.lib import context_models as _dnd5e_context_models  # noqa: F401
 from .systems.dnd5e.lib import content_models as _dnd5e_content_models  # noqa: F401
 from .database import engine, Base
+from sqlalchemy import inspect, text
 import logging
 from pathlib import Path
 
@@ -27,6 +29,7 @@ async def lifespan(app: FastAPI):
     )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_apply_schema_backfills)
 
     if settings.LOAD_MOCK_DATA:
         from src.database import AsyncSessionLocal
@@ -44,6 +47,40 @@ async def lifespan(app: FastAPI):
             "LOAD_MOCK_DATA is false. Skipping startup fixture import and dev router registration.")
 
     yield
+
+
+def _apply_schema_backfills(sync_conn) -> None:
+    """Apply additive column backfills for environments without migrations.
+
+    This keeps existing persisted DB volumes compatible when new nullable/defaulted
+    columns are introduced during MVP while Alembic is not yet in place.
+    """
+
+    inspector = inspect(sync_conn)
+    table_names = set(inspector.get_table_names())
+
+    if "campaigns" in table_names:
+        campaign_columns = {column["name"]
+                            for column in inspector.get_columns("campaigns")}
+
+        if "active_encounter_id" not in campaign_columns:
+            sync_conn.execute(
+                text("ALTER TABLE campaigns ADD COLUMN active_encounter_id VARCHAR"))
+
+        if "context_version" not in campaign_columns:
+            sync_conn.execute(
+                text("ALTER TABLE campaigns ADD COLUMN context_version INTEGER DEFAULT 0"))
+            sync_conn.execute(
+                text("UPDATE campaigns SET context_version = 0 WHERE context_version IS NULL"))
+
+    if "dnd5e_encounter_sessions" in table_names:
+        encounter_session_columns = {
+            column["name"] for column in inspector.get_columns("dnd5e_encounter_sessions")
+        }
+        if "scene_id" not in encounter_session_columns:
+            sync_conn.execute(
+                text("ALTER TABLE dnd5e_encounter_sessions ADD COLUMN scene_id VARCHAR"))
+
 
 app = FastAPI(
     title="Open RPG Engine API",

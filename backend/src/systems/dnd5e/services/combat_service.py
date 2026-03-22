@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+from pathlib import Path
 import re
 from typing import Any
 
@@ -28,6 +30,7 @@ from ..schemas.enums import Ability, ActionType, ActorType, ConditionType, Damag
 from ..schemas.definitions import ActionDefinition
 from ..schemas.contracts import EffectDefinition as CanonicalEffectDefinition
 from ..lib.combat_models import ActionLog, CombatantState, EncounterSession, TurnBudgetRecord
+from ..lib.context_models import EncounterCatalogRecord, SceneCatalogRecord
 from .validation import (
     resolve_action_family,
     build_action_definition,
@@ -107,24 +110,42 @@ class ActionExecutionMetadataResult:
 class CombatService:
     """Authoritative combat lifecycle + persistence orchestration for DnD5e."""
 
+    DEFAULT_SCENE_ID = "scene.default"
+    FIXTURE_ENCOUNTERS_DIR = Path(__file__).resolve(
+    ).parents[4] / "data" / "fixtures" / "encounters"
+
     def __init__(self, db: AsyncSession):
         self.db = db
 
     async def load_or_create_encounter_state(self, campaign_id: str) -> tuple[EncounterSession, EncounterState]:
+        campaign = await self._load_campaign_with_characters(campaign_id)
+        if campaign is None:
+            raise ValueError(f"Campaign {campaign_id} does not exist")
+
+        await self._ensure_context_catalog(campaign)
+        if not campaign.active_encounter_id:
+            raise RuntimeError(
+                "No active encounter selected for this campaign. DM must select campaign context first."
+            )
+
+        active_scene_id = campaign.current_scene or self.DEFAULT_SCENE_ID
+        selected_catalog = await self._load_catalog_encounter(
+            campaign_id,
+            active_scene_id,
+            campaign.active_encounter_id,
+        )
+        if selected_catalog is None:
+            raise RuntimeError(
+                "Selected encounter is not available in catalog. DM must select a valid encounter first."
+            )
+
         session = await self._load_session(campaign_id)
         if session is None:
-            # Try to fetch campaign characters for initialization
-            campaign_stmt = (
-                select(Campaign)
-                .options(selectinload(Campaign.characters))
-                .where(Campaign.id == campaign_id)
-            )
-            campaign_result = await self.db.execute(campaign_stmt)
-            campaign = campaign_result.scalar_one_or_none()
-
-            encounter = self._default_encounter(campaign_id, campaign)
+            encounter = EncounterState.model_validate(
+                selected_catalog.state_json)
             session = EncounterSession(
                 campaign_id=campaign_id,
+                scene_id=active_scene_id,
                 encounter_id=encounter.id,
                 phase=encounter.turn_phase,
                 round_number=encounter.round_number,
@@ -135,6 +156,13 @@ class CombatService:
             await self.db.flush()
             await self._sync_combatants(session, encounter)
             await self.db.commit()
+            return session, encounter
+
+        if session.encounter_id != campaign.active_encounter_id or session.scene_id != active_scene_id:
+            encounter = EncounterState.model_validate(
+                selected_catalog.state_json)
+            session.scene_id = active_scene_id
+            await self._persist_encounter(session, encounter)
             return session, encounter
 
         # If session exists, load the campaign to ensure we have character context
@@ -148,12 +176,68 @@ class CombatService:
         await self._refresh_turn_budgets_on_encounter(encounter, session)
         return session, encounter
 
+    async def list_scenes(self, campaign_id: str) -> list[SceneCatalogRecord]:
+        campaign = await self._load_campaign_with_characters(campaign_id)
+        if campaign is None:
+            raise ValueError(f"Campaign {campaign_id} does not exist")
+
+        await self._ensure_context_catalog(campaign)
+        result = await self.db.execute(
+            select(SceneCatalogRecord)
+            .where(SceneCatalogRecord.campaign_id == campaign_id)
+            .order_by(SceneCatalogRecord.name.asc())
+        )
+        return list(result.scalars().all())
+
+    async def list_encounters(self, campaign_id: str, scene_id: str) -> list[EncounterCatalogRecord]:
+        campaign = await self._load_campaign_with_characters(campaign_id)
+        if campaign is None:
+            raise ValueError(f"Campaign {campaign_id} does not exist")
+
+        await self._ensure_context_catalog(campaign)
+        result = await self.db.execute(
+            select(EncounterCatalogRecord)
+            .where(
+                EncounterCatalogRecord.campaign_id == campaign_id,
+                EncounterCatalogRecord.scene_id == scene_id,
+            )
+            .order_by(EncounterCatalogRecord.name.asc())
+        )
+        return list(result.scalars().all())
+
+    async def select_context(self, campaign_id: str, scene_id: str, encounter_id: str) -> Campaign:
+        campaign = await self._load_campaign_with_characters(campaign_id)
+        if campaign is None:
+            raise ValueError(f"Campaign {campaign_id} does not exist")
+
+        await self._ensure_context_catalog(campaign)
+        selected = await self._load_catalog_encounter(campaign_id, scene_id, encounter_id)
+        if selected is None:
+            raise ValueError(
+                "Scene/encounter combination does not exist for campaign")
+
+        campaign.current_scene = scene_id
+        campaign.active_encounter_id = encounter_id
+        campaign.context_version = int(campaign.context_version or 0) + 1
+        await self.db.commit()
+        await self.db.refresh(campaign)
+        return campaign
+
+    async def get_context(self, campaign_id: str) -> Campaign:
+        campaign = await self._load_campaign_with_characters(campaign_id)
+        if campaign is None:
+            raise ValueError(f"Campaign {campaign_id} does not exist")
+
+        await self._ensure_context_catalog(campaign)
+        return campaign
+
     async def reset_encounter_state(self, campaign_id: str) -> bool:
         """Deletes the existing encounter session for a campaign, forcing an initialization refresh."""
-        from src.systems.dnd5e.lib.content_models import EncounterSession
+        from src.systems.dnd5e.lib.combat_models import EncounterSession
         from sqlalchemy import delete
-        
-        stmt = delete(EncounterSession).where(EncounterSession.campaign_id == campaign_id)
+
+        stmt = delete(EncounterSession).where(
+            EncounterSession.campaign_id == campaign_id)
         result = await self.db.execute(stmt)
         await self.db.commit()
         return result.rowcount > 0
@@ -785,19 +869,20 @@ class CombatService:
                 CombatantState.encounter_session_id == encounter_session.id
             )
         )
-        existing_combatants = {c.actor_id: c for c in existing_result.scalars().all()}
-        
+        existing_combatants = {
+            c.actor_id: c for c in existing_result.scalars().all()}
+
         current_actor_ids = {actor.id for actor in encounter.combatants}
-        
+
         # 1. Remove combatants no longer in the encounter
         for aid, combatant in list(existing_combatants.items()):
             if aid not in current_actor_ids:
-                # Some async wrappers might return a coroutine for delete, 
-                # but in standard SQLAlchemy it's synchronous. 
+                # Some async wrappers might return a coroutine for delete,
+                # but in standard SQLAlchemy it's synchronous.
                 # To be safe and satisfy lints if it IS a coroutine (rare):
                 res = self.db.delete(combatant)
                 if hasattr(res, "__await__"):
-                     await res
+                    await res
                 del existing_combatants[aid]
 
         # 2. Update or Create
@@ -809,7 +894,7 @@ class CombatService:
                     actor_id=actor.id,
                 )
                 self.db.add(combatant)
-            
+
             combatant.initiative_order = index
             combatant.owner_user_id = actor.owner_user_id
             combatant.current_hp = actor.current_hp
@@ -1553,27 +1638,8 @@ class CombatService:
                 # Assign a simple spread for positions
                 actor.position = Position(x=5 + i, y=10)
                 combatants.append(actor)
-                tokens.append(MapToken(actor_id=actor.id, position=actor.position))
-        else:
-            # Absolute fallback if no campaign characters found
-            arannis = ActorInstance(
-                id="hero_1",
-                name="Arannis",
-                current_hp=45,
-                max_hp=45,
-                owner_user_id="simon",
-            )
-            goblin = ActorInstance(
-                id="goblin_1",
-                name="Goblin",
-                current_hp=7,
-                max_hp=7,
-            )
-            combatants = [arannis, goblin]
-            tokens = [
-                MapToken(actor_id="hero_1", position={"x": 5, "y": 10}),
-                MapToken(actor_id="goblin_1", position={"x": 6, "y": 11}),
-            ]
+                tokens.append(MapToken(actor_id=actor.id,
+                              position=actor.position))
 
         return EncounterState(
             id=f"enc_{campaign_id}",
@@ -1598,6 +1664,116 @@ class CombatService:
             active_index=session.active_index,
             combatants=[],
         )
+
+    async def _load_campaign_with_characters(self, campaign_id: str) -> Campaign | None:
+        campaign_stmt = (
+            select(Campaign)
+            .options(selectinload(Campaign.characters))
+            .where(Campaign.id == campaign_id)
+        )
+        campaign_result = await self.db.execute(campaign_stmt)
+        return campaign_result.scalar_one_or_none()
+
+    async def _ensure_context_catalog(self, campaign: Campaign) -> None:
+        scene_result = await self.db.execute(
+            select(SceneCatalogRecord).where(
+                SceneCatalogRecord.campaign_id == campaign.id)
+        )
+        scenes = list(scene_result.scalars().all())
+
+        default_scene = next(
+            (scene for scene in scenes if scene.scene_id == self.DEFAULT_SCENE_ID), None)
+        if default_scene is None:
+            default_scene = SceneCatalogRecord(
+                campaign_id=campaign.id,
+                scene_id=self.DEFAULT_SCENE_ID,
+                name="Default Scene",
+            )
+            self.db.add(default_scene)
+
+        encounter_result = await self.db.execute(
+            select(EncounterCatalogRecord).where(
+                EncounterCatalogRecord.campaign_id == campaign.id)
+        )
+        existing_catalog = list(encounter_result.scalars().all())
+        existing_ids = {item.encounter_id for item in existing_catalog}
+
+        fixture_states = self._load_fixture_states(campaign.id)
+        for state in fixture_states:
+            if state.id in existing_ids:
+                continue
+            self.db.add(
+                EncounterCatalogRecord(
+                    campaign_id=campaign.id,
+                    scene_id=self.DEFAULT_SCENE_ID,
+                    encounter_id=state.id,
+                    name=state.id,
+                    source="fixture",
+                    state_json=state.model_dump(mode="json"),
+                )
+            )
+
+        if not fixture_states and campaign.characters and not existing_ids:
+            party_state = self._default_encounter(campaign.id, campaign)
+            self.db.add(
+                EncounterCatalogRecord(
+                    campaign_id=campaign.id,
+                    scene_id=self.DEFAULT_SCENE_ID,
+                    encounter_id=party_state.id,
+                    name="Party Encounter",
+                    source="campaign",
+                    state_json=party_state.model_dump(mode="json"),
+                )
+            )
+            existing_ids.add(party_state.id)
+
+        if campaign.current_scene is None:
+            campaign.current_scene = self.DEFAULT_SCENE_ID
+
+        if campaign.active_encounter_id is None:
+            available_result = await self.db.execute(
+                select(EncounterCatalogRecord)
+                .where(EncounterCatalogRecord.campaign_id == campaign.id)
+                .order_by(EncounterCatalogRecord.encounter_id.asc())
+            )
+            available = list(available_result.scalars().all())
+            if available:
+                campaign.active_encounter_id = available[0].encounter_id
+
+        await self.db.flush()
+        await self.db.commit()
+        await self.db.refresh(campaign)
+
+    def _load_fixture_states(self, campaign_id: str) -> list[EncounterState]:
+        if not self.FIXTURE_ENCOUNTERS_DIR.exists():
+            return []
+
+        states: list[EncounterState] = []
+        for file_path in sorted(self.FIXTURE_ENCOUNTERS_DIR.glob("*.json")):
+            try:
+                data = json.loads(file_path.read_text(encoding="utf-8"))
+                state = EncounterState.model_validate(data)
+            except Exception:
+                continue
+
+            if state.campaign_id == campaign_id:
+                states.append(state)
+        return states
+
+    async def _load_catalog_encounter(
+        self,
+        campaign_id: str,
+        scene_id: str,
+        encounter_id: str,
+    ) -> EncounterCatalogRecord | None:
+        result = await self.db.execute(
+            select(EncounterCatalogRecord).where(
+                EncounterCatalogRecord.campaign_id == campaign_id,
+                EncounterCatalogRecord.scene_id == scene_id,
+                EncounterCatalogRecord.encounter_id == encounter_id,
+            )
+        )
+        return result.scalar_one_or_none()
 
     # ------------------------------------------------------------------
     # Action execution pipeline  (extracted from ws_handler)
@@ -1671,7 +1847,8 @@ class CombatService:
 
         resolved_action_type = action_type
         if canonical_meta.found and canonical_meta.action_type_cost:
-            resolved_action_type = self.normalize_action_type(canonical_meta.action_type_cost)
+            resolved_action_type = self.normalize_action_type(
+                canonical_meta.action_type_cost)
             if resolved_action_type != action_type:
                 budget_check = await self.check_can_act(
                     encounter_session, encounter,
@@ -1696,7 +1873,8 @@ class CombatService:
             if canonical_meta.found and canonical_meta.targeting_mode
             else None
         )
-        is_authoritative_targeting = targeting_mode in {"single_target", "aoe", "self"}
+        is_authoritative_targeting = targeting_mode in {
+            "single_target", "aoe", "self"}
         is_aoe_targeting = targeting_mode == "aoe"
 
         should_validate_preview = is_authoritative_targeting or bool(
@@ -1792,7 +1970,8 @@ class CombatService:
         if encounter_session is not None:
             await self.sync_effect_instance_records(
                 self.db, encounter_session, encounter,
-                provenance_by_instance=collect_effect_provenance_by_instance(events),
+                provenance_by_instance=collect_effect_provenance_by_instance(
+                    events),
             )
 
         if encounter_session is not None:
@@ -1839,7 +2018,8 @@ class CombatService:
             return [{"type": "error", "message": "Attack action requires at least one target"}]
 
         target = targets[0]
-        action_def = build_action_definition(ACTION_FAMILY_ATTACK, actor, action_name, action_payload)
+        action_def = build_action_definition(
+            ACTION_FAMILY_ATTACK, actor, action_name, action_payload)
 
         roll_override = safe_int(action_payload.get("roll_override"))
         roll_overrides = safe_int_list(action_payload.get("roll_overrides"))
@@ -1867,11 +2047,12 @@ class CombatService:
 
         if attack_result.hit and attack_result.total_damage > 0:
             events.append({"type": "actor_damaged", "payload": {
-                "actor_id": target.id , "amount": attack_result.total_damage,
+                "actor_id": target.id, "amount": attack_result.total_damage,
                 "new_hp": target.current_hp, "source": action_name,
             }})
             if target.current_hp <= 0:
-                events.append({"type": "actor_died", "payload": {"actor_id": target.id}})
+                events.append(
+                    {"type": "actor_died", "payload": {"actor_id": target.id}})
 
         return events
 
@@ -1886,8 +2067,10 @@ class CombatService:
         if not targets:
             return [{"type": "error", "message": "Save action requires at least one target"}]
 
-        action_def = build_action_definition(ACTION_FAMILY_SAVE, actor, action_name, action_payload)
-        damage_roll_override = safe_int(action_payload.get("damage_roll_override"))
+        action_def = build_action_definition(
+            ACTION_FAMILY_SAVE, actor, action_name, action_payload)
+        damage_roll_override = safe_int(
+            action_payload.get("damage_roll_override"))
         save_overrides = safe_int_list(action_payload.get("save_overrides"))
 
         save_result = resolve_save_action(
@@ -1912,7 +2095,8 @@ class CombatService:
                         "new_hp": target.current_hp, "source": action_name,
                     }})
                     if target.current_hp <= 0:
-                        events.append({"type": "actor_died", "payload": {"actor_id": target.id}})
+                        events.append(
+                            {"type": "actor_died", "payload": {"actor_id": target.id}})
 
         save_req = action_def.save
         events.insert(0, {"type": "save_result", "payload": {
@@ -1932,9 +2116,11 @@ class CombatService:
         action_payload: dict[str, Any],
     ) -> list[dict[str, Any]]:
         target = targets[0] if targets else actor
-        action_def = build_action_definition(ACTION_FAMILY_HEALING, actor, action_name, action_payload)
+        action_def = build_action_definition(
+            ACTION_FAMILY_HEALING, actor, action_name, action_payload)
         dice_override = safe_int(action_payload.get("dice_override"))
-        healing_result = resolve_healing(target, action_def, dice_override=dice_override)
+        healing_result = resolve_healing(
+            target, action_def, dice_override=dice_override)
 
         return [
             {"type": "effect_applied", "payload": {
@@ -1958,7 +2144,8 @@ class CombatService:
     ) -> list[dict[str, Any]]:
         target = targets[0] if targets else actor
         condition = parse_condition(action_payload.get("condition"))
-        condition_op = str(action_payload.get("condition_op", "add")).strip().lower()
+        condition_op = str(action_payload.get(
+            "condition_op", "add")).strip().lower()
         should_remove = bool(action_payload.get(
             "remove_condition", False)) or condition_op in {"remove", "delete"}
 
@@ -2010,7 +2197,8 @@ class CombatService:
         request_id: str | None,
     ) -> list[dict[str, Any]]:
         """Process effect intents (inline and canonical) and return domain event dicts."""
-        intents = canonical_effect_intents if isinstance(canonical_effect_intents, list) else []
+        intents = canonical_effect_intents if isinstance(
+            canonical_effect_intents, list) else []
         if not intents and isinstance(action_payload.get("effect_intents"), list):
             intents = [intent for intent in action_payload.get(
                 "effect_intents", []) if isinstance(intent, dict)]
@@ -2034,11 +2222,13 @@ class CombatService:
             if operation not in {"apply_condition", "remove_condition"}:
                 continue
 
-            condition = parse_condition(intent.get("condition") or intent.get("value"))
+            condition = parse_condition(intent.get(
+                "condition") or intent.get("value"))
             if condition is None:
                 continue
 
-            resolved_targets = self._resolve_effect_targets(encounter, targets, intent.get("target_ids"))
+            resolved_targets = self._resolve_effect_targets(
+                encounter, targets, intent.get("target_ids"))
             for target in resolved_targets:
                 if operation == "remove_condition":
                     target.conditions = [
@@ -2134,7 +2324,8 @@ class CombatService:
         )
 
         events: list[dict[str, Any]] = []
-        resolved_targets = self._resolve_effect_targets(encounter, targets, intent.get("target_ids"))
+        resolved_targets = self._resolve_effect_targets(
+            encounter, targets, intent.get("target_ids"))
         if not resolved_targets:
             return [{"type": "effect_denied", "payload": {
                 "effect_id": effect_id, "reason_code": "target_invalid",
@@ -2144,7 +2335,8 @@ class CombatService:
 
         duration_type = str(definition.duration.type)
         requires_concentration = duration_type == "concentration"
-        duration_value = safe_int(intent.get("duration_override"), default=definition.duration.value)
+        duration_value = safe_int(intent.get(
+            "duration_override"), default=definition.duration.value)
 
         for target in resolved_targets:
             existing_instances = [
@@ -2284,21 +2476,22 @@ class CombatService:
         """Upsert of effect instance records to DB to preserve metadata like tick_intent."""
         from src.systems.dnd5e.lib.content_models import EffectInstanceRecord
         from sqlalchemy import select
-        
+
         # 1. Load existing records
         existing_result = await db_session.execute(
             select(EffectInstanceRecord).where(
                 EffectInstanceRecord.encounter_session_id == encounter_session.id,
             )
         )
-        existing_rows = {row.instance_id: row for row in existing_result.scalars().all()}
-        
+        existing_rows = {
+            row.instance_id: row for row in existing_result.scalars().all()}
+
         # 2. Collect current instances
         current_instances = []
         for actor in encounter.combatants:
             current_instances.extend(actor.effects)
         current_instance_ids = {eff.id for eff in current_instances}
-        
+
         provenance_by_instance = provenance_by_instance or {}
 
         # 3. Delete orphans
@@ -2319,10 +2512,10 @@ class CombatService:
                         id=f"eff_rec_{uuid4().hex[:8]}",
                         encounter_session_id=encounter_session.id,
                         instance_id=effect.id,
-                        applied_at_round=encounter.round_number, # Fix constraint
+                        applied_at_round=encounter.round_number,  # Fix constraint
                     )
                     db_session.add(row)
-                
+
                 row.effect_id = effect.effect_id
                 row.source_actor_id = effect.source_id
                 row.target_actor_id = effect.target_id
@@ -2360,7 +2553,8 @@ class CombatService:
     ) -> list[dict[str, Any]]:
         """Build domain event dicts from effect tick outcomes."""
         events: list[dict[str, Any]] = []
-        provenance = effect_provenance_payload(request_id, None, source_actor_id)
+        provenance = effect_provenance_payload(
+            request_id, None, source_actor_id)
 
         for entry in tick_outcome.get("ticked", []):
             events.append({"type": "effect_tick_resolved", "payload": {
@@ -2443,7 +2637,8 @@ class CombatService:
             active_id, _ = await self.advance_turn(encounter_session, encounter)
             await self.sync_effect_instance_records(
                 self.db, encounter_session, encounter,
-                provenance_by_instance=collect_effect_provenance_by_instance(tick_events),
+                provenance_by_instance=collect_effect_provenance_by_instance(
+                    tick_events),
             )
 
         budget_snapshot = await self.get_turn_budget_snapshot(encounter_session, encounter)
@@ -2542,7 +2737,8 @@ class CombatService:
             return {"error": "add_actor target is out of map bounds"}
 
         actor_id = next_actor_id(encounter, definition_slug)
-        actor_name = (name or "").strip() or display_name_from_slug(definition_slug)
+        actor_name = (name or "").strip(
+        ) or display_name_from_slug(definition_slug)
 
         actor = ActorInstance(
             id=actor_id,
@@ -2559,7 +2755,8 @@ class CombatService:
         )
         encounter.combatants.append(actor)
 
-        token = MapToken(actor_id=actor.id, position=Position(x=position.x, y=position.y))
+        token = MapToken(actor_id=actor.id, position=Position(
+            x=position.x, y=position.y))
         encounter.map.tokens.append(token)
 
         return {
@@ -2584,8 +2781,10 @@ class CombatService:
         if actor is None:
             return {"error": f"Actor {actor_id} not found"}
 
-        encounter.combatants = [c for c in encounter.combatants if c.id != actor_id]
-        encounter.map.tokens = [t for t in encounter.map.tokens if t.actor_id != actor_id]
+        encounter.combatants = [
+            c for c in encounter.combatants if c.id != actor_id]
+        encounter.map.tokens = [
+            t for t in encounter.map.tokens if t.actor_id != actor_id]
 
         if not encounter.combatants:
             encounter.active_index = 0
@@ -2614,7 +2813,8 @@ class CombatService:
                     dex_score=actor.abilities.dexterity,
                 ))
             start_combat(encounter, initiatives)
-            order = [{"actor_id": a.id, "name": a.name} for a in encounter.combatants]
+            order = [{"actor_id": a.id, "name": a.name}
+                     for a in encounter.combatants]
         else:
             order = await self.start_combat(encounter_session, encounter)
 
@@ -2646,7 +2846,8 @@ class CombatService:
         except ValueError:
             damage_type = DamageType.SLASHING
 
-        result = engine_apply_damage(actor, amount=amount, damage_type=damage_type)
+        result = engine_apply_damage(
+            actor, amount=amount, damage_type=damage_type)
         actor.current_hp = result.remaining_hp
         actor.temp_hp = result.remaining_temp_hp
 
@@ -2713,7 +2914,8 @@ class CombatService:
         except ValueError:
             return {"error": f"Unknown condition: {condition_str}"}
 
-        actor.conditions = [c for c in actor.conditions if c.condition != condition]
+        actor.conditions = [
+            c for c in actor.conditions if c.condition != condition]
         return {"actor_id": actor_id, "condition": condition.value}
 
     def handle_roll_dice(self, expression: str, purpose: str | None, user_id: str) -> dict[str, Any]:

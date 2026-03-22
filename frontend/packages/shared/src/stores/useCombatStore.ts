@@ -83,6 +83,9 @@ export type CombatActionDispatcher = (commandOrType: WsInboundEnvelope | string,
 
 export interface CombatStore {
   gameState: GameState | null;
+  selectedCampaignId: string | null;
+  selectedSceneId: string | null;
+  selectedEncounterId: string | null;
   isConnected: boolean;
   role: "dm" | "observer" | null;
   actingAsUserId: string | null;
@@ -112,6 +115,7 @@ export interface CombatStore {
   setConnectionStatus: (isConnected: boolean, role?: "dm" | "observer") => void;
   setActingAsUserId: (userId: string | null) => void;
   setActionDispatcher: (dispatcher: CombatActionDispatcher | null) => void;
+  setSelectedContext: (campaignId: string, sceneId?: string | null, encounterId?: string | null) => void;
   ingestEnvelope: (message: unknown) => void;
   clearCommandLog: () => void;
   clearActionFeedback: () => void;
@@ -467,6 +471,9 @@ function isTerminalOutboundTypeForSentType(sentType: string, outboundType: strin
 
 export const useCombatStore = create<CombatStore>((set, get) => ({
   gameState: null,
+  selectedCampaignId: null,
+  selectedSceneId: null,
+  selectedEncounterId: null,
   isConnected: false,
   role: null,
   actingAsUserId: null,
@@ -493,6 +500,7 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
 
   connect: (_campaignId: string, role: "dm" | "observer") => {
     set((current) => ({
+      selectedCampaignId: _campaignId,
       role,
       errorMessage: null,
       commandLog: appendLogEntry(current.commandLog, createLogEntry("RECV", "connection_role_set", { role })),
@@ -505,6 +513,9 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
       role: null,
       actingAsUserId: null,
       gameState: null,
+      selectedCampaignId: null,
+      selectedSceneId: null,
+      selectedEncounterId: null,
       actionDispatcher: null,
       actionFeedback: null,
       latestDenied: null,
@@ -539,6 +550,14 @@ export const useCombatStore = create<CombatStore>((set, get) => ({
 
   setActionDispatcher: (dispatcher: CombatActionDispatcher | null) => {
     set({ actionDispatcher: dispatcher });
+  },
+
+  setSelectedContext: (campaignId: string, sceneId?: string | null, encounterId?: string | null) => {
+    set({
+      selectedCampaignId: campaignId,
+      selectedSceneId: sceneId ?? null,
+      selectedEncounterId: encounterId ?? null,
+    });
   },
 
   ingestEnvelope: (message: unknown) => {

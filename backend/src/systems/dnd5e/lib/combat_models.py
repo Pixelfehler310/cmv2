@@ -11,6 +11,7 @@ class EncounterSession(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "dnd5e_encounter_sessions"
 
     campaign_id: Mapped[str] = mapped_column(String, index=True, unique=True)
+    scene_id: Mapped[str | None] = mapped_column(String, nullable=True)
     encounter_id: Mapped[str] = mapped_column(String, nullable=False)
     phase: Mapped[str] = mapped_column(String, default="pre_combat")
     round_number: Mapped[int] = mapped_column(Integer, default=0)

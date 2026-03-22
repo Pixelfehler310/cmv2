@@ -60,6 +60,48 @@
       "title": "BackgroundResponse",
       "type": "object"
     },
+    "CampaignContextResponse": {
+      "properties": {
+        "campaign_id": {
+          "title": "Campaign Id",
+          "type": "string"
+        },
+        "context_version": {
+          "default": 0,
+          "title": "Context Version",
+          "type": "integer"
+        },
+        "encounter_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encounter Id"
+        },
+        "scene_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Id"
+        }
+      },
+      "required": [
+        "campaign_id"
+      ],
+      "title": "CampaignContextResponse",
+      "type": "object"
+    },
     "CampaignCreate": {
       "properties": {
         "description": {
@@ -99,6 +141,18 @@
     },
     "CampaignResponse": {
       "properties": {
+        "active_encounter_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Active Encounter Id"
+        },
         "characters": {
           "default": [],
           "items": {
@@ -106,6 +160,23 @@
           },
           "title": "Characters",
           "type": "array"
+        },
+        "context_version": {
+          "default": 0,
+          "title": "Context Version",
+          "type": "integer"
+        },
+        "current_scene": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Scene"
         },
         "description": {
           "anyOf": [
@@ -713,6 +784,29 @@
       "title": "EffectConfig",
       "type": "object"
     },
+    "EncounterOptionResponse": {
+      "properties": {
+        "encounter_id": {
+          "title": "Encounter Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "scene_id": {
+          "title": "Scene Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "encounter_id",
+        "scene_id",
+        "name"
+      ],
+      "title": "EncounterOptionResponse",
+      "type": "object"
+    },
     "ItemCreate": {
       "properties": {
         "description": {
@@ -1250,6 +1344,42 @@
       "title": "MonsterResponse",
       "type": "object"
     },
+    "SceneOptionResponse": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "scene_id": {
+          "title": "Scene Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scene_id",
+        "name"
+      ],
+      "title": "SceneOptionResponse",
+      "type": "object"
+    },
+    "SelectCampaignContextRequest": {
+      "properties": {
+        "encounter_id": {
+          "title": "Encounter Id",
+          "type": "string"
+        },
+        "scene_id": {
+          "title": "Scene Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scene_id",
+        "encounter_id"
+      ],
+      "title": "SelectCampaignContextRequest",
+      "type": "object"
+    },
     "SpeciesResponse": {
       "properties": {
         "ability_bonuses": {
@@ -1453,6 +1583,13 @@
       "title": "Backgrounds",
       "type": "array"
     },
+    "campaign_context": {
+      "items": {
+        "$ref": "#/$defs/CampaignContextResponse"
+      },
+      "title": "Campaign Context",
+      "type": "array"
+    },
     "campaign_create": {
       "items": {
         "$ref": "#/$defs/CampaignCreate"
@@ -1488,6 +1625,13 @@
       "title": "Classes",
       "type": "array"
     },
+    "encounter_options": {
+      "items": {
+        "$ref": "#/$defs/EncounterOptionResponse"
+      },
+      "title": "Encounter Options",
+      "type": "array"
+    },
     "item_create": {
       "items": {
         "$ref": "#/$defs/ItemCreate"
@@ -1514,6 +1658,20 @@
         "$ref": "#/$defs/MonsterResponse"
       },
       "title": "Monsters",
+      "type": "array"
+    },
+    "scene_options": {
+      "items": {
+        "$ref": "#/$defs/SceneOptionResponse"
+      },
+      "title": "Scene Options",
+      "type": "array"
+    },
+    "select_campaign_context_request": {
+      "items": {
+        "$ref": "#/$defs/SelectCampaignContextRequest"
+      },
+      "title": "Select Campaign Context Request",
       "type": "array"
     },
     "species": {
@@ -1549,6 +1707,10 @@
     "campaign_create",
     "characters",
     "character_create",
+    "campaign_context",
+    "scene_options",
+    "encounter_options",
+    "select_campaign_context_request",
     "species",
     "classes",
     "backgrounds"

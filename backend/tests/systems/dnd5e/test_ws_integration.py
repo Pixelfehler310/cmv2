@@ -12,7 +12,6 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-import os
 import re
 from src.config import settings
 from src.database import Base
@@ -21,27 +20,22 @@ from src.core.sessions.models import SessionContext, UserRole
 from src.core.sessions.manager import SessionManager
 
 import src.systems.dnd5e.ws_handler as ws_handler_module
+from src.campaigns.lib.campaign import Campaign
 from src.systems.dnd5e.ws_handler import Dnd5eWsHandler
 from src.systems.dnd5e.schemas.encounter import EncounterState
 from src.systems.dnd5e.schemas.instances import ActorInstance, ConditionInstance, EffectInstance
 from src.systems.dnd5e.schemas.enums import ActorType, ConditionType, DamageType, DurationType
 from src.systems.dnd5e.schemas.common import AbilityScores
 from src.systems.dnd5e.lib.combat_models import EncounterSession
+from src.systems.dnd5e.lib.context_models import SceneCatalogRecord, EncounterCatalogRecord
 from src.systems.dnd5e.lib.content_models import EffectDefinitionRecord, EffectInstanceRecord
 from src.systems.dnd5e.services.combat_service import CombatService
 from src import database as db_module
 
-# Use a file-based DB instead of :memory: to ensure sharing works reliably on Windows
-db_path = os.path.abspath("test_ws_integration.db")
-if os.path.exists(db_path):
-    try:
-        os.remove(db_path)
-    except:
-        pass
-
 test_engine = create_async_engine(
-    f"sqlite+aiosqlite:///{db_path}",
-    connect_args={"check_same_thread": False}
+    "sqlite+aiosqlite:///:memory:",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
 )
 TestAsyncSessionLocal = async_sessionmaker(
     bind=test_engine,
@@ -50,13 +44,15 @@ TestAsyncSessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
+
 @pytest.fixture(autouse=True)
 def setup_test_db(monkeypatch):
     """Override the real DB with an in-memory one for all tests in this module."""
     # Patch both the original and the one imported by ws_handler
     monkeypatch.setattr(db_module, "AsyncSessionLocal", TestAsyncSessionLocal)
     monkeypatch.setattr(db_module, "engine", test_engine)
-    monkeypatch.setattr("src.systems.dnd5e.ws_handler.AsyncSessionLocal", TestAsyncSessionLocal)
+    monkeypatch.setattr(
+        "src.systems.dnd5e.ws_handler.AsyncSessionLocal", TestAsyncSessionLocal)
 
 
 # ---------------------------------------------------------------------------
@@ -69,6 +65,42 @@ async def cleanup_db():
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+
+    # Seed baseline campaign + context catalog so ws connect and command tests
+    # have a valid backend-authoritative selection context.
+    async with TestAsyncSessionLocal() as db:
+        db.add(
+            Campaign(
+                id="test_campaign",
+                name="WS Integration Campaign",
+                current_scene="scene.default",
+                active_encounter_id="enc_test_campaign",
+                context_version=1,
+            )
+        )
+        db.add(
+            SceneCatalogRecord(
+                campaign_id="test_campaign",
+                scene_id="scene.default",
+                name="Default Scene",
+            )
+        )
+        db.add(
+            EncounterCatalogRecord(
+                campaign_id="test_campaign",
+                scene_id="scene.default",
+                encounter_id="enc_test_campaign",
+                name="Initial Encounter",
+                source="test",
+                state_json=EncounterState(
+                    id="enc_test_campaign",
+                    campaign_id="test_campaign",
+                    combatants=[],
+                ).model_dump(mode="json"),
+            )
+        )
+        await db.commit()
+
     yield
 
 
@@ -143,6 +175,7 @@ async def combat_encounter(dm_ctx):
         await service.save_full_state(session, enc)
         await db.commit()
         return enc
+
 
 async def refresh_encounter(campaign_id="test_campaign"):
     async with TestAsyncSessionLocal() as db:
@@ -1504,7 +1537,8 @@ class TestActionResolutionPhase3:
         async with db_module.AsyncSessionLocal() as db:
             service = CombatService(db)
             session, encounter = await service.load_or_create_encounter_state("test_campaign")
-            target = next(c for c in encounter.combatants if c.id == target_actor_id)
+            target = next(
+                c for c in encounter.combatants if c.id == target_actor_id)
             target.effects.append(
                 EffectInstance(
                     id="phase4_tick_effect_1",
@@ -1554,8 +1588,11 @@ class TestEffectExecutionPhase4DbMode:
 
     @staticmethod
     async def _configure_sqlite_db_mode(monkeypatch):
-        DB_EFF_PATH = "test_effect_final.db"
-        engine = create_async_engine(f"sqlite+aiosqlite:///{DB_EFF_PATH}")
+        engine = create_async_engine(
+            "sqlite+aiosqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
@@ -1599,6 +1636,57 @@ class TestEffectExecutionPhase4DbMode:
             await db.commit()
 
     @staticmethod
+    async def _seed_campaign_context(session_factory, campaign_id: str) -> None:
+        async with session_factory() as db:
+            db.add(
+                Campaign(
+                    id=campaign_id,
+                    name=f"Campaign {campaign_id}",
+                    current_scene="scene.default",
+                    active_encounter_id=f"enc_{campaign_id}",
+                    context_version=1,
+                )
+            )
+            db.add(
+                SceneCatalogRecord(
+                    campaign_id=campaign_id,
+                    scene_id="scene.default",
+                    name="Default Scene",
+                )
+            )
+            db.add(
+                EncounterCatalogRecord(
+                    campaign_id=campaign_id,
+                    scene_id="scene.default",
+                    encounter_id=f"enc_{campaign_id}",
+                    name="Seed Encounter",
+                    source="test",
+                    state_json=EncounterState(
+                        id=f"enc_{campaign_id}",
+                        campaign_id=campaign_id,
+                        combatants=[
+                            ActorInstance(
+                                id="hero_1",
+                                name="Hero",
+                                owner_user_id="dm_user",
+                                actor_type=ActorType.PLAYER_CHARACTER,
+                                current_hp=30,
+                                max_hp=30,
+                            ),
+                            ActorInstance(
+                                id="goblin_1",
+                                name="Goblin",
+                                actor_type=ActorType.MONSTER,
+                                current_hp=7,
+                                max_hp=7,
+                            ),
+                        ],
+                    ).model_dump(mode="json"),
+                )
+            )
+            await db.commit()
+
+    @staticmethod
     async def _load_effect_rows(session_factory, campaign_id: str) -> list[EffectInstanceRecord]:
         async with session_factory() as db:
             session_stmt = select(EncounterSession).where(
@@ -1612,6 +1700,7 @@ class TestEffectExecutionPhase4DbMode:
     async def test_db_mode_canonical_concentration_replacement_persists_and_emits_provenance(self, handler, mgr, monkeypatch):
         session_factory, engine = await self._configure_sqlite_db_mode(monkeypatch)
         campaign_id = "db_phase4_concentration"
+        await self._seed_campaign_context(session_factory, campaign_id)
         dm_ctx = SessionContext(
             campaign_id=campaign_id,
             user_id="dm_user",
@@ -1747,6 +1836,7 @@ class TestEffectExecutionPhase4DbMode:
     async def test_db_mode_canonical_stack_limit_denial_emits_provenance_and_keeps_single_row(self, handler, mgr, monkeypatch):
         session_factory, engine = await self._configure_sqlite_db_mode(monkeypatch)
         campaign_id = "db_phase4_stack_limit"
+        await self._seed_campaign_context(session_factory, campaign_id)
         dm_ctx = SessionContext(
             campaign_id=campaign_id,
             user_id="dm_user",
@@ -1849,6 +1939,7 @@ class TestEffectExecutionPhase4DbMode:
     async def test_db_mode_effect_refresh_emits_provenance(self, handler, mgr, monkeypatch):
         session_factory, engine = await self._configure_sqlite_db_mode(monkeypatch)
         campaign_id = "db_phase4_refresh"
+        await self._seed_campaign_context(session_factory, campaign_id)
         dm_ctx = SessionContext(
             campaign_id=campaign_id,
             user_id="dm_user",
@@ -1945,6 +2036,7 @@ class TestEffectExecutionPhase4DbMode:
     async def test_db_mode_aoe_effect_intent_uses_canonical_effect_id_for_derived_targets(self, handler, mgr, monkeypatch):
         session_factory, engine = await self._configure_sqlite_db_mode(monkeypatch)
         campaign_id = "db_phase5_aoe_effect_id"
+        await self._seed_campaign_context(session_factory, campaign_id)
         dm_ctx = SessionContext(
             campaign_id=campaign_id,
             user_id="dm_user",
@@ -2138,7 +2230,8 @@ class TestRemoveActor:
 
         refreshed_encounter = await refresh_encounter()
         assert all(c.id != "goblin_1" for c in refreshed_encounter.combatants)
-        assert all(t.actor_id != "goblin_1" for t in refreshed_encounter.map.tokens)
+        assert all(
+            t.actor_id != "goblin_1" for t in refreshed_encounter.map.tokens)
 
     @pytest.mark.anyio
     async def test_remove_actor_invalid_target_returns_error(self, handler, dm_ctx, mgr, combat_encounter):
@@ -2263,7 +2356,8 @@ class TestConditions:
 
         # Verify it was actually applied
         combat_encounter = await refresh_encounter()
-        goblin = next(c for c in combat_encounter.combatants if c.id == "goblin_1")
+        goblin = next(
+            c for c in combat_encounter.combatants if c.id == "goblin_1")
         assert any(c.condition ==
                    ConditionType.STUNNED for c in goblin.conditions)
 
@@ -2282,7 +2376,8 @@ class TestConditions:
         events = await handler.handle(envelope, dm_ctx, mgr)
         assert events[0].type == "condition_removed"
         combat_encounter = await refresh_encounter()
-        goblin = next(c for c in combat_encounter.combatants if c.id == "goblin_1")
+        goblin = next(
+            c for c in combat_encounter.combatants if c.id == "goblin_1")
         assert not any(
             c.condition == ConditionType.PRONE for c in goblin.conditions)
 

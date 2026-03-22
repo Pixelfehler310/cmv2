@@ -27,6 +27,8 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
 
   const requestedView = (searchParams.get("view") ?? "").trim().toLowerCase();
   const requestedImpersonationUserId = (searchParams.get("as_user_id") ?? "").trim();
+  const requestedSceneId = (searchParams.get("scene_id") ?? "").trim();
+  const requestedEncounterId = (searchParams.get("encounter_id") ?? "").trim();
 
   useEffect(() => {
     let currentStoreRole: "dm" | "observer" = config.useMocks ? "observer" : "dm";
@@ -61,6 +63,7 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
           // Connect WS
           const token = auth.getToken();
           if (id && token) {
+            useCombatStore.getState().setSelectedContext(id, requestedSceneId || null, requestedEncounterId || null);
             ws.connect(id, token, "dm");
           }
         }
@@ -134,7 +137,7 @@ export const SessionRoute = ({ auth, ws, queryClient }: SessionRouteProps) => {
       useCombatStore.getState().setConnectionStatus(false);
       ws.disconnect();
     };
-  }, [id, auth, ws, queryClient, navigate, requestedView]);
+  }, [id, auth, ws, queryClient, navigate, requestedView, requestedSceneId, requestedEncounterId]);
 
   if (!bridge) return <div>Initializing...</div>;
 

@@ -4,6 +4,12 @@ from src.schemas.item import ItemCreate, ItemResponse
 from src.schemas.definitions import BackgroundResponse, ClassResponse, SpeciesResponse
 from src.schemas.character import CharacterCreate, CharacterResponse
 from src.schemas.campaign import CampaignCreate, CampaignResponse
+from src.schemas.context import (
+    CampaignContextResponse,
+    EncounterOptionResponse,
+    SceneOptionResponse,
+    SelectCampaignContextRequest,
+)
 import argparse
 import difflib
 import json
@@ -55,6 +61,10 @@ class ExportModel(BaseModel):
     campaign_create: list[CampaignCreate]
     characters: list[CharacterResponse]
     character_create: list[CharacterCreate]
+    campaign_context: list[CampaignContextResponse]
+    scene_options: list[SceneOptionResponse]
+    encounter_options: list[EncounterOptionResponse]
+    select_campaign_context_request: list[SelectCampaignContextRequest]
     species: list[SpeciesResponse]
     classes: list[ClassResponse]
     backgrounds: list[BackgroundResponse]

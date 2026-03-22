@@ -4,18 +4,21 @@ from src.database import Base
 from src.common.mixins import UUIDMixin, TimestampMixin
 import enum
 
+
 class CampaignRole(str, enum.Enum):
     DM = "DM"
     PLAYER = "PLAYER"
     SPECTATOR = "SPECTATOR"
+
 
 class CampaignMember(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "campaign_members"
 
     campaign_id: Mapped[str] = mapped_column(ForeignKey("campaigns.id"))
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
-    role: Mapped[CampaignRole] = mapped_column(String, default=CampaignRole.PLAYER)
-    
+    role: Mapped[CampaignRole] = mapped_column(
+        String, default=CampaignRole.PLAYER)
+
     # Optional: Link to a specific character if they are a player
     active_character_id: Mapped[str] = mapped_column(String, nullable=True)
 
@@ -33,12 +36,14 @@ class Campaign(Base, UUIDMixin, TimestampMixin):
 
     # State
     current_scene: Mapped[str] = mapped_column(String, nullable=True)
+    active_encounter_id: Mapped[str] = mapped_column(String, nullable=True)
+    context_version: Mapped[int] = mapped_column(Integer, default=0)
     active_turn: Mapped[str] = mapped_column(
         String, nullable=True)  # Character ID whose turn it is
 
     # Relationships
     characters: Mapped[list["Character"]] = relationship(
         back_populates="campaign", cascade="all, delete-orphan")
-    
+
     members: Mapped[list["CampaignMember"]] = relationship(
         back_populates="campaign", cascade="all, delete-orphan")

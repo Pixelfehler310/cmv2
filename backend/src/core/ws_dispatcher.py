@@ -200,6 +200,19 @@ async def websocket_endpoint(
             campaign_id,
             user_id,
         )
+        await session_manager.send_to_user(
+            campaign_id,
+            user_id,
+            WsOutbound(
+                type="error",
+                payload={
+                    "message": "Unable to initialize session context",
+                    "code": WsErrorCode.INTERNAL_ERROR.value,
+                },
+                visibility=Visibility.ACTOR_OWNER,
+                target_user_id=user_id,
+            ),
+        )
 
     # --- Message loop ---
     try:

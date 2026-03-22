@@ -663,6 +663,145 @@
       "source_ref": "fixtures.heroes",
       "content_version": "1",
       "enabled": true
+    },
+    {
+      "action_id": "hero.class_wizard.arcane_blast",
+      "name": "Arcane Blast",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 60,
+      "attack_context": {
+        "attack_bonus": 6,
+        "damage": {
+          "dice": "1d10+4",
+          "type": "force"
+        }
+      },
+      "tags": [
+        "hero",
+        "fixture",
+        "class_wizard"
+      ],
+      "source_ref": "fixtures.heroes",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "hero.class_cleric.radiant_bolt",
+      "name": "Radiant Bolt",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 60,
+      "attack_context": {
+        "attack_bonus": 6,
+        "damage": {
+          "dice": "1d8+4",
+          "type": "radiant"
+        }
+      },
+      "tags": [
+        "hero",
+        "fixture",
+        "class_cleric"
+      ],
+      "source_ref": "fixtures.heroes",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "hero.class_fighter.weapon_strike",
+      "name": "Weapon Strike",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 6,
+        "damage": {
+          "dice": "1d8+4",
+          "type": "slashing"
+        }
+      },
+      "tags": [
+        "hero",
+        "fixture",
+        "class_fighter"
+      ],
+      "source_ref": "fixtures.heroes",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "hero.class_rogue.precise_strike",
+      "name": "Precise Strike",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 7,
+        "damage": {
+          "dice": "1d6+4",
+          "type": "piercing"
+        }
+      },
+      "tags": [
+        "hero",
+        "fixture",
+        "class_rogue"
+      ],
+      "source_ref": "fixtures.heroes",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "hero.class_ranger.longbow_shot",
+      "name": "Longbow Shot",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 150,
+      "attack_context": {
+        "attack_bonus": 6,
+        "damage": {
+          "dice": "1d8+3",
+          "type": "piercing"
+        }
+      },
+      "tags": [
+        "hero",
+        "fixture",
+        "class_ranger",
+        "ranged"
+      ],
+      "source_ref": "fixtures.heroes",
+      "content_version": "1",
+      "enabled": true
+    },
+    {
+      "action_id": "hero.class_paladin.holy_strike",
+      "name": "Holy Strike",
+      "family": "attack",
+      "action_type_cost": "action",
+      "targeting_mode": "single_target",
+      "range": 5,
+      "attack_context": {
+        "attack_bonus": 6,
+        "damage": {
+          "dice": "1d8+4",
+          "type": "radiant"
+        }
+      },
+      "tags": [
+        "hero",
+        "fixture",
+        "class_paladin"
+      ],
+      "source_ref": "fixtures.heroes",
+      "content_version": "1",
+      "enabled": true
     }
   ],
   "abilities": [
@@ -815,6 +954,36 @@
       "binding_id": "monster.arannis.longbow.binding",
       "action_id": "monster.arannis.longbow",
       "actor_template_id": "arannis"
+    },
+    {
+      "binding_id": "hero.class_wizard.arcane_blast.binding",
+      "action_id": "hero.class_wizard.arcane_blast",
+      "actor_template_id": "class_wizard"
+    },
+    {
+      "binding_id": "hero.class_cleric.radiant_bolt.binding",
+      "action_id": "hero.class_cleric.radiant_bolt",
+      "actor_template_id": "class_cleric"
+    },
+    {
+      "binding_id": "hero.class_fighter.weapon_strike.binding",
+      "action_id": "hero.class_fighter.weapon_strike",
+      "actor_template_id": "class_fighter"
+    },
+    {
+      "binding_id": "hero.class_rogue.precise_strike.binding",
+      "action_id": "hero.class_rogue.precise_strike",
+      "actor_template_id": "class_rogue"
+    },
+    {
+      "binding_id": "hero.class_ranger.longbow_shot.binding",
+      "action_id": "hero.class_ranger.longbow_shot",
+      "actor_template_id": "class_ranger"
+    },
+    {
+      "binding_id": "hero.class_paladin.holy_strike.binding",
+      "action_id": "hero.class_paladin.holy_strike",
+      "actor_template_id": "class_paladin"
     }
   ],
   "effects": [],

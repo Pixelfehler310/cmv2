@@ -7,8 +7,15 @@ from src.database import get_db
 from src.campaigns.lib.campaign import Campaign, CampaignMember, CampaignRole
 from src.campaigns.lib.character import Character
 from src.schemas.campaign import CampaignCreate, CampaignResponse
+from src.schemas.context import (
+    CampaignContextResponse,
+    EncounterOptionResponse,
+    SceneOptionResponse,
+    SelectCampaignContextRequest,
+)
 from src.identity.models import User
 from src.identity.dependencies import get_current_active_user
+from src.systems.dnd5e.services.combat_service import CombatService
 
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 
@@ -19,6 +26,26 @@ def _campaign_with_character_relations():
         selectinload(Campaign.characters).selectinload(Character.char_class),
         selectinload(Campaign.characters).selectinload(Character.background),
     )
+
+
+async def _resolve_member_or_raise(
+    db: AsyncSession,
+    campaign_id: str,
+    current_user: User,
+) -> tuple[CampaignMember | None, bool]:
+    from src.config import settings
+
+    is_admin = current_user.username == settings.ADMIN_USERNAME or current_user.is_superuser
+    stmt = select(CampaignMember).where(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.user_id == current_user.id,
+    )
+    result = await db.execute(stmt)
+    member = result.scalar_one_or_none()
+    if member is None and not is_admin:
+        raise HTTPException(
+            status_code=403, detail="Not a member of this campaign")
+    return member, is_admin
 
 
 @router.post("", response_model=CampaignResponse)
@@ -194,3 +221,93 @@ async def delete_campaign(
     await db.delete(campaign)
     await db.commit()
     return {"ok": True}
+
+
+@router.get("/{campaign_id}/context", response_model=CampaignContextResponse)
+async def get_campaign_context(
+    campaign_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    await _resolve_member_or_raise(db, campaign_id, current_user)
+
+    service = CombatService(db)
+    try:
+        campaign = await service.get_context(campaign_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return CampaignContextResponse(
+        campaign_id=campaign.id,
+        scene_id=campaign.current_scene,
+        encounter_id=campaign.active_encounter_id,
+        context_version=campaign.context_version,
+    )
+
+
+@router.get("/{campaign_id}/scenes", response_model=List[SceneOptionResponse])
+async def list_campaign_scenes(
+    campaign_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    await _resolve_member_or_raise(db, campaign_id, current_user)
+
+    service = CombatService(db)
+    try:
+        scenes = await service.list_scenes(campaign_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return [SceneOptionResponse(scene_id=scene.scene_id, name=scene.name) for scene in scenes]
+
+
+@router.get("/{campaign_id}/scenes/{scene_id}/encounters", response_model=List[EncounterOptionResponse])
+async def list_scene_encounters(
+    campaign_id: str,
+    scene_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    await _resolve_member_or_raise(db, campaign_id, current_user)
+
+    service = CombatService(db)
+    try:
+        encounters = await service.list_encounters(campaign_id, scene_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return [
+        EncounterOptionResponse(
+            encounter_id=encounter.encounter_id,
+            scene_id=encounter.scene_id,
+            name=encounter.name,
+        )
+        for encounter in encounters
+    ]
+
+
+@router.post("/{campaign_id}/context/select", response_model=CampaignContextResponse)
+async def select_campaign_context(
+    campaign_id: str,
+    request: SelectCampaignContextRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    member, is_admin = await _resolve_member_or_raise(db, campaign_id, current_user)
+    if not is_admin and (member is None or member.role != CampaignRole.DM):
+        raise HTTPException(
+            status_code=403, detail="Only DM can change campaign context")
+
+    service = CombatService(db)
+    try:
+        campaign = await service.select_context(campaign_id, request.scene_id, request.encounter_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return CampaignContextResponse(
+        campaign_id=campaign.id,
+        scene_id=campaign.current_scene,
+        encounter_id=campaign.active_encounter_id,
+        context_version=campaign.context_version,
+    )

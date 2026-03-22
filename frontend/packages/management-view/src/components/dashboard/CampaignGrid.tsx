@@ -10,6 +10,17 @@ interface Campaign {
   characters?: Array<{ id?: string; player_name?: string | null; owner_user_id?: string | null }>;
 }
 
+interface SceneOption {
+  scene_id: string;
+  name: string;
+}
+
+interface EncounterOption {
+  encounter_id: string;
+  scene_id: string;
+  name: string;
+}
+
 const PLAYER_PICKER_RECENT_USERS_KEY = "campaign_player_picker_recent_users";
 
 export const CampaignGrid = () => {
@@ -21,6 +32,13 @@ export const CampaignGrid = () => {
   const [playerPickerSelection, setPlayerPickerSelection] = useState<string>("");
   const [playerPickerCustomUserId, setPlayerPickerCustomUserId] = useState<string>("");
   const [recentPlayerUserIds, setRecentPlayerUserIds] = useState<string[]>([]);
+  const [dmPickerCampaign, setDmPickerCampaign] = useState<Campaign | null>(null);
+  const [dmScenes, setDmScenes] = useState<SceneOption[]>([]);
+  const [dmEncounters, setDmEncounters] = useState<EncounterOption[]>([]);
+  const [dmSelectedSceneId, setDmSelectedSceneId] = useState<string>("");
+  const [dmSelectedEncounterId, setDmSelectedEncounterId] = useState<string>("");
+  const [dmPickerLoading, setDmPickerLoading] = useState<boolean>(false);
+  const [dmPickerError, setDmPickerError] = useState<string>("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -127,6 +145,120 @@ export const CampaignGrid = () => {
     setPlayerPickerCustomUserId("");
   };
 
+  const fetchEncountersForScene = async (campaignId: string, sceneId: string): Promise<EncounterOption[]> => {
+    const token = localStorage.getItem("civic_auth_token");
+    const res = await fetch(`/api/campaigns/${encodeURIComponent(campaignId)}/scenes/${encodeURIComponent(sceneId)}/encounters`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      throw new Error("Failed to load encounters");
+    }
+    return (await res.json()) as EncounterOption[];
+  };
+
+  const openDmPicker = async (campaign: Campaign): Promise<void> => {
+    setDmPickerCampaign(campaign);
+    setDmScenes([]);
+    setDmEncounters([]);
+    setDmSelectedSceneId("");
+    setDmSelectedEncounterId("");
+    setDmPickerError("");
+    setDmPickerLoading(true);
+
+    try {
+      const token = localStorage.getItem("civic_auth_token");
+      const scenesRes = await fetch(`/api/campaigns/${encodeURIComponent(campaign.id)}/scenes`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!scenesRes.ok) {
+        throw new Error("Failed to load scenes");
+      }
+
+      const scenes = (await scenesRes.json()) as SceneOption[];
+      setDmScenes(scenes);
+      if (scenes.length === 0) {
+        setDmPickerError("No scenes available for this campaign.");
+        return;
+      }
+
+      const initialSceneId = scenes[0].scene_id;
+      setDmSelectedSceneId(initialSceneId);
+      const encounters = await fetchEncountersForScene(campaign.id, initialSceneId);
+      setDmEncounters(encounters);
+      if (encounters.length > 0) {
+        setDmSelectedEncounterId(encounters[0].encounter_id);
+      }
+    } catch (err: any) {
+      setDmPickerError(err.message || "Failed to load DM context");
+    } finally {
+      setDmPickerLoading(false);
+    }
+  };
+
+  const closeDmPicker = (): void => {
+    setDmPickerCampaign(null);
+    setDmScenes([]);
+    setDmEncounters([]);
+    setDmSelectedSceneId("");
+    setDmSelectedEncounterId("");
+    setDmPickerError("");
+    setDmPickerLoading(false);
+  };
+
+  const onDmSceneChange = async (sceneId: string): Promise<void> => {
+    if (!dmPickerCampaign) {
+      return;
+    }
+
+    setDmSelectedSceneId(sceneId);
+    setDmSelectedEncounterId("");
+    setDmPickerError("");
+    setDmPickerLoading(true);
+    try {
+      const encounters = await fetchEncountersForScene(dmPickerCampaign.id, sceneId);
+      setDmEncounters(encounters);
+      setDmSelectedEncounterId(encounters[0]?.encounter_id ?? "");
+    } catch (err: any) {
+      setDmEncounters([]);
+      setDmPickerError(err.message || "Failed to load encounters");
+    } finally {
+      setDmPickerLoading(false);
+    }
+  };
+
+  const launchDmView = async (): Promise<void> => {
+    if (!dmPickerCampaign || !dmSelectedSceneId || !dmSelectedEncounterId) {
+      setDmPickerError("Please select both scene and encounter.");
+      return;
+    }
+
+    setDmPickerError("");
+    setDmPickerLoading(true);
+    try {
+      const token = localStorage.getItem("civic_auth_token");
+      const res = await fetch(`/api/campaigns/${encodeURIComponent(dmPickerCampaign.id)}/context/select`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ scene_id: dmSelectedSceneId, encounter_id: dmSelectedEncounterId }),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to select campaign context");
+      }
+
+      const query = new URLSearchParams({ scene_id: dmSelectedSceneId, encounter_id: dmSelectedEncounterId });
+      window.open(`/session/${encodeURIComponent(dmPickerCampaign.id)}?${query.toString()}`, "_blank", "noopener,noreferrer");
+      closeDmPicker();
+    } catch (err: any) {
+      setDmPickerError(err.message || "Failed to launch DM session");
+    } finally {
+      setDmPickerLoading(false);
+    }
+  };
+
   const closePlayerPicker = (): void => {
     setPlayerPickerCampaign(null);
     setPlayerPickerSelection("");
@@ -210,7 +342,7 @@ export const CampaignGrid = () => {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => window.open(`/session/${c.id}`, "_blank")}
+                    onClick={() => void openDmPicker(c)}
                     className="flex-1 py-2 px-3 rounded text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(var(--color-primary),0.3)]"
                     title="Launch DM Podium"
                   >
@@ -291,6 +423,66 @@ export const CampaignGrid = () => {
               </button>
               <button type="button" onClick={() => launchPlayerView("new-tab")} className="btn btn-primary">
                 Open New Tab
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dmPickerCampaign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={closeDmPicker}>
+          <div
+            className="w-full max-w-md rounded-xl border border-border bg-surface-100 p-4 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="DM context picker"
+          >
+            <h3 className="text-lg font-bold text-foreground">Launch DM Session</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Campaign: {dmPickerCampaign.name}</p>
+
+            <div className="mt-4 space-y-2">
+              <label htmlFor="campaign-dm-scene-select" className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Scene
+              </label>
+              <select id="campaign-dm-scene-select" value={dmSelectedSceneId} onChange={(event) => void onDmSceneChange(event.target.value)} className="input w-full" disabled={dmPickerLoading}>
+                <option value="">Select scene</option>
+                {dmScenes.map((scene) => (
+                  <option key={scene.scene_id} value={scene.scene_id}>
+                    {scene.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              <label htmlFor="campaign-dm-encounter-select" className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Encounter
+              </label>
+              <select
+                id="campaign-dm-encounter-select"
+                value={dmSelectedEncounterId}
+                onChange={(event) => setDmSelectedEncounterId(event.target.value)}
+                className="input w-full"
+                disabled={dmPickerLoading || dmSelectedSceneId.length === 0}
+              >
+                <option value="">Select encounter</option>
+                {dmEncounters.map((encounter) => (
+                  <option key={encounter.encounter_id} value={encounter.encounter_id}>
+                    {encounter.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {dmPickerError && <p className="mt-3 text-sm text-red-500">{dmPickerError}</p>}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={closeDmPicker} className="btn btn-ghost" disabled={dmPickerLoading}>
+                Cancel
+              </button>
+              <button type="button" onClick={() => void launchDmView()} className="btn btn-primary" disabled={dmPickerLoading || !dmSelectedSceneId || !dmSelectedEncounterId}>
+                Launch DM
               </button>
             </div>
           </div>

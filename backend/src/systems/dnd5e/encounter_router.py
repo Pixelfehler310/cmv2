@@ -31,7 +31,12 @@ async def get_encounter_state(
             status_code=403, detail="Not a member of this campaign")
 
     service = CombatService(db)
-    _, encounter = await service.load_or_create_encounter_state(campaign_id)
+    try:
+        _, encounter = await service.load_or_create_encounter_state(campaign_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return encounter.model_dump(mode="json")
 
 
