@@ -62,6 +62,7 @@ services:
       REDIS_HOST: redis
       SECRET_KEY: "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
       FRONTEND_TYPES_DIR: /workspace/frontend/packages/types
+      RUN_JSON_FIXTURE_CHECKS: ${RUN_JSON_FIXTURE_CHECKS:-true}
       RUN_CONTRACT_CHECKS: ${RUN_CONTRACT_CHECKS:-true}
       RUN_BACKEND_TESTS: ${RUN_BACKEND_TESTS:-true}
       PYTEST_ARGS: ${PYTEST_ARGS:-tests -q}
@@ -69,7 +70,12 @@ services:
       - ./backend:/app
       - ./frontend/packages/types:/workspace/frontend/packages/types
     command: >
-      sh -c "if [ \"$$RUN_CONTRACT_CHECKS\" = \"true\" ]; then
+      sh -c "if [ \"$$RUN_JSON_FIXTURE_CHECKS\" = \"true\" ]; then
+      python scripts/validate_fixture_json.py;
+      else
+      echo 'RUN_JSON_FIXTURE_CHECKS=false, skipping fixture JSON validation.';
+      fi &&
+      if [ \"$$RUN_CONTRACT_CHECKS\" = \"true\" ]; then
       python scripts/generate_types.py --check;
       else
       echo 'RUN_CONTRACT_CHECKS=false, skipping contract drift check.';
