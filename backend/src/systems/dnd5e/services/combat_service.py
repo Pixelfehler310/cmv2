@@ -22,7 +22,7 @@ from ..engine.dice import DiceService
 from ..engine.action_resolver import resolve_attack, resolve_healing, resolve_save_action
 from ..engine.damage import apply_damage as engine_apply_damage
 from ..engine.effect_engine import add_effect, remove_effect, tick_effects
-from ..lib.content_models import AbilityBindingRecord, ActionDefinitionRecord, EffectDefinitionRecord, EffectInstanceRecord
+from ..lib.content_models import ActionDefinitionRecord
 from ..schemas.common import AbilityScores, Position, SpeedBlock
 from ..schemas.encounter import EncounterState, MapState, MapToken
 from ..schemas.instances import ActorInstance, ConditionInstance, EffectInstance
@@ -32,6 +32,14 @@ from ..schemas.contracts import EffectDefinition as CanonicalEffectDefinition
 from ..lib.combat_models import ActionLog, CombatantState, EncounterSession, TurnBudgetRecord
 from ..lib.context_models import EncounterCatalogRecord, SceneCatalogRecord
 from ..repositories.context_repository import ContextReadRepository, ContextReadRepositoryProtocol
+from ..repositories.action_catalog_repository import (
+    ActionCatalogRepository,
+    ActionCatalogRepositoryProtocol,
+)
+from ..repositories.action_execution_repository import (
+    ActionExecutionRepository,
+    ActionExecutionRepositoryProtocol,
+)
 from ..repositories.encounter_session_repository import (
     EncounterSessionRepository,
     EncounterSessionRepositoryProtocol,
@@ -124,10 +132,14 @@ class CombatService:
         db: AsyncSession,
         context_read_repository: ContextReadRepositoryProtocol | None = None,
         encounter_session_repository: EncounterSessionRepositoryProtocol | None = None,
+        action_catalog_repository: ActionCatalogRepositoryProtocol | None = None,
+        action_execution_repository: ActionExecutionRepositoryProtocol | None = None,
     ):
         self.db = db
         self._context_read_repository = context_read_repository or ContextReadRepository(db)
         self._encounter_session_repository = encounter_session_repository or EncounterSessionRepository(db)
+        self._action_catalog_repository = action_catalog_repository or ActionCatalogRepository(db)
+        self._action_execution_repository = action_execution_repository or ActionExecutionRepository(db)
 
     async def load_or_create_encounter_state(self, campaign_id: str) -> tuple[EncounterSession, EncounterState]:
         campaign = await self._load_campaign_with_characters(campaign_id)
@@ -747,7 +759,7 @@ class CombatService:
         elif normalized == "reaction":
             budget.reaction_available = False
 
-        await self.db.flush()
+        await self._action_execution_repository.flush()
 
     async def on_turn_started(self, encounter_session: EncounterSession | None, encounter: EncounterState) -> None:
         """Sync turn budget semantics when a new active actor's turn begins."""
@@ -768,7 +780,7 @@ class CombatService:
             active.speed.walk,
         )
         budget.reaction_available = True
-        await self.db.flush()
+        await self._action_execution_repository.flush()
 
     async def get_turn_budget_snapshot(self, encounter_session: EncounterSession | None, encounter: EncounterState) -> dict[str, Any]:
         if encounter_session is None:
@@ -809,29 +821,19 @@ class CombatService:
         checks: dict[str, Any],
         denial_reason: str | None,
     ) -> None:
-        entry = ActionLog(
-            encounter_session_id=encounter_session.id,
+        await self._action_execution_repository.create_action_log(
+            encounter_session=encounter_session,
             request_id=request_id,
             actor_id=actor_id,
             action_type=action_type,
             action_state=action_state,
-            denial_reason=denial_reason,
-            authorization_checks=checks,
             payload=payload,
+            checks=checks,
+            denial_reason=denial_reason,
         )
-        self.db.add(entry)
-        await self.db.flush()
 
     async def get_action_log(self, campaign_id: str, limit: int = 100) -> list[ActionLog]:
-        stmt = (
-            select(ActionLog)
-            .join(EncounterSession, ActionLog.encounter_session_id == EncounterSession.id)
-            .where(EncounterSession.campaign_id == campaign_id)
-            .order_by(ActionLog.created_at.desc())
-            .limit(limit)
-        )
-        result = await self.db.execute(stmt)
-        return list(result.scalars().all())
+        return await self._action_execution_repository.list_action_logs(campaign_id, limit)
 
     async def save_full_state(self, encounter_session: EncounterSession, encounter: EncounterState) -> None:
         await self._persist_encounter(encounter_session, encounter)
@@ -849,15 +851,7 @@ class CombatService:
         return result.scalar_one_or_none()
 
     async def _persist_encounter(self, encounter_session: EncounterSession, encounter: EncounterState) -> None:
-        encounter_session.encounter_id = encounter.id
-        encounter_session.phase = encounter.turn_phase
-        encounter_session.round_number = encounter.round_number
-        encounter_session.active_index = encounter.active_index
-        encounter_session.combat_state_json = encounter.model_dump(mode="json")
-
-        await self._sync_combatants(encounter_session, encounter)
-        await self.db.flush()
-        await self.db.commit()
+        await self._action_execution_repository.persist_encounter(encounter_session, encounter)
 
     async def _sync_combatants(self, encounter_session: EncounterSession, encounter: EncounterState) -> None:
         # Load existing combatant states to avoid unnecessary delete-orphans of turn budgets
@@ -906,7 +900,7 @@ class CombatService:
         for actor in encounter.combatants:
             await self._get_or_create_budget(encounter_session, actor.id, encounter.round_number, actor.speed.walk)
 
-        await self.db.commit()
+        await self._action_execution_repository.commit()
 
     async def _refresh_turn_budgets_on_encounter(
         self,
@@ -937,53 +931,15 @@ class CombatService:
         round_number: int,
         max_movement: int,
     ) -> TurnBudgetRecord:
-        combatant = await self._load_combatant(encounter_session.id, actor_id)
-        if combatant is None:
-            combatant = CombatantState(
-                encounter_session_id=encounter_session.id,
-                actor_id=actor_id,
-                initiative_order=0,
-                owner_user_id=None,
-                current_hp=0,
-                max_hp=0,
-                pos_x=0,
-                pos_y=0,
-                actor_snapshot={},
-            )
-            self.db.add(combatant)
-            await self.db.flush()
-
-        stmt = select(TurnBudgetRecord).where(
-            TurnBudgetRecord.encounter_session_id == encounter_session.id,
-            TurnBudgetRecord.combatant_id == combatant.id,
-            TurnBudgetRecord.round_number == round_number,
-        )
-        result = await self.db.execute(stmt)
-        budget = result.scalar_one_or_none()
-        if budget is not None:
-            return budget
-
-        budget = TurnBudgetRecord(
-            encounter_session_id=encounter_session.id,
-            combatant_id=combatant.id,
+        return await self._action_execution_repository.get_or_create_budget(
+            encounter_session=encounter_session,
+            actor_id=actor_id,
             round_number=round_number,
-            action_available=True,
-            bonus_action_available=True,
-            reaction_available=True,
             max_movement=max_movement,
-            movement_used=0,
         )
-        self.db.add(budget)
-        await self.db.flush()
-        return budget
 
     async def _load_combatant(self, encounter_session_id: str, actor_id: str) -> CombatantState | None:
-        stmt = select(CombatantState).where(
-            CombatantState.encounter_session_id == encounter_session_id,
-            CombatantState.actor_id == actor_id,
-        )
-        result = await self.db.execute(stmt)
-        return result.scalar_one_or_none()
+        return await self._action_execution_repository.load_combatant(encounter_session_id, actor_id)
 
     async def _load_monster_for_actor(self, actor: ActorInstance) -> Monster | None:
         candidates: list[str] = []
@@ -1016,21 +972,12 @@ class CombatService:
 
     async def _build_bound_action_candidates(self, actor: ActorInstance) -> list[dict[str, Any]]:
         template_candidates = self._binding_template_candidates(actor)
-        definition_slug = actor.definition_slug.strip()
-        binding_filters = [AbilityBindingRecord.actor_id == actor.id]
-        if template_candidates:
-            binding_filters.append(
-                AbilityBindingRecord.actor_template_id.in_(template_candidates)
-            )
-
-        stmt = select(AbilityBindingRecord).where(
-            AbilityBindingRecord.system == "dnd5e",
-            or_(*binding_filters),
-        )
 
         try:
-            binding_result = await self.db.execute(stmt)
-            bindings = list(binding_result.scalars().all())
+            bindings = await self._action_catalog_repository.list_bindings_for_actor(
+                actor_id=actor.id,
+                template_candidates=template_candidates,
+            )
         except Exception:
             # Fallback is handled by legacy candidate projection.
             return []
@@ -1052,15 +999,8 @@ class CombatService:
         if not action_ids:
             return []
 
-        action_stmt = select(ActionDefinitionRecord).where(
-            ActionDefinitionRecord.system == "dnd5e",
-            ActionDefinitionRecord.enabled.is_(True),
-            ActionDefinitionRecord.action_id.in_(action_ids),
-        )
-
         try:
-            action_result = await self.db.execute(action_stmt)
-            action_defs = list(action_result.scalars().all())
+            action_defs = await self._action_catalog_repository.list_action_definitions_by_ids(action_ids)
         except Exception:
             return []
 
@@ -2265,13 +2205,7 @@ class CombatService:
         if not effect_id:
             return []
 
-        stmt = select(EffectDefinitionRecord).where(
-            EffectDefinitionRecord.system == "dnd5e",
-            EffectDefinitionRecord.effect_id == effect_id,
-            EffectDefinitionRecord.enabled.is_(True),
-        )
-        result = await db_session.execute(stmt)
-        effect_record = result.scalar_one_or_none()
+        effect_record = await self._action_catalog_repository.get_effect_definition(effect_id)
 
         if effect_record is None:
             return [{"type": "effect_denied", "payload": {
@@ -2444,62 +2378,12 @@ class CombatService:
         encounter: EncounterState,
         provenance_by_instance: dict[str, dict[str, Any]] | None = None,
     ) -> None:
-        """Upsert of effect instance records to DB to preserve metadata like tick_intent."""
-        from src.systems.dnd5e.lib.content_models import EffectInstanceRecord
-        from sqlalchemy import select
-
-        # 1. Load existing records
-        existing_result = await db_session.execute(
-            select(EffectInstanceRecord).where(
-                EffectInstanceRecord.encounter_session_id == encounter_session.id,
-            )
+        """Upsert effect instance records via repository-owned persistence."""
+        await self._action_execution_repository.sync_effect_instance_records(
+            encounter_session=encounter_session,
+            encounter=encounter,
+            provenance_by_instance=provenance_by_instance,
         )
-        existing_rows = {
-            row.instance_id: row for row in existing_result.scalars().all()}
-
-        # 2. Collect current instances
-        current_instances = []
-        for actor in encounter.combatants:
-            current_instances.extend(actor.effects)
-        current_instance_ids = {eff.id for eff in current_instances}
-
-        provenance_by_instance = provenance_by_instance or {}
-
-        # 3. Delete orphans
-        for instance_id, row in list(existing_rows.items()):
-            if instance_id not in current_instance_ids:
-                res = db_session.delete(row)
-                if hasattr(res, "__await__"):
-                    await res
-                del existing_rows[instance_id]
-
-        # 4. Upsert current
-        for actor in encounter.combatants:
-            for effect in actor.effects:
-                row = existing_rows.get(effect.id)
-                if row is None:
-                    from uuid import uuid4
-                    row = EffectInstanceRecord(
-                        id=f"eff_rec_{uuid4().hex[:8]}",
-                        encounter_session_id=encounter_session.id,
-                        instance_id=effect.id,
-                        applied_at_round=encounter.round_number,  # Fix constraint
-                    )
-                    db_session.add(row)
-
-                row.effect_id = effect.effect_id
-                row.source_actor_id = effect.source_id
-                row.target_actor_id = effect.target_id
-                row.duration_type = effect.duration_type.value
-                row.remaining_duration = effect.remaining_rounds
-                row.tick_intent = effect.tick_intent
-                row.stack_count = effect.value
-                row.snapshot_payload = effect.model_dump(mode="json")
-
-                if effect.id in provenance_by_instance:
-                    row.provenance = provenance_by_instance[effect.id]
-
-        await db_session.flush()
 
     def _sync_effect_instance_records_from_events(
         self,

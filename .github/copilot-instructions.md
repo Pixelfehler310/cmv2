@@ -42,6 +42,14 @@ It uses a **Hybrid Architecture** with a Python Backend and React Frontend in a 
 - Favor clear structure and direct implementations, even if breaking changes occur.
 - Use tests to validate the current direction, not to protect deprecated systems.
 
+### Legacy Debt Capture (Guarded)
+
+- If you encounter unresolved legacy code/debt during a task and do not fix it in the same scope, create a focused issue document in `ISSUES/` at the end of the task.
+- Only create the issue when the debt is material (e.g., causes warnings/errors, raises maintenance risk, or blocks near-term refactors). Do not create issues for minor style nits.
+- Before creating a new file, check whether an existing issue already tracks the same area and append/expand that issue instead of duplicating.
+- Each legacy debt issue must include: affected files/line references, impact/risk, explicit in-scope fix list, out-of-scope notes, and verification commands.
+- Keep implementation output quality first: issue capture is a finalization step and must not interrupt primary task delivery.
+
 ## Development Workflow
 
 - Prefer container-first development for day-to-day work.

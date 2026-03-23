@@ -43,6 +43,10 @@ from .event_types import (
 )
 
 from .schemas.encounter import EncounterState
+from .application.action_execution_service import (
+    ActionExecutionApplicationService,
+    ActionExecutionRequest,
+)
 from .services.combat_service import CombatService
 
 logger = logging.getLogger(__name__)
@@ -182,6 +186,7 @@ class Dnd5eWsHandler(ISystemHandler):
         print(f"DEBUG: handler.handle using AsyncSessionLocal ID={id(AsyncSessionLocal)}")
         async with AsyncSessionLocal() as db:
             service = CombatService(db)
+            action_execution_service = ActionExecutionApplicationService(service)
             encounter_session, encounter = await service.load_or_create_encounter_state(ctx.campaign_id)
 
             if event_type == "ping":
@@ -197,10 +202,24 @@ class Dnd5eWsHandler(ISystemHandler):
                 _results = self._handle_chat_message(envelope, ctx)
 
             elif event_type == "action":
-                _results = await self._handle_action(encounter, encounter_session, service, envelope, ctx)
+                _results = await self._handle_action(
+                    encounter,
+                    encounter_session,
+                    action_execution_service,
+                    service,
+                    envelope,
+                    ctx,
+                )
 
             elif event_type == "request_action":
-                _results = await self._handle_request_action(encounter, encounter_session, service, envelope, ctx)
+                _results = await self._handle_request_action(
+                    encounter,
+                    encounter_session,
+                    action_execution_service,
+                    service,
+                    envelope,
+                    ctx,
+                )
 
             elif event_type == "request_executable_actions":
                 _results = await self._handle_request_executable_actions(encounter, encounter_session, service, envelope, ctx)
@@ -336,6 +355,7 @@ class Dnd5eWsHandler(ISystemHandler):
         self,
         encounter: EncounterState,
         encounter_session,
+        action_execution_service: ActionExecutionApplicationService,
         service: CombatService,
         envelope: WsEnvelope,
         ctx: SessionContext,
@@ -345,24 +365,30 @@ class Dnd5eWsHandler(ISystemHandler):
         except Exception:
             return [self._error("Invalid action payload", WsErrorCode.INVALID_MESSAGE, ctx)]
 
-        domain_events = await service.execute_action(
-            encounter, encounter_session,
+        request = ActionExecutionRequest(
             actor_id=payload.actor_id,
-            action_type=service.normalize_action_type(payload.action_type),
+            action_type=payload.action_type,
             action_name=payload.action_name,
             target_ids=payload.target_ids,
             action_payload={},
             request_id=envelope.request_id,
-            ctx=ctx,
             raw_payload=payload.model_dump(mode="json"),
             require_canonical_action_id=True,
         )
+        execution = await action_execution_service.execute(
+            request=request,
+            encounter=encounter,
+            encounter_session=encounter_session,
+            ctx=ctx,
+        )
+        domain_events = execution.events
         return self._domain_events_to_outbound(domain_events, ctx)
 
     async def _handle_request_action(
         self,
         encounter: EncounterState,
         encounter_session,
+        action_execution_service: ActionExecutionApplicationService,
         service: CombatService,
         envelope: WsEnvelope,
         ctx: SessionContext,
@@ -382,18 +408,23 @@ class Dnd5eWsHandler(ISystemHandler):
             requested_target_ids = [
                 str(target_id) for target_id in raw_target_ids if isinstance(target_id, str)]
 
-        domain_events = await service.execute_action(
-            encounter, encounter_session,
+        request = ActionExecutionRequest(
             actor_id=payload.actor_id,
-            action_type=service.normalize_action_type(payload.action_type),
+            action_type=payload.action_type,
             action_name=payload.action_name,
             target_ids=requested_target_ids,
             action_payload=payload.payload,
             request_id=envelope.request_id,
-            ctx=effective_ctx,
             raw_payload=payload.model_dump(mode="json"),
             require_canonical_action_id=True,
         )
+        execution = await action_execution_service.execute(
+            request=request,
+            encounter=encounter,
+            encounter_session=encounter_session,
+            ctx=effective_ctx,
+        )
+        domain_events = execution.events
         return self._domain_events_to_outbound(domain_events, ctx)
 
     async def _handle_request_executable_actions(
