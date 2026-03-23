@@ -1,0 +1,505 @@
+Project cmv2_backend_database {
+  database_type: "PostgreSQL"
+  Note: '''
+  CMV2 backend ERM in DBML form.
+
+  - This file models SQLAlchemy-declared persistent entities.
+  - Hard FK relationships are encoded as Ref statements.
+  - Soft/logical references (application-enforced) are documented in notes.
+  '''
+}
+
+Table users {
+  id varchar [pk, not null, note: "UUID string"]
+  username varchar [not null, unique]
+  hashed_password varchar
+  is_active boolean [not null, default: true]
+  is_superuser boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    username [name: "ix_users_username", unique]
+  }
+}
+
+Table user_social_auths {
+  id varchar [pk, not null, note: "UUID string"]
+  user_id varchar [not null]
+  provider varchar [not null]
+  provider_user_id varchar [not null]
+  email varchar
+  extra_data json [not null, default: "{}"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Note: 'Model does not currently enforce unique(provider, provider_user_id) at DB level.'
+}
+
+Table campaigns {
+  id varchar [pk, not null, note: "UUID string"]
+  name varchar [not null]
+  description varchar
+  dm_id varchar [note: "Soft ref to users.id (legacy lookup field)"]
+  current_scene varchar [note: "Soft ref to dnd5e_scene_catalog.scene_id scoped by campaign"]
+  active_encounter_id varchar [note: "Soft ref to dnd5e_encounter_catalog.encounter_id scoped by campaign+scene"]
+  context_version integer [not null, default: 0]
+  active_turn varchar [note: "Actor/character id, not FK-constrained"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    name [name: "ix_campaigns_name"]
+  }
+}
+
+Table campaign_members {
+  id varchar [pk, not null, note: "UUID string"]
+  campaign_id varchar [not null]
+  user_id varchar [not null]
+  role varchar [not null, default: "PLAYER"]
+  active_character_id varchar [note: "Soft ref to characters.id"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Note: 'Model does not currently enforce unique(campaign_id, user_id) at DB level.'
+}
+
+Table characters {
+  id varchar [pk, not null, note: "UUID string"]
+  name varchar [not null]
+  player_name varchar
+  campaign_id varchar
+  species_id varchar
+  class_id varchar
+  background_id varchar
+  level integer [not null, default: 1]
+  xp integer [not null, default: 0]
+  alignment varchar
+  strength integer [not null, default: 10]
+  dexterity integer [not null, default: 10]
+  constitution integer [not null, default: 10]
+  intelligence integer [not null, default: 10]
+  wisdom integer [not null, default: 10]
+  charisma integer [not null, default: 10]
+  max_hp integer [not null]
+  current_hp integer [not null]
+  temp_hp integer [not null, default: 0]
+  hit_dice varchar [not null]
+  armor_class integer [not null, default: 10]
+  speed integer [not null, default: 30]
+  initiative integer [not null, default: 0]
+  inventory json [not null, default: "[]"]
+  spells json [not null, default: "[]"]
+  spell_slots json [not null, default: "{}"]
+  actions json [not null, default: "[]"]
+  effects json [not null, default: "[]"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    name [name: "ix_characters_name"]
+  }
+}
+
+Table factions {
+  id varchar [pk, not null, note: "UUID string"]
+  name varchar [not null]
+  description varchar [not null]
+  goals varchar
+  beliefs varchar
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    name [name: "ix_factions_name"]
+  }
+
+  Note: 'Currently standalone: no FK relationships in model.'
+}
+
+Table items {
+  id varchar [pk, not null, note: "UUID string"]
+  name varchar [not null]
+  description varchar [not null]
+  type varchar [not null]
+  rarity varchar [not null]
+  weight integer [not null, default: 0, note: "Model type is float but DB column is Integer"]
+  price integer [not null, default: 0]
+  properties json [not null, default: "{}"]
+  effects json [not null, default: "[]"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    name [name: "ix_items_name"]
+  }
+}
+
+Table spells {
+  id varchar [pk, not null, note: "UUID string"]
+  name varchar [not null]
+  description varchar [not null]
+  level integer [not null]
+  school varchar [not null]
+  casting_time varchar [not null]
+  range varchar [not null]
+  components json [not null]
+  duration varchar [not null]
+  effects json [not null, default: "[]"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    name [name: "ix_spells_name"]
+  }
+}
+
+Table monsters {
+  id varchar [pk, not null, note: "UUID string"]
+  name varchar [not null]
+  description varchar
+  size varchar [not null]
+  type varchar [not null]
+  alignment varchar [not null]
+  armor_class integer [not null]
+  hit_points integer [not null]
+  hit_dice varchar [not null]
+  speed json [not null]
+  strength integer [not null]
+  dexterity integer [not null]
+  constitution integer [not null]
+  intelligence integer [not null]
+  wisdom integer [not null]
+  charisma integer [not null]
+  proficiencies json [not null, default: "[]"]
+  senses json [not null, default: "{}"]
+  languages varchar [not null]
+  challenge_rating integer [not null, note: "Model type is float but DB column is Integer"]
+  xp integer [not null]
+  special_abilities json [not null, default: "[]"]
+  actions json [not null, default: "[]"]
+  legendary_actions json [not null, default: "[]"]
+  inventory json [not null, default: "[]"]
+  effects json [not null, default: "[]"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    name [name: "ix_monsters_name"]
+  }
+}
+
+Table species {
+  id varchar [pk, not null, note: "UUID string"]
+  name varchar [not null]
+  description varchar [not null]
+  speed integer [not null, default: 30]
+  size varchar [not null, default: "Medium"]
+  ability_bonuses json [not null, default: "{}"]
+  traits json [not null, default: "[]"]
+  languages json [not null, default: "[]"]
+  effects json [not null, default: "[]"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    name [name: "ix_species_name"]
+  }
+}
+
+Table classes {
+  id varchar [pk, not null, note: "UUID string"]
+  name varchar [not null]
+  description varchar [not null]
+  hit_die varchar [not null]
+  proficiencies json [not null, default: "{}"]
+  saving_throws json [not null, default: "[]"]
+  progression json [not null, default: "[]"]
+  effects json [not null, default: "[]"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    name [name: "ix_classes_name"]
+  }
+}
+
+Table backgrounds {
+  id varchar [pk, not null, note: "UUID string"]
+  name varchar [not null]
+  description varchar [not null]
+  skill_proficiencies json [not null, default: "[]"]
+  tool_proficiencies json [not null, default: "[]"]
+  equipment json [not null, default: "[]"]
+  feature json [not null, default: "{}"]
+  effects json [not null, default: "[]"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    name [name: "ix_backgrounds_name"]
+  }
+}
+
+Table feats {
+  id varchar [pk, not null, note: "UUID string"]
+  name varchar [not null]
+  description varchar [not null]
+  prerequisites varchar
+  effects json [not null, default: "[]"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    name [name: "ix_feats_name"]
+  }
+}
+
+Table features {
+  id varchar [pk, not null, note: "UUID string"]
+  name varchar [not null]
+  description varchar [not null]
+  source varchar [not null]
+  level_required integer [not null, default: 1]
+  effects json [not null, default: "[]"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    name [name: "ix_features_name"]
+  }
+}
+
+Table dnd5e_scene_catalog {
+  id varchar [pk, not null, note: "UUID string"]
+  campaign_id varchar [not null, note: "Soft ref to campaigns.id"]
+  scene_id varchar [not null]
+  name varchar [not null]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    campaign_id [name: "ix_dnd5e_scene_catalog_campaign_id"]
+    (campaign_id, scene_id) [name: "uq_dnd5e_scene_catalog_campaign_scene", unique]
+  }
+}
+
+Table dnd5e_encounter_catalog {
+  id varchar [pk, not null, note: "UUID string"]
+  campaign_id varchar [not null, note: "Soft ref to campaigns.id"]
+  scene_id varchar [not null, note: "Soft ref to dnd5e_scene_catalog.scene_id within campaign"]
+  encounter_id varchar [not null]
+  name varchar [not null]
+  source varchar [not null, default: "fixture"]
+  state_json json [not null, default: "{}"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    campaign_id [name: "ix_dnd5e_encounter_catalog_campaign_id"]
+    scene_id [name: "ix_dnd5e_encounter_catalog_scene_id"]
+    (campaign_id, scene_id, encounter_id) [name: "uq_dnd5e_encounter_catalog_campaign_scene_encounter", unique]
+    (campaign_id, scene_id) [name: "ix_dnd5e_encounter_catalog_campaign_scene"]
+  }
+}
+
+Table dnd5e_encounter_sessions {
+  id varchar [pk, not null, note: "UUID string"]
+  campaign_id varchar [not null, note: "Soft ref to campaigns.id"]
+  scene_id varchar [note: "Soft ref to dnd5e_scene_catalog.scene_id"]
+  encounter_id varchar [not null, note: "Soft ref to dnd5e_encounter_catalog.encounter_id"]
+  phase varchar [not null, default: "pre_combat"]
+  round_number integer [not null, default: 0]
+  active_index integer [not null, default: 0]
+  combat_state_json json [not null, default: "{}"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    campaign_id [name: "ix_dnd5e_encounter_sessions_campaign_id", unique]
+  }
+}
+
+Table dnd5e_combatant_states {
+  id varchar [pk, not null, note: "UUID string"]
+  encounter_session_id varchar [not null]
+  actor_id varchar [not null]
+  initiative_order integer [not null, default: 0]
+  owner_user_id varchar [note: "Soft ref to users.id"]
+  current_hp integer [not null, default: 0]
+  max_hp integer [not null, default: 0]
+  pos_x integer [not null, default: 0]
+  pos_y integer [not null, default: 0]
+  actor_snapshot json [not null, default: "{}"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    encounter_session_id [name: "ix_dnd5e_combatant_states_encounter_session_id"]
+    actor_id [name: "ix_dnd5e_combatant_states_actor_id"]
+  }
+}
+
+Table dnd5e_turn_budget_records {
+  id varchar [pk, not null, note: "UUID string"]
+  encounter_session_id varchar [not null]
+  combatant_id varchar [not null]
+  round_number integer [not null, default: 1]
+  action_available boolean [not null, default: true]
+  bonus_action_available boolean [not null, default: true]
+  reaction_available boolean [not null, default: true]
+  max_movement integer [not null, default: 30]
+  movement_used integer [not null, default: 0]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    encounter_session_id [name: "ix_dnd5e_turn_budget_records_encounter_session_id"]
+    combatant_id [name: "ix_dnd5e_turn_budget_records_combatant_id"]
+    (encounter_session_id, combatant_id, round_number) [name: "uq_dnd5e_budget_encounter_combatant_round", unique]
+    (encounter_session_id, round_number) [name: "ix_dnd5e_budget_encounter_round"]
+    (encounter_session_id, combatant_id) [name: "ix_dnd5e_budget_encounter_combatant"]
+  }
+}
+
+Table dnd5e_action_logs {
+  id varchar [pk, not null, note: "UUID string"]
+  encounter_session_id varchar [not null]
+  request_id varchar
+  actor_id varchar [not null]
+  action_type varchar [not null]
+  action_state varchar [not null]
+  denial_reason varchar
+  authorization_checks json [not null, default: "{}"]
+  payload json [not null, default: "{}"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    encounter_session_id [name: "ix_dnd5e_action_logs_encounter_session_id"]
+    actor_id [name: "ix_dnd5e_action_logs_actor_id"]
+  }
+}
+
+Table dnd5e_action_definitions {
+  id varchar [pk, not null, note: "UUID string"]
+  system varchar [not null, default: "dnd5e"]
+  action_id varchar [not null]
+  name varchar [not null]
+  family varchar [not null, default: "utility"]
+  action_type_cost varchar [not null, default: "action"]
+  targeting_mode varchar [not null, default: "single_target"]
+  range integer
+  save_context json
+  attack_context json
+  resource_costs json [not null, default: "[]"]
+  effect_intents json [not null, default: "[]"]
+  tags json [not null, default: "[]"]
+  source_ref varchar [not null, default: "custom"]
+  content_version varchar [not null, default: "1"]
+  enabled boolean [not null, default: true]
+  pack_id varchar
+  pack_version varchar
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    system [name: "ix_dnd5e_action_definitions_system"]
+    pack_id [name: "ix_dnd5e_action_definitions_pack_id"]
+    (system, action_id) [name: "uq_dnd5e_action_definition_system_action", unique]
+    (system, pack_id) [name: "ix_dnd5e_action_definitions_system_pack"]
+  }
+}
+
+Table dnd5e_ability_bindings {
+  id varchar [pk, not null, note: "UUID string"]
+  system varchar [not null, default: "dnd5e"]
+  binding_id varchar [not null]
+  action_id varchar [not null, note: "Soft ref to dnd5e_action_definitions.action_id by system"]
+  actor_template_id varchar
+  actor_id varchar
+  unlock_conditions json [not null, default: "[]"]
+  override_payload json
+  pack_id varchar
+  pack_version varchar
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    system [name: "ix_dnd5e_ability_bindings_system"]
+    action_id [name: "ix_dnd5e_ability_bindings_action_id"]
+    pack_id [name: "ix_dnd5e_ability_bindings_pack_id"]
+    (system, binding_id) [name: "uq_dnd5e_ability_binding_system_binding", unique]
+    (system, pack_id) [name: "ix_dnd5e_ability_bindings_system_pack"]
+  }
+}
+
+Table dnd5e_effect_definitions {
+  id varchar [pk, not null, note: "UUID string"]
+  system varchar [not null, default: "dnd5e"]
+  effect_id varchar [not null]
+  name varchar [not null]
+  family varchar [not null, default: "utility"]
+  duration json [not null, default: "{}"]
+  stacking json [not null, default: "{}"]
+  tags json [not null, default: "[]"]
+  modifiers json [not null, default: "[]"]
+  grants_conditions json [not null, default: "[]"]
+  periodic json [not null, default: "[]"]
+  removal_triggers json [not null, default: "[]"]
+  metadata json [not null, default: "{}"]
+  content_version varchar [not null, default: "1"]
+  enabled boolean [not null, default: true]
+  pack_id varchar
+  pack_version varchar
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    system [name: "ix_dnd5e_effect_definitions_system"]
+    pack_id [name: "ix_dnd5e_effect_definitions_pack_id"]
+    (system, effect_id) [name: "uq_dnd5e_effect_definition_system_effect", unique]
+    (system, pack_id) [name: "ix_dnd5e_effect_definitions_system_pack"]
+  }
+}
+
+Table dnd5e_effect_instances {
+  id varchar [pk, not null, note: "UUID string"]
+  instance_id varchar [not null, unique]
+  effect_id varchar [not null, note: "Soft ref to dnd5e_effect_definitions.effect_id"]
+  source_actor_id varchar [note: "Actor id (soft ref)"]
+  target_actor_id varchar [not null, note: "Actor id (soft ref)"]
+  applied_at_round integer [not null]
+  remaining_duration integer
+  concentration_owner_actor_id varchar [note: "Actor id (soft ref)"]
+  stack_count integer [not null, default: 1]
+  snapshot_payload json [not null, default: "{}"]
+  provenance json [not null, default: "{}"]
+  encounter_session_id varchar [note: "Nullable FK, on delete set null"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: "Updated by ORM on row update"]
+
+  Indexes {
+    instance_id [name: "ix_dnd5e_effect_instances_instance_id", unique]
+    effect_id [name: "ix_dnd5e_effect_instances_effect_id"]
+    target_actor_id [name: "ix_dnd5e_effect_instances_target_actor_id"]
+    encounter_session_id [name: "ix_dnd5e_effect_instances_encounter_session_id"]
+  }
+}
+
+Ref: user_social_auths.user_id > users.id
+
+Ref: campaign_members.campaign_id > campaigns.id
+Ref: campaign_members.user_id > users.id
+
+Ref: characters.campaign_id > campaigns.id
+Ref: characters.species_id > species.id
+Ref: characters.class_id > classes.id
+Ref: characters.background_id > backgrounds.id
+
+Ref combatants_session_cascade: dnd5e_combatant_states.encounter_session_id > dnd5e_encounter_sessions.id [delete: cascade]
+Ref budget_session_cascade: dnd5e_turn_budget_records.encounter_session_id > dnd5e_encounter_sessions.id [delete: cascade]
+Ref budget_combatant_cascade: dnd5e_turn_budget_records.combatant_id > dnd5e_combatant_states.id [delete: cascade]
+Ref action_logs_session_cascade: dnd5e_action_logs.encounter_session_id > dnd5e_encounter_sessions.id [delete: cascade]
+Ref effect_instances_session_set_null: dnd5e_effect_instances.encounter_session_id > dnd5e_encounter_sessions.id [delete: set null]

@@ -3,6 +3,10 @@
 Status: Drafted from codebase state on 2026-03-23  
 Scope source: SQLAlchemy models and effective write paths in backend services/repositories
 
+Companion artifact:
+
+- Detailed DBML model: [database_erm_specification.dbml](database_erm_specification.dbml)
+
 ## 1. Purpose and Boundaries
 
 This document is the authoritative ERM for persisted backend data in CMV2.
@@ -41,10 +45,10 @@ erDiagram
 
   users {
     string id PK
-    string username UNIQUE
-    string hashed_password nullable
-    boolean is_active default_true
-    boolean is_superuser default_false
+    string username
+    string hashed_password
+    boolean is_active
+    boolean is_superuser
     datetime created_at
     datetime updated_at
   }
@@ -54,8 +58,8 @@ erDiagram
     string user_id FK
     string provider
     string provider_user_id
-    string email nullable
-    json extra_data default_object
+    string email
+    json extra_data
     datetime created_at
     datetime updated_at
   }
@@ -63,12 +67,12 @@ erDiagram
   campaigns {
     string id PK
     string name
-    string description nullable
-    string dm_id nullable
-    string current_scene nullable
-    string active_encounter_id nullable
-    int context_version default_0
-    string active_turn nullable
+    string description
+    string dm_id
+    string current_scene
+    string active_encounter_id
+    int context_version
+    string active_turn
     datetime created_at
     datetime updated_at
   }
@@ -77,8 +81,8 @@ erDiagram
     string id PK
     string campaign_id FK
     string user_id FK
-    string role default_PLAYER
-    string active_character_id nullable
+    string role
+    string active_character_id
     datetime created_at
     datetime updated_at
   }
@@ -86,15 +90,15 @@ erDiagram
   characters {
     string id PK
     string name
-    string player_name nullable
-    string campaign_id FK nullable
-    string species_id FK nullable
-    string class_id FK nullable
-    string background_id FK nullable
-    int level default_1
-    int xp default_0
-    json inventory default_array
-    json effects default_array
+    string player_name
+    string campaign_id FK
+    string species_id FK
+    string class_id FK
+    string background_id FK
+    int level
+    int xp
+    json inventory
+    json effects
     datetime created_at
     datetime updated_at
   }
@@ -103,12 +107,12 @@ erDiagram
     string id PK
     string name
     string description
-    int speed default_30
-    string size default_Medium
-    json ability_bonuses default_object
-    json traits default_array
-    json languages default_array
-    json effects default_array
+    int speed
+    string size
+    json ability_bonuses
+    json traits
+    json languages
+    json effects
     datetime created_at
     datetime updated_at
   }
@@ -118,10 +122,10 @@ erDiagram
     string name
     string description
     string hit_die
-    json proficiencies default_object
-    json saving_throws default_array
-    json progression default_array
-    json effects default_array
+    json proficiencies
+    json saving_throws
+    json progression
+    json effects
     datetime created_at
     datetime updated_at
   }
@@ -130,18 +134,18 @@ erDiagram
     string id PK
     string name
     string description
-    json skill_proficiencies default_array
-    json tool_proficiencies default_array
-    json equipment default_array
-    json feature default_object
-    json effects default_array
+    json skill_proficiencies
+    json tool_proficiencies
+    json equipment
+    json feature
+    json effects
     datetime created_at
     datetime updated_at
   }
 
   dnd5e_scene_catalog {
     string id PK
-    string campaign_id soft_ref
+    string campaign_id
     string scene_id
     string name
     datetime created_at
@@ -150,25 +154,25 @@ erDiagram
 
   dnd5e_encounter_catalog {
     string id PK
-    string campaign_id soft_ref
-    string scene_id soft_ref
+    string campaign_id
+    string scene_id
     string encounter_id
     string name
-    string source default_fixture
-    json state_json default_object
+    string source
+    json state_json
     datetime created_at
     datetime updated_at
   }
 
   dnd5e_encounter_sessions {
     string id PK
-    string campaign_id unique_soft_ref
-    string scene_id nullable_soft_ref
+    string campaign_id
+    string scene_id
     string encounter_id
-    string phase default_pre_combat
-    int round_number default_0
-    int active_index default_0
-    json combat_state_json default_object
+    string phase
+    int round_number
+    int active_index
+    json combat_state_json
     datetime created_at
     datetime updated_at
   }
@@ -177,13 +181,13 @@ erDiagram
     string id PK
     string encounter_session_id FK
     string actor_id
-    int initiative_order default_0
-    string owner_user_id nullable_soft_ref
-    int current_hp default_0
-    int max_hp default_0
-    int pos_x default_0
-    int pos_y default_0
-    json actor_snapshot default_object
+    int initiative_order
+    string owner_user_id
+    int current_hp
+    int max_hp
+    int pos_x
+    int pos_y
+    json actor_snapshot
     datetime created_at
     datetime updated_at
   }
@@ -192,12 +196,12 @@ erDiagram
     string id PK
     string encounter_session_id FK
     string combatant_id FK
-    int round_number default_1
-    boolean action_available default_true
-    boolean bonus_action_available default_true
-    boolean reaction_available default_true
-    int max_movement default_30
-    int movement_used default_0
+    int round_number
+    boolean action_available
+    boolean bonus_action_available
+    boolean reaction_available
+    int max_movement
+    int movement_used
     datetime created_at
     datetime updated_at
   }
@@ -205,90 +209,90 @@ erDiagram
   dnd5e_action_logs {
     string id PK
     string encounter_session_id FK
-    string request_id nullable
+    string request_id
     string actor_id
     string action_type
     string action_state
-    string denial_reason nullable
-    json authorization_checks default_object
-    json payload default_object
+    string denial_reason
+    json authorization_checks
+    json payload
     datetime created_at
     datetime updated_at
   }
 
   dnd5e_action_definitions {
     string id PK
-    string system indexed_default_dnd5e
+    string system
     string action_id
     string name
-    string family default_utility
-    string action_type_cost default_action
-    string targeting_mode default_single_target
-    int range nullable
-    json save_context nullable
-    json attack_context nullable
-    json resource_costs default_array
-    json effect_intents default_array
-    json tags default_array
-    string source_ref default_custom
-    string content_version default_1
-    boolean enabled default_true
-    string pack_id nullable
-    string pack_version nullable
+    string family
+    string action_type_cost
+    string targeting_mode
+    int range
+    json save_context
+    json attack_context
+    json resource_costs
+    json effect_intents
+    json tags
+    string source_ref
+    string content_version
+    boolean enabled
+    string pack_id
+    string pack_version
     datetime created_at
     datetime updated_at
   }
 
   dnd5e_ability_bindings {
     string id PK
-    string system indexed_default_dnd5e
+    string system
     string binding_id
-    string action_id soft_ref
-    string actor_template_id nullable
-    string actor_id nullable
-    json unlock_conditions default_array
-    json override_payload nullable
-    string pack_id nullable
-    string pack_version nullable
+    string action_id
+    string actor_template_id
+    string actor_id
+    json unlock_conditions
+    json override_payload
+    string pack_id
+    string pack_version
     datetime created_at
     datetime updated_at
   }
 
   dnd5e_effect_definitions {
     string id PK
-    string system indexed_default_dnd5e
+    string system
     string effect_id
     string name
-    string family default_utility
-    json duration default_object
-    json stacking default_object
-    json tags default_array
-    json modifiers default_array
-    json grants_conditions default_array
-    json periodic default_array
-    json removal_triggers default_array
-    json metadata default_object
-    string content_version default_1
-    boolean enabled default_true
-    string pack_id nullable
-    string pack_version nullable
+    string family
+    json duration
+    json stacking
+    json tags
+    json modifiers
+    json grants_conditions
+    json periodic
+    json removal_triggers
+    json metadata
+    string content_version
+    boolean enabled
+    string pack_id
+    string pack_version
     datetime created_at
     datetime updated_at
   }
 
   dnd5e_effect_instances {
     string id PK
-    string instance_id UNIQUE
-    string effect_id indexed_soft_ref
-    string source_actor_id nullable_soft_ref
-    string target_actor_id soft_ref
+    string instance_id
+    string effect_id
+    string source_actor_id
+    string target_actor_id
     int applied_at_round
-    int remaining_duration nullable
-    string concentration_owner_actor_id nullable_soft_ref
-    int stack_count default_1
-    json snapshot_payload default_object
-    json provenance default_object
-    string encounter_session_id FK_nullable_set_null
+    int remaining_duration
+    string concentration_owner_actor_id
+    int stack_count
+    json snapshot_payload
+    json provenance
+    string encounter_session_id FK
     datetime created_at
     datetime updated_at
   }

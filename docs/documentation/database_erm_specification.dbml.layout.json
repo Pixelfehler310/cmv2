@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "positions": {
+    "table-users": {
+      "x": 13.5,
+      "y": 1163
+    },
+    "table-user_social_auths": {
+      "x": 0,
+      "y": 330
+    },
+    "table-campaigns": {
+      "x": 300.75200757099236,
+      "y": 1118
+    },
+    "table-campaign_members": {
+      "x": 278,
+      "y": 345
+    },
+    "table-characters": {
+      "x": 16.614073182454206,
+      "y": 1439.2999596289837
+    },
+    "table-factions": {
+      "x": 977,
+      "y": 345
+    },
+    "table-items": {
+      "x": 1237,
+      "y": 285
+    },
+    "table-spells": {
+      "x": 1497,
+      "y": 270
+    },
+    "table-monsters": {
+      "x": 1757,
+      "y": 30
+    },
+    "table-species": {
+      "x": 420.1004533304567,
+      "y": 1530.4593753532715
+    },
+    "table-classes": {
+      "x": 568.4540216277428,
+      "y": 1949.657609017853
+    },
+    "table-backgrounds": {
+      "x": 298.18614350223686,
+      "y": 2047.2969691926014
+    },
+    "table-feats": {
+      "x": 2035,
+      "y": 345
+    },
+    "table-features": {
+      "x": 2295,
+      "y": 330
+    },
+    "table-dnd5e_scene_catalog": {
+      "x": 2559,
+      "y": 360
+    },
+    "table-dnd5e_encounter_catalog": {
+      "x": 2819,
+      "y": 315
+    },
+    "table-dnd5e_encounter_sessions": {
+      "x": 3268.5,
+      "y": 1636
+    },
+    "table-dnd5e_combatant_states": {
+      "x": 2172,
+      "y": 1088
+    },
+    "table-dnd5e_turn_budget_records": {
+      "x": 3079,
+      "y": 285
+    },
+    "table-dnd5e_action_logs": {
+      "x": 3330.5,
+      "y": 1103
+    },
+    "table-dnd5e_action_definitions": {
+      "x": 3399,
+      "y": 150
+    },
+    "table-dnd5e_ability_bindings": {
+      "x": 3677,
+      "y": 270
+    },
+    "table-dnd5e_effect_definitions": {
+      "x": 3962,
+      "y": 165
+    },
+    "table-dnd5e_effect_instances": {
+      "x": 3636.5,
+      "y": 1058
+    }
+  }
+}
