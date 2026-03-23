@@ -44,6 +44,21 @@ from ..repositories.encounter_session_repository import (
     EncounterSessionRepository,
     EncounterSessionRepositoryProtocol,
 )
+from ..domain.authorization import (
+    AuthorizationResult,
+    check_actor_exists,
+    check_actor_alive,
+    check_user_role_allowed,
+    check_actor_ownership,
+    check_turn_ownership,
+    combine_authorization_checks,
+)
+from ..domain.action_economy import (
+    normalize_action_type as normalize_domain_action_type,
+    can_spend_action_budget,
+    apply_action_budget_consumption,
+    get_or_create_in_memory_budget,
+)
 from .validation import (
     resolve_action_family,
     build_action_definition,
@@ -62,14 +77,6 @@ from .validation import (
     ACTION_FAMILY_HEALING,
     ACTION_FAMILY_UTILITY,
 )
-
-
-@dataclass
-class AuthorizationResult:
-    allowed: bool
-    reason_code: str | None = None
-    message: str | None = None
-    checks: dict[str, Any] | None = None
 
 
 @dataclass
@@ -706,17 +713,16 @@ class CombatService:
             reaction_available = budget.reaction_available
 
         checks_data = checks.checks or {}
-        if action_type_normalized == "action" and not action_available:
-            checks_data["action_available"] = False
-            return AuthorizationResult(False, "action_exhausted", "Action already spent this turn", checks_data)
-
-        if action_type_normalized == "bonus_action" and not bonus_action_available:
-            checks_data["bonus_action_available"] = False
-            return AuthorizationResult(False, "bonus_action_exhausted", "Bonus action already spent this turn", checks_data)
-
-        if action_type_normalized == "reaction" and not reaction_available:
-            checks_data["reaction_available"] = False
-            return AuthorizationResult(False, "reaction_exhausted", "Reaction already spent", checks_data)
+        budget_check = can_spend_action_budget(
+            action_type=action_type_normalized,
+            action_available=action_available,
+            bonus_action_available=bonus_action_available,
+            reaction_available=reaction_available,
+        )
+        if not budget_check.allowed:
+            if budget_check.check_key:
+                checks_data[budget_check.check_key] = False
+            return AuthorizationResult(False, budget_check.reason_code, budget_check.message, checks_data)
 
         return AuthorizationResult(True, checks=checks_data)
 
@@ -736,28 +742,21 @@ class CombatService:
         if encounter_session is None:
             budget_state = self._get_or_create_in_memory_budget(
                 encounter, actor_id)
-            if normalized == "action":
-                budget_state["action_available"] = False
-            elif normalized == "bonus_action":
-                budget_state["bonus_action_available"] = False
-            elif normalized == "reaction":
-                budget_state["reaction_available"] = False
-
-            budget_state["movement_remaining"] = max(
-                int(budget_state.get("max_movement", actor.speed.walk)) -
-                int(budget_state.get("movement_used", 0)),
-                0,
-            )
+            apply_action_budget_consumption(normalized, budget_state)
             return
 
         budget = await self._get_or_create_budget(encounter_session, actor_id, encounter.round_number, actor.speed.walk)
-
-        if normalized == "action":
-            budget.action_available = False
-        elif normalized == "bonus_action":
-            budget.bonus_action_available = False
-        elif normalized == "reaction":
-            budget.reaction_available = False
+        budget_state = {
+            "action_available": budget.action_available,
+            "bonus_action_available": budget.bonus_action_available,
+            "reaction_available": budget.reaction_available,
+            "max_movement": budget.max_movement,
+            "movement_used": budget.movement_used,
+        }
+        updated_budget = apply_action_budget_consumption(normalized, budget_state)
+        budget.action_available = bool(updated_budget.get("action_available", budget.action_available))
+        budget.bonus_action_available = bool(updated_budget.get("bonus_action_available", budget.bonus_action_available))
+        budget.reaction_available = bool(updated_budget.get("reaction_available", budget.reaction_available))
 
         await self._action_execution_repository.flush()
 
@@ -799,16 +798,7 @@ class CombatService:
 
     @staticmethod
     def normalize_action_type(action_type: str) -> str:
-        normalized = (action_type or "").strip().lower()
-        if normalized in {"", "action", "attack", "cast_spell", "cast-spell", "spell", "main_action"}:
-            return "action"
-        if normalized in {"bonus_action", "bonus-action", "bonus"}:
-            return "bonus_action"
-        if normalized in {"reaction"}:
-            return "reaction"
-        if normalized in {"move", "movement", "move_token"}:
-            return "move"
-        return normalized
+        return normalize_domain_action_type(action_type)
 
     async def log_action_attempt(
         self,
@@ -1446,11 +1436,13 @@ class CombatService:
         ctx: SessionContext,
     ) -> AuthorizationResult:
         actor = self._find_actor(encounter, actor_id)
-        if actor is None:
-            return AuthorizationResult(False, "invalid_target", f"Actor {actor_id} not found")
+        actor_check = check_actor_exists(actor_id, actor)
+        if not actor_check.allowed:
+            return actor_check
 
-        if ctx.role == UserRole.SPECTATOR:
-            return AuthorizationResult(False, "unauthorized", "Spectators cannot perform combat actions")
+        role_check = check_user_role_allowed(ctx.role)
+        if not role_check.allowed:
+            return role_check
 
         checks: dict[str, Any] = {
             "role": ctx.role.value,
@@ -1463,59 +1455,35 @@ class CombatService:
 
         owner_user_id = combatant.owner_user_id if combatant else actor.owner_user_id
         checks["owner_user_id"] = owner_user_id
-
-        if ctx.role == UserRole.PLAYER and owner_user_id and owner_user_id != ctx.user_id:
-            checks["ownership_ok"] = False
-            return AuthorizationResult(False, "unauthorized", "Player does not own this actor", checks)
-        checks["ownership_ok"] = True
-
-        if actor.current_hp <= 0:
-            checks["alive"] = False
-            return AuthorizationResult(False, "invalid_action", "Dead combatants cannot act", checks)
-        checks["alive"] = True
+        ownership_check = check_actor_ownership(ctx.role, ctx.user_id, owner_user_id)
+        alive_check = check_actor_alive(actor)
 
         active = get_active_combatant(encounter)
         active_id = active.id if active else None
-        checks["active_actor_id"] = active_id
+        turn_check = check_turn_ownership(
+            action_type=action_type,
+            turn_phase=encounter.turn_phase,
+            active_actor_id=active_id,
+            requesting_actor_id=actor_id,
+        )
 
-        if action_type != "reaction" and encounter.turn_phase == "active" and active_id and active_id != actor_id:
-            return AuthorizationResult(False, "not_your_turn", "This actor is not the active turn", checks)
-
-        return AuthorizationResult(True, checks=checks)
+        return combine_authorization_checks(
+            AuthorizationResult(True, checks=checks),
+            ownership_check,
+            alive_check,
+            turn_check,
+        )
 
     @staticmethod
     def _get_or_create_in_memory_budget(encounter: EncounterState, actor_id: str) -> dict[str, Any]:
         actor = CombatService._find_actor(encounter, actor_id)
         max_movement = actor.speed.walk if actor is not None else 30
-
-        budget = encounter.turn_budgets.get(actor_id)
-        if budget is None:
-            budget = {
-                "action_available": True,
-                "bonus_action_available": True,
-                "reaction_available": True,
-                "max_movement": max_movement,
-                "movement_used": 0,
-                "movement_remaining": max_movement,
-                "round_number": encounter.round_number,
-            }
-            encounter.turn_budgets[actor_id] = budget
-
-        # Ensure movement max follows actor speed and reset if round changed.
-        budget["max_movement"] = max_movement
-        if int(budget.get("round_number", encounter.round_number)) != encounter.round_number:
-            budget["action_available"] = True
-            budget["bonus_action_available"] = True
-            budget["reaction_available"] = True
-            budget["movement_used"] = 0
-            budget["round_number"] = encounter.round_number
-
-        budget["movement_remaining"] = max(
-            int(budget.get("max_movement", max_movement)) -
-            int(budget.get("movement_used", 0)),
-            0,
+        return get_or_create_in_memory_budget(
+            turn_budgets=encounter.turn_budgets,
+            actor_id=actor_id,
+            max_movement=max_movement,
+            round_number=encounter.round_number,
         )
-        return budget
 
     @staticmethod
     def _find_actor(encounter: EncounterState, actor_id: str) -> ActorInstance | None:
