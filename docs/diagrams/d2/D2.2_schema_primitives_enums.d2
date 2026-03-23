@@ -1,0 +1,225 @@
+# D2.2 Shared Schema Primitives and Enums
+# Sources:
+# - backend/src/systems/dnd5e/schemas/common.py
+# - backend/src/systems/dnd5e/schemas/enums.py
+
+vars: {
+  schema_color: "#2E86AB"
+  enum_color: "#C0392B"
+}
+
+Enums: {
+  label: "Core Enums"
+
+  Ability: {
+    shape: class
+    style.stroke: ${enum_color}
+    "STR = \"strength\""
+    "DEX = \"dexterity\""
+    "CON = \"constitution\""
+    "INT = \"intelligence\""
+    "WIS = \"wisdom\""
+    "CHA = \"charisma\""
+  }
+
+  AoeShape: {
+    shape: class
+    style.stroke: ${enum_color}
+    "CONE = \"cone\""
+    "SPHERE = \"sphere\""
+    "LINE = \"line\""
+    "CUBE = \"cube\""
+    "CYLINDER = \"cylinder\""
+  }
+
+  EffectType: {
+    shape: class
+    style.stroke: ${enum_color}
+    "BONUS"
+    "SET"
+    "MULTIPLY"
+    "ADVANTAGE"
+    "DISADVANTAGE"
+    "IMMUNITY"
+    "RESISTANCE"
+    "VULNERABILITY"
+    "DAMAGE_PER_TURN"
+    "HEALING_PER_TURN"
+    "GRANT_CONDITION"
+    "REMOVE_CONDITION"
+  }
+
+  ResetOn: {
+    shape: class
+    style.stroke: ${enum_color}
+    "SHORT_REST"
+    "LONG_REST"
+    "DAWN"
+    "ROUND"
+  }
+
+  Size: {
+    shape: class
+    style.stroke: ${enum_color}
+    "TINY"
+    "SMALL"
+    "MEDIUM"
+    "LARGE"
+    "HUGE"
+    "GARGANTUAN"
+  }
+}
+
+ValueObjects: {
+  label: "Shared Value Objects"
+
+  AbilityScores: {
+    shape: class
+    style.stroke: ${schema_color}
+    "strength: int"
+    "dexterity: int"
+    "constitution: int"
+    "intelligence: int"
+    "wisdom: int"
+    "charisma: int"
+  }
+
+  SavingThrows: {
+    shape: class
+    style.stroke: ${schema_color}
+    "strength_save: int | None"
+    "dexterity_save: int | None"
+    "constitution_save: int | None"
+    "intelligence_save: int | None"
+    "wisdom_save: int | None"
+    "charisma_save: int | None"
+  }
+
+  SpeedBlock: {
+    shape: class
+    style.stroke: ${schema_color}
+    "walk: int"
+    "fly: int | None"
+    "swim: int | None"
+    "climb: int | None"
+    "burrow: int | None"
+    "hover: bool"
+  }
+
+  Position: {
+    shape: class
+    style.stroke: ${schema_color}
+    "x: int"
+    "y: int"
+    "elevation: int"
+  }
+
+  Components: {
+    shape: class
+    style.stroke: ${schema_color}
+    "verbal: bool"
+    "somatic: bool"
+    "material: bool"
+    "material_desc: str | None"
+  }
+
+  AreaOfEffect: {
+    shape: class
+    style.stroke: ${schema_color}
+    "shape: AoeShape"
+    "size: int"
+  }
+
+  SaveRequirement: {
+    shape: class
+    style.stroke: ${schema_color}
+    "ability: Ability"
+    "dc: int"
+    "on_fail: str"
+    "on_success: str"
+  }
+
+  RechargeRule: {
+    shape: class
+    style.stroke: ${schema_color}
+    "min_roll: int"
+    "max_roll: int"
+  }
+
+  UsageLimit: {
+    shape: class
+    style.stroke: ${schema_color}
+    "uses: int"
+    "reset_on: ResetOn"
+  }
+
+  AbilityScoreBonus: {
+    shape: class
+    style.stroke: ${schema_color}
+    "ability: Ability"
+    "bonus: int"
+  }
+
+  SkillChoice: {
+    shape: class
+    style.stroke: ${schema_color}
+    "options: list[str]"
+    "choose: int"
+  }
+
+  ResourceCounter: {
+    shape: class
+    style.stroke: ${schema_color}
+    "name: str"
+    "max: int"
+    "current: int"
+    "resets_on: ResetOn"
+  }
+
+  SpellSlots: {
+    shape: class
+    style.stroke: ${schema_color}
+    "max: int"
+    "current: int"
+  }
+
+  SpellcastingProgression: {
+    shape: class
+    style.stroke: ${schema_color}
+    "ability: Ability"
+    "type: str"
+    "cantrips_known_at_1: int"
+    "slots_by_level: dict[int, SpellSlots]"
+  }
+
+  EffectDefinitionLite: {
+    shape: class
+    style.stroke: ${schema_color}
+    "name: str"
+    "type: EffectType"
+    "target_stat: str"
+    "value: int | str"
+    "source: str | None"
+  }
+
+  LevelFeature: {
+    shape: class
+    style.stroke: ${schema_color}
+    "level: int"
+    "feature_slug: str"
+    "effects: list[EffectDefinitionLite]"
+    "granted_actions: list"
+    "granted_resource: ResourceCounter | None"
+  }
+}
+
+AreaOfEffect -> AoeShape: "uses"
+SaveRequirement -> Ability: "uses"
+UsageLimit -> ResetOn: "uses"
+AbilityScoreBonus -> Ability: "uses"
+ResourceCounter -> ResetOn: "uses"
+SpellcastingProgression -> Ability: "uses"
+SpellcastingProgression -> SpellSlots: "owns [0..*]"
+EffectDefinitionLite -> EffectType: "uses"
+LevelFeature -> EffectDefinitionLite: "owns [0..*]"
+LevelFeature -> ResourceCounter: "owns [0..1]"

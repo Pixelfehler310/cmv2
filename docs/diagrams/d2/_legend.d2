@@ -1,0 +1,56 @@
+# Shared Legend and Conventions for Backend Class Diagrams
+
+vars: {
+  schema_color: "#2E86AB"
+  transport_color: "#2A9D8F"
+  service_color: "#F4A261"
+  domain_color: "#E76F51"
+  orm_color: "#6C5CE7"
+  enum_color: "#C0392B"
+}
+
+legend: {
+  label: "Legend"
+
+  SchemaModel: {
+    shape: class
+    style.stroke: ${schema_color}
+    "field_name: type"
+  }
+
+  TransportModel: {
+    shape: class
+    style.stroke: ${transport_color}
+    "field_name: type"
+  }
+
+  ServiceClass: {
+    shape: class
+    style.stroke: ${service_color}
+    "field_name: type"
+    "+ key_method()"
+  }
+
+  DomainType: {
+    shape: class
+    style.stroke: ${domain_color}
+    "field_name: type"
+  }
+
+  OrmModel: {
+    shape: class
+    style.stroke: ${orm_color}
+    "column_name: type"
+  }
+
+  EnumType: {
+    shape: class
+    style.stroke: ${enum_color}
+    "VALUE = \"value\""
+  }
+
+  Notes: {
+    shape: text
+    label: "Solid arrow = ownership or composition, dashed arrow = dependency or lookup by id"
+  }
+}

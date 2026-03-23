@@ -1,0 +1,153 @@
+# D2.4 Runtime Instances and Encounter State
+# Sources:
+# - backend/src/systems/dnd5e/schemas/instances.py
+# - backend/src/systems/dnd5e/schemas/encounter.py
+
+vars: {
+  schema_color: "#2E86AB"
+}
+
+RuntimeState: {
+  label: "Mutable Runtime State"
+
+  EffectInstanceRuntime: {
+    shape: class
+    style.stroke: ${schema_color}
+    "id: str"
+    "effect_id: str"
+    "name: str"
+    "source_id: str"
+    "target_id: str"
+    "type: EffectType"
+    "target_stat: str"
+    "value: int | str"
+    "duration_type: DurationType"
+    "remaining_rounds: int | None"
+    "tick_intent: dict"
+    "requires_concentration: bool"
+  }
+
+  ConditionInstance: {
+    shape: class
+    style.stroke: ${schema_color}
+    "condition: ConditionType"
+    "source_id: str"
+    "source_effect_id: str"
+    "remaining_rounds: int | None"
+  }
+
+  ItemInstance: {
+    shape: class
+    style.stroke: ${schema_color}
+    "id: str"
+    "definition_slug: str"
+    "custom_name: str | None"
+    "quantity: int"
+    "equipped: bool"
+    "attuned: bool"
+    "current_charges: int | None"
+    "max_charges: int | None"
+  }
+
+  PreparedSpell: {
+    shape: class
+    style.stroke: ${schema_color}
+    "spell_slug: str"
+    "always_prepared: bool"
+  }
+
+  SpellcastingState: {
+    shape: class
+    style.stroke: ${schema_color}
+    "slots: dict[int, SpellSlots]"
+    "prepared_spells: list[PreparedSpell]"
+    "spellcasting_ability: Ability | None"
+    "spell_save_dc: int"
+    "spell_attack_bonus: int"
+  }
+
+  ConcentrationState: {
+    shape: class
+    style.stroke: ${schema_color}
+    "is_concentrating: bool"
+    "effect_id: str | None"
+  }
+
+  ResourcePool: {
+    shape: class
+    style.stroke: ${schema_color}
+    "counters: dict[str, ResourceCounter]"
+  }
+
+  ActorInstance: {
+    shape: class
+    style.stroke: ${schema_color}
+    "id: str"
+    "owner_user_id: str | None"
+    "definition_slug: str"
+    "name: str"
+    "actor_type: ActorType"
+    "abilities: AbilityScores"
+    "current_hp: int"
+    "max_hp: int"
+    "temp_hp: int"
+    "armor_class: int"
+    "speed: SpeedBlock"
+    "proficiency_bonus: int"
+    "position: Position"
+    "conditions: list[ConditionInstance]"
+    "effects: list[EffectInstanceRuntime]"
+    "inventory: list[ItemInstance]"
+    "spellcasting: SpellcastingState | None"
+    "resources: ResourcePool"
+    "concentration: ConcentrationState"
+    "exhaustion_level: int"
+    "saving_throw_proficiencies: list[Ability]"
+    "skill_proficiencies: list[str]"
+  }
+
+  MapToken: {
+    shape: class
+    style.stroke: ${schema_color}
+    "actor_id: str"
+    "position: Position"
+    "size: Size"
+  }
+
+  MapState: {
+    shape: class
+    style.stroke: ${schema_color}
+    "width: int"
+    "height: int"
+    "grid_type: str"
+    "difficult_terrain: list[Position]"
+    "tokens: list[MapToken]"
+  }
+
+  EncounterState: {
+    shape: class
+    style.stroke: ${schema_color}
+    "id: str"
+    "campaign_id: str"
+    "round_number: int"
+    "turn_phase: str"
+    "active_index: int"
+    "combatants: list[ActorInstance]"
+    "turn_budgets: dict[str, dict]"
+    "global_effects: list[EffectInstanceRuntime]"
+    "map: MapState"
+  }
+}
+
+ActorInstance -> ConditionInstance: "owns [0..*]"
+ActorInstance -> EffectInstanceRuntime: "owns [0..*]"
+ActorInstance -> ItemInstance: "owns [0..*]"
+ActorInstance -> SpellcastingState: "owns [0..1]"
+ActorInstance -> ResourcePool: "owns"
+ActorInstance -> ConcentrationState: "owns"
+SpellcastingState -> PreparedSpell: "owns [0..*]"
+MapState -> MapToken: "owns [0..*]"
+EncounterState -> ActorInstance: "owns [0..*]"
+EncounterState -> EffectInstanceRuntime: "owns [0..*]"
+EncounterState -> MapState: "owns"
+MapToken -> ActorInstance: "references actor_id"

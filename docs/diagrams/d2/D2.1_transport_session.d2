@@ -1,0 +1,94 @@
+# D2.1 Transport and Session Context
+# Sources:
+# - backend/src/core/ws_protocol.py
+# - backend/src/core/sessions/models.py
+
+vars: {
+  transport_color: "#2A9D8F"
+  enum_color: "#C0392B"
+}
+
+TransportLayer: {
+  label: "Transport and Session Layer"
+
+  Visibility: {
+    shape: class
+    style.stroke: ${enum_color}
+    "ALL = \"all\""
+    "DM_ONLY = \"dm_only\""
+    "ACTOR_OWNER = \"actor_owner\""
+    "EXCLUDE_ACTOR = \"exclude_actor\""
+  }
+
+  WsErrorCode: {
+    shape: class
+    style.stroke: ${enum_color}
+    "INVALID_MESSAGE = \"invalid_message\""
+    "UNAUTHORIZED = \"unauthorized\""
+    "INVALID_TARGET = \"invalid_target\""
+    "NOT_YOUR_TURN = \"not_your_turn\""
+    "RESOURCE_EXHAUSTED = \"resource_exhausted\""
+    "INVALID_ACTION = \"invalid_action\""
+    "INTERNAL_ERROR = \"internal_error\""
+  }
+
+  WsEnvelope: {
+    shape: class
+    style.stroke: ${transport_color}
+    "type: str"
+    "request_id: str | None"
+    "payload: dict[str, Any]"
+  }
+
+  WsOutbound: {
+    shape: class
+    style.stroke: ${transport_color}
+    "type: str"
+    "request_id: str | None"
+    "payload: dict[str, Any]"
+    "visibility: Visibility"
+    "target_user_id: str | None"
+  }
+
+  UserRole: {
+    shape: class
+    style.stroke: ${enum_color}
+    "DM = \"dm\""
+    "PLAYER = \"player\""
+    "SPECTATOR = \"spectator\""
+  }
+
+  ConnectedUser: {
+    shape: class
+    style.stroke: ${transport_color}
+    "user_id: str"
+    "display_name: str"
+    "role: UserRole"
+    "ws: object"
+    "connected_at: datetime"
+  }
+
+  CampaignRoom: {
+    shape: class
+    style.stroke: ${transport_color}
+    "campaign_id: str"
+    "game_system: str"
+    "users: dict[str, ConnectedUser]"
+    "+ is_empty()"
+  }
+
+  SessionContext: {
+    shape: class
+    style.stroke: ${transport_color}
+    "campaign_id: str"
+    "user_id: str"
+    "display_name: str"
+    "role: UserRole"
+    "game_system: str"
+  }
+}
+
+WsOutbound -> Visibility: "uses"
+ConnectedUser -> UserRole: "has"
+CampaignRoom -> ConnectedUser: "owns [0..*]"
+SessionContext -> UserRole: "uses"

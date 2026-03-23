@@ -1,0 +1,307 @@
+# D2.3 Definitions and Contracts
+# Sources:
+# - backend/src/systems/dnd5e/schemas/definitions.py
+# - backend/src/systems/dnd5e/schemas/contracts.py
+
+vars: {
+  schema_color: "#2E86AB"
+}
+
+Definitions: {
+  label: "Compendium Definitions"
+
+  TraitDefinition: {
+    shape: class
+    style.stroke: ${schema_color}
+    "name: str"
+    "desc: str"
+    "usage: UsageLimit | None"
+  }
+
+  ActionDefinitionCompendium: {
+    shape: class
+    style.stroke: ${schema_color}
+    "name: str"
+    "desc: str"
+    "action_type: ActionType | None"
+    "attack_bonus: int | None"
+    "damage_dice: str | None"
+    "damage_bonus: int | None"
+    "damage_type: DamageType | None"
+    "reach: int | None"
+    "save: SaveRequirement | None"
+    "aoe: AreaOfEffect | None"
+    "recharge: RechargeRule | None"
+  }
+
+  MonsterDefinition: {
+    shape: class
+    style.stroke: ${schema_color}
+    "slug: str"
+    "name: str"
+    "size: Size"
+    "type: str"
+    "subtype: str"
+    "alignment: str"
+    "armor_class: int"
+    "armor_desc: str | None"
+    "hit_points: int"
+    "hit_dice: str"
+    "speed: SpeedBlock"
+    "abilities: AbilityScores"
+    "saves: SavingThrows"
+    "skills: dict[str, int]"
+    "damage_vulnerabilities: str"
+    "damage_resistances: str"
+    "damage_immunities: str"
+    "condition_immunities: str"
+    "senses: str"
+    "languages: str"
+    "challenge_rating: float"
+    "xp: int"
+    "actions: list[ActionDefinitionCompendium]"
+    "bonus_actions: list[ActionDefinitionCompendium] | None"
+    "reactions: list[ActionDefinitionCompendium] | None"
+    "legendary_actions: list[ActionDefinitionCompendium]"
+    "special_abilities: list[TraitDefinition]"
+    "legendary_desc: str"
+    "legendary_action_count: int"
+    "spell_list: list[str]"
+  }
+
+  SpellDefinition: {
+    shape: class
+    style.stroke: ${schema_color}
+    "slug: str"
+    "name: str"
+    "level: int"
+    "school: MagicSchool"
+    "casting_time: str"
+    "range: str"
+    "target_range_sort: int"
+    "components: Components"
+    "material: str"
+    "duration: str"
+    "requires_concentration: bool"
+    "can_be_cast_as_ritual: bool"
+    "desc: str"
+    "higher_level: str"
+    "spell_lists: list[str]"
+    "aoe: AreaOfEffect | None"
+  }
+
+  ItemDefinition: {
+    shape: class
+    style.stroke: ${schema_color}
+    "slug: str"
+    "name: str"
+    "category: str"
+    "cost: str"
+    "damage_dice: str | None"
+    "damage_type: str | None"
+    "weight: str"
+    "properties: list[str]"
+    "rarity: Rarity | None"
+    "requires_attunement: bool"
+    "effects: list[EffectDefinitionLite]"
+  }
+
+  SubraceDefinition: {
+    shape: class
+    style.stroke: ${schema_color}
+    "slug: str"
+    "name: str"
+    "desc: str"
+    "ability_bonuses: list[AbilityScoreBonus]"
+    "racial_traits: list[TraitDefinition]"
+    "proficiencies: list[str]"
+  }
+
+  RaceDefinition: {
+    shape: class
+    style.stroke: ${schema_color}
+    "slug: str"
+    "name: str"
+    "desc: str"
+    "speed: SpeedBlock"
+    "size: Size"
+    "ability_bonuses: list[AbilityScoreBonus]"
+    "languages: list[str]"
+    "racial_traits: list[TraitDefinition]"
+    "proficiencies: list[str]"
+    "subraces: list[SubraceDefinition]"
+  }
+
+  SubclassDefinition: {
+    shape: class
+    style.stroke: ${schema_color}
+    "slug: str"
+    "name: str"
+    "desc: str"
+    "parent_class_slug: str"
+    "level_features: list[LevelFeature]"
+    "bonus_spell_list: list[str]"
+  }
+
+  ClassDefinition: {
+    shape: class
+    style.stroke: ${schema_color}
+    "slug: str"
+    "name: str"
+    "desc: str"
+    "hit_die: str"
+    "saving_throw_proficiencies: list[Ability]"
+    "armor_proficiencies: list[str]"
+    "weapon_proficiencies: list[str]"
+    "tool_proficiencies: list[str]"
+    "skill_choices: SkillChoice | None"
+    "starting_equipment: list[str]"
+    "level_features: list[LevelFeature]"
+    "spellcasting: SpellcastingProgression | None"
+    "subclasses: list[SubclassDefinition]"
+  }
+
+  BackgroundDefinition: {
+    shape: class
+    style.stroke: ${schema_color}
+    "slug: str"
+    "name: str"
+    "desc: str"
+    "skill_proficiencies: list[str]"
+    "tool_proficiencies: list[str]"
+    "languages: list[str]"
+    "starting_equipment: list[str]"
+    "feature: TraitDefinition | None"
+  }
+}
+
+Contracts: {
+  label: "Data-Driven Contracts"
+
+  ActionDefinitionContract: {
+    shape: class
+    style.stroke: ${schema_color}
+    "action_id: str"
+    "name: str"
+    "family: str"
+    "action_type_cost: action | bonus_action | reaction | move | free"
+    "targeting_mode: single_target | aoe | self"
+    "range: int | None"
+    "save_context: dict | None"
+    "attack_context: dict | None"
+    "resource_costs: list[dict]"
+    "effect_intents: list[dict]"
+    "tags: list[str]"
+    "source_ref: str"
+    "content_version: str"
+    "enabled: bool"
+  }
+
+  AbilityBinding: {
+    shape: class
+    style.stroke: ${schema_color}
+    "binding_id: str"
+    "action_id: str"
+    "actor_template_id: str | None"
+    "actor_id: str | None"
+    "unlock_conditions: list[dict]"
+    "override_payload: dict | None"
+  }
+
+  EffectDurationSpec: {
+    shape: class
+    style.stroke: ${schema_color}
+    "type: instant | rounds | turns | until_removed | concentration"
+    "value: int | None"
+    "timing: immediate | start_of_turn | end_of_turn"
+  }
+
+  EffectStackingSpec: {
+    shape: class
+    style.stroke: ${schema_color}
+    "mode: replace | stack | refresh_duration | highest_only"
+    "max_stacks: int | None"
+  }
+
+  EffectModifierSpec: {
+    shape: class
+    style.stroke: ${schema_color}
+    "operation: set | bonus | multiply"
+    "stat_key: str"
+    "value: int | float | str"
+  }
+
+  EffectPeriodicSpec: {
+    shape: class
+    style.stroke: ${schema_color}
+    "trigger: start_of_turn | end_of_turn"
+    "operation: apply_damage | apply_heal | apply_condition | remove_condition"
+    "payload: dict"
+  }
+
+  EffectRemovalTriggerSpec: {
+    shape: class
+    style.stroke: ${schema_color}
+    "trigger: on_save_success | on_damage_taken | on_turn_end | dispel"
+  }
+
+  EffectDefinitionContract: {
+    shape: class
+    style.stroke: ${schema_color}
+    "effect_id: str"
+    "name: str"
+    "family: str"
+    "duration: EffectDurationSpec"
+    "stacking: EffectStackingSpec"
+    "tags: list[str]"
+    "modifiers: list[EffectModifierSpec]"
+    "grants_conditions: list[str]"
+    "periodic: list[EffectPeriodicSpec]"
+    "removal_triggers: list[EffectRemovalTriggerSpec]"
+    "metadata: dict"
+  }
+
+  EffectInstanceContract: {
+    shape: class
+    style.stroke: ${schema_color}
+    "instance_id: str"
+    "effect_id: str"
+    "source_actor_id: str | None"
+    "target_actor_id: str"
+    "applied_at_round: int"
+    "remaining_duration: int | None"
+    "concentration_owner_actor_id: str | None"
+    "stack_count: int"
+    "snapshot_payload: dict"
+    "provenance: dict"
+  }
+
+  ContentPack: {
+    shape: class
+    style.stroke: ${schema_color}
+    "pack_id: str"
+    "system: str"
+    "version: str"
+    "actions: list[ActionDefinitionContract]"
+    "abilities: list[AbilityBinding]"
+    "effects: list[EffectDefinitionContract]"
+    "dependencies: list[str]"
+    "migration_notes: str"
+  }
+}
+
+MonsterDefinition -> ActionDefinitionCompendium: "owns [0..*]"
+MonsterDefinition -> TraitDefinition: "owns [0..*]"
+SpellDefinition -> Components: "owns"
+SpellDefinition -> AreaOfEffect: "owns [0..1]"
+ClassDefinition -> SubclassDefinition: "owns [0..*]"
+ClassDefinition -> LevelFeature: "owns [0..*]"
+RaceDefinition -> SubraceDefinition: "owns [0..*]"
+ContentPack -> ActionDefinitionContract: "owns [0..*]"
+ContentPack -> AbilityBinding: "owns [0..*]"
+ContentPack -> EffectDefinitionContract: "owns [0..*]"
+EffectDefinitionContract -> EffectDurationSpec: "owns"
+EffectDefinitionContract -> EffectStackingSpec: "owns"
+EffectDefinitionContract -> EffectModifierSpec: "owns [0..*]"
+EffectDefinitionContract -> EffectPeriodicSpec: "owns [0..*]"
+EffectDefinitionContract -> EffectRemovalTriggerSpec: "owns [0..*]"

@@ -1,0 +1,59 @@
+# D2.5 Event Payload Models
+# Source:
+# - backend/src/systems/dnd5e/event_types.py
+
+vars: {
+  schema_color: "#2E86AB"
+}
+
+Inbound: {
+  label: "Inbound Payloads"
+
+  ActionPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "action_name: str" "action_type: str" "target_ids: list[str]" }
+  RequestActionPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "action_type: str" "action_name: str" "payload: dict" "acting_as_user_id: str | None" }
+  MoveTokenPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "path: list[dict]" "acting_as_user_id: str | None" }
+  RequestMovePreviewPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "acting_as_user_id: str | None" }
+  RequestExecutableActionsPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "acting_as_user_id: str | None" }
+  RequestAttackPreviewPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "action_id: str" "template_origin: dict | None" "template_direction: dict | None" "acting_as_user_id: str | None" }
+  RollDicePayload: { shape: class style.stroke: ${schema_color} "expression: str" "purpose: str | None" }
+  EndTurnPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" }
+  StartCombatPayload: { shape: class style.stroke: ${schema_color} }
+  EndCombatPayload: { shape: class style.stroke: ${schema_color} }
+  ApplyDamagePayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "amount: int" "damage_type: str" }
+  ApplyHealingPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "amount: int" }
+  ApplyConditionPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "condition: str" "source_id: str | None" }
+  RemoveConditionPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "condition: str" }
+  AddActorPayload: { shape: class style.stroke: ${schema_color} "definition_slug: str" "name: str | None" "position: dict | None" "owner_user_id: str | None" }
+  RemoveActorPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" }
+  ChatMessagePayload: { shape: class style.stroke: ${schema_color} "message: str" }
+}
+
+Outbound: {
+  label: "Outbound Payloads"
+
+  ErrorPayload: { shape: class style.stroke: ${schema_color} "message: str" "code: str" }
+  TurnAdvancedPayload: { shape: class style.stroke: ${schema_color} "active_actor_id: str" "round: int" }
+  MovementPreviewPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "origin: dict" "movement_remaining: int" "reachable: list[dict]" }
+  AttackPreviewPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "action_id: str" "origin: dict" "eligible_target_ids: list[str]" "eligible_cells: list[dict]" "template_projection: dict | None" }
+  ActionAuthorizedPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "action_type: str" "action_name: str" }
+  ActionDeniedPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "action_type: str" "reason_code: str" "message: str" }
+  ActorDamagedPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "amount: int" "new_hp: int" "source: str" }
+  ActorHealedPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "amount: int" "new_hp: int" }
+  ActorDiedPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" }
+  ConditionAddedPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "condition: str" "source: str" }
+  ConditionRemovedPayload: { shape: class style.stroke: ${schema_color} "actor_id: str" "condition: str" }
+  CombatStartedPayload: { shape: class style.stroke: ${schema_color} "initiative_order: list[dict]" }
+  CombatEndedPayload: { shape: class style.stroke: ${schema_color} }
+  DiceRolledPayload: { shape: class style.stroke: ${schema_color} "roller_id: str" "expression: str" "result: int" }
+  PongPayload: { shape: class style.stroke: ${schema_color} }
+}
+
+ActionPayload -> ActionAuthorizedPayload: "request/response family"
+RequestAttackPreviewPayload -> AttackPreviewPayload: "request/response family"
+RequestMovePreviewPayload -> MovementPreviewPayload: "request/response family"
+ApplyDamagePayload -> ActorDamagedPayload: "command/event family"
+ApplyHealingPayload -> ActorHealedPayload: "command/event family"
+ApplyConditionPayload -> ConditionAddedPayload: "command/event family"
+RemoveConditionPayload -> ConditionRemovedPayload: "command/event family"
+StartCombatPayload -> CombatStartedPayload: "command/event family"
+EndCombatPayload -> CombatEndedPayload: "command/event family"
