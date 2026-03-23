@@ -82,7 +82,8 @@ def get_or_create_in_memory_budget(
         budget["round_number"] = round_number
 
     budget["movement_remaining"] = max(
-        int(budget.get("max_movement", max_movement)) - int(budget.get("movement_used", 0)),
+        int(budget.get("max_movement", max_movement)) -
+        int(budget.get("movement_used", 0)),
         0,
     )
     return budget

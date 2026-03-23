@@ -63,7 +63,8 @@ class ActionExecutionApplicationService:
         return ActionResolutionRequest(
             actor_id=request.actor_id,
             action_id=request.action_name,
-            action_type_cost=self._combat_service.normalize_action_type(request.action_type),
+            action_type_cost=self._combat_service.normalize_action_type(
+                request.action_type),
             family="utility",
             targeting_mode="single_target",
             target_ids=list(request.target_ids),

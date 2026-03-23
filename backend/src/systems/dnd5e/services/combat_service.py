@@ -143,10 +143,14 @@ class CombatService:
         action_execution_repository: ActionExecutionRepositoryProtocol | None = None,
     ):
         self.db = db
-        self._context_read_repository = context_read_repository or ContextReadRepository(db)
-        self._encounter_session_repository = encounter_session_repository or EncounterSessionRepository(db)
-        self._action_catalog_repository = action_catalog_repository or ActionCatalogRepository(db)
-        self._action_execution_repository = action_execution_repository or ActionExecutionRepository(db)
+        self._context_read_repository = context_read_repository or ContextReadRepository(
+            db)
+        self._encounter_session_repository = encounter_session_repository or EncounterSessionRepository(
+            db)
+        self._action_catalog_repository = action_catalog_repository or ActionCatalogRepository(
+            db)
+        self._action_execution_repository = action_execution_repository or ActionExecutionRepository(
+            db)
 
     async def load_or_create_encounter_state(self, campaign_id: str) -> tuple[EncounterSession, EncounterState]:
         campaign = await self._load_campaign_with_characters(campaign_id)
@@ -753,10 +757,14 @@ class CombatService:
             "max_movement": budget.max_movement,
             "movement_used": budget.movement_used,
         }
-        updated_budget = apply_action_budget_consumption(normalized, budget_state)
-        budget.action_available = bool(updated_budget.get("action_available", budget.action_available))
-        budget.bonus_action_available = bool(updated_budget.get("bonus_action_available", budget.bonus_action_available))
-        budget.reaction_available = bool(updated_budget.get("reaction_available", budget.reaction_available))
+        updated_budget = apply_action_budget_consumption(
+            normalized, budget_state)
+        budget.action_available = bool(updated_budget.get(
+            "action_available", budget.action_available))
+        budget.bonus_action_available = bool(updated_budget.get(
+            "bonus_action_available", budget.bonus_action_available))
+        budget.reaction_available = bool(updated_budget.get(
+            "reaction_available", budget.reaction_available))
 
         await self._action_execution_repository.flush()
 
@@ -1455,7 +1463,8 @@ class CombatService:
 
         owner_user_id = combatant.owner_user_id if combatant else actor.owner_user_id
         checks["owner_user_id"] = owner_user_id
-        ownership_check = check_actor_ownership(ctx.role, ctx.user_id, owner_user_id)
+        ownership_check = check_actor_ownership(
+            ctx.role, ctx.user_id, owner_user_id)
         alive_check = check_actor_alive(actor)
 
         active = get_active_combatant(encounter)

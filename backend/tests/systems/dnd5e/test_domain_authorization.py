@@ -70,6 +70,7 @@ def test_combine_authorization_checks_short_circuits_denial() -> None:
     deny_result = check_actor_ownership(UserRole.PLAYER, "user-1", "user-2")
     alive_result = check_actor_alive(DummyActor(current_hp=10))
 
-    combined = combine_authorization_checks(role_result, deny_result, alive_result)
+    combined = combine_authorization_checks(
+        role_result, deny_result, alive_result)
     assert combined.allowed is False
     assert combined.reason_code == "unauthorized"
