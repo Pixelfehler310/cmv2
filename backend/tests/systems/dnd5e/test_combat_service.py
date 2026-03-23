@@ -1,8 +1,10 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from src.campaigns.lib.campaign import Campaign
 from src.core.sessions.models import SessionContext, UserRole
 from src.database import Base
+from src.systems.dnd5e.lib.context_models import EncounterCatalogRecord, SceneCatalogRecord
 from src.systems.dnd5e.lib.content_models import AbilityBindingRecord, ActionDefinitionRecord
 from src.systems.dnd5e.schemas.common import AbilityScores, Position, SpeedBlock
 from src.systems.dnd5e.schemas.encounter import EncounterState
@@ -60,8 +62,44 @@ def combat_encounter_state() -> EncounterState:
     )
 
 
+@pytest.fixture
+async def seeded_campaign_context(db_session: AsyncSession, combat_encounter_state: EncounterState):
+    campaign = Campaign(
+        id=combat_encounter_state.campaign_id,
+        name="Test Campaign",
+        description="",
+        dm_id="dm_1",
+        current_scene="scene.default",
+        active_encounter_id=combat_encounter_state.id,
+        context_version=0,
+    )
+    db_session.add(campaign)
+    db_session.add(
+        SceneCatalogRecord(
+            campaign_id=combat_encounter_state.campaign_id,
+            scene_id="scene.default",
+            name="Default Scene",
+        )
+    )
+    db_session.add(
+        EncounterCatalogRecord(
+            campaign_id=combat_encounter_state.campaign_id,
+            scene_id="scene.default",
+            encounter_id=combat_encounter_state.id,
+            name="Test Encounter",
+            source="test",
+            state_json=combat_encounter_state.model_dump(mode="json"),
+        )
+    )
+    await db_session.commit()
+
+
 @pytest.mark.anyio
-async def test_check_can_act_denies_non_owner_player(db_session: AsyncSession, combat_encounter_state: EncounterState):
+async def test_check_can_act_denies_non_owner_player(
+    db_session: AsyncSession,
+    combat_encounter_state: EncounterState,
+    seeded_campaign_context,
+):
     service = CombatService(db_session)
     encounter_session, _ = await service.load_or_create_encounter_state(combat_encounter_state.campaign_id)
     await service.save_full_state(encounter_session, combat_encounter_state)
@@ -86,7 +124,11 @@ async def test_check_can_act_denies_non_owner_player(db_session: AsyncSession, c
 
 
 @pytest.mark.anyio
-async def test_check_can_act_denies_not_active_turn(db_session: AsyncSession, combat_encounter_state: EncounterState):
+async def test_check_can_act_denies_not_active_turn(
+    db_session: AsyncSession,
+    combat_encounter_state: EncounterState,
+    seeded_campaign_context,
+):
     service = CombatService(db_session)
     encounter_session, _ = await service.load_or_create_encounter_state(combat_encounter_state.campaign_id)
     await service.save_full_state(encounter_session, combat_encounter_state)
@@ -111,7 +153,11 @@ async def test_check_can_act_denies_not_active_turn(db_session: AsyncSession, co
 
 
 @pytest.mark.anyio
-async def test_apply_movement_denies_when_exceeds_budget(db_session: AsyncSession, combat_encounter_state: EncounterState):
+async def test_apply_movement_denies_when_exceeds_budget(
+    db_session: AsyncSession,
+    combat_encounter_state: EncounterState,
+    seeded_campaign_context,
+):
     service = CombatService(db_session)
     encounter_session, _ = await service.load_or_create_encounter_state(combat_encounter_state.campaign_id)
     await service.save_full_state(encounter_session, combat_encounter_state)
@@ -230,7 +276,11 @@ async def test_get_attack_preview_aoe_denies_template_origin_out_of_range(db_ses
 
 
 @pytest.mark.anyio
-async def test_get_executable_actions_snapshot_projects_canonical_bindings(db_session: AsyncSession, combat_encounter_state: EncounterState):
+async def test_get_executable_actions_snapshot_projects_canonical_bindings(
+    db_session: AsyncSession,
+    combat_encounter_state: EncounterState,
+    seeded_campaign_context,
+):
     service = CombatService(db_session)
     encounter_session, _ = await service.load_or_create_encounter_state(combat_encounter_state.campaign_id)
     await service.save_full_state(encounter_session, combat_encounter_state)
@@ -296,6 +346,7 @@ async def test_get_executable_actions_snapshot_projects_canonical_bindings(db_se
 async def test_get_executable_actions_snapshot_resolves_template_binding_from_actor_name_when_definition_slug_empty(
     db_session: AsyncSession,
     combat_encounter_state: EncounterState,
+    seeded_campaign_context,
 ):
     service = CombatService(db_session)
     encounter_session, _ = await service.load_or_create_encounter_state(combat_encounter_state.campaign_id)

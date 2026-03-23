@@ -31,6 +31,11 @@ from ..schemas.definitions import ActionDefinition
 from ..schemas.contracts import EffectDefinition as CanonicalEffectDefinition
 from ..lib.combat_models import ActionLog, CombatantState, EncounterSession, TurnBudgetRecord
 from ..lib.context_models import EncounterCatalogRecord, SceneCatalogRecord
+from ..repositories.context_repository import ContextReadRepository, ContextReadRepositoryProtocol
+from ..repositories.encounter_session_repository import (
+    EncounterSessionRepository,
+    EncounterSessionRepositoryProtocol,
+)
 from .validation import (
     resolve_action_family,
     build_action_definition,
@@ -114,8 +119,15 @@ class CombatService:
     FIXTURE_ENCOUNTERS_DIR = Path(__file__).resolve(
     ).parents[4] / "data" / "fixtures" / "encounters"
 
-    def __init__(self, db: AsyncSession):
+    def __init__(
+        self,
+        db: AsyncSession,
+        context_read_repository: ContextReadRepositoryProtocol | None = None,
+        encounter_session_repository: EncounterSessionRepositoryProtocol | None = None,
+    ):
         self.db = db
+        self._context_read_repository = context_read_repository or ContextReadRepository(db)
+        self._encounter_session_repository = encounter_session_repository or EncounterSessionRepository(db)
 
     async def load_or_create_encounter_state(self, campaign_id: str) -> tuple[EncounterSession, EncounterState]:
         campaign = await self._load_campaign_with_characters(campaign_id)
@@ -182,12 +194,7 @@ class CombatService:
             raise ValueError(f"Campaign {campaign_id} does not exist")
 
         await self._ensure_context_catalog(campaign)
-        result = await self.db.execute(
-            select(SceneCatalogRecord)
-            .where(SceneCatalogRecord.campaign_id == campaign_id)
-            .order_by(SceneCatalogRecord.name.asc())
-        )
-        return list(result.scalars().all())
+        return await self._context_read_repository.list_scenes(campaign_id)
 
     async def list_encounters(self, campaign_id: str, scene_id: str) -> list[EncounterCatalogRecord]:
         campaign = await self._load_campaign_with_characters(campaign_id)
@@ -195,15 +202,7 @@ class CombatService:
             raise ValueError(f"Campaign {campaign_id} does not exist")
 
         await self._ensure_context_catalog(campaign)
-        result = await self.db.execute(
-            select(EncounterCatalogRecord)
-            .where(
-                EncounterCatalogRecord.campaign_id == campaign_id,
-                EncounterCatalogRecord.scene_id == scene_id,
-            )
-            .order_by(EncounterCatalogRecord.name.asc())
-        )
-        return list(result.scalars().all())
+        return await self._context_read_repository.list_scene_encounters(campaign_id, scene_id)
 
     async def select_context(self, campaign_id: str, scene_id: str, encounter_id: str) -> Campaign:
         campaign = await self._load_campaign_with_characters(campaign_id)
@@ -211,17 +210,15 @@ class CombatService:
             raise ValueError(f"Campaign {campaign_id} does not exist")
 
         await self._ensure_context_catalog(campaign)
-        selected = await self._load_catalog_encounter(campaign_id, scene_id, encounter_id)
-        if selected is None:
+        if not await self._context_read_repository.encounter_exists(campaign_id, scene_id, encounter_id):
             raise ValueError(
                 "Scene/encounter combination does not exist for campaign")
 
-        campaign.current_scene = scene_id
-        campaign.active_encounter_id = encounter_id
-        campaign.context_version = int(campaign.context_version or 0) + 1
-        await self.db.commit()
-        await self.db.refresh(campaign)
-        return campaign
+        return await self._encounter_session_repository.persist_context_selection(
+            campaign=campaign,
+            scene_id=scene_id,
+            encounter_id=encounter_id,
+        )
 
     async def get_context(self, campaign_id: str) -> Campaign:
         campaign = await self._load_campaign_with_characters(campaign_id)
@@ -1666,20 +1663,10 @@ class CombatService:
         )
 
     async def _load_campaign_with_characters(self, campaign_id: str) -> Campaign | None:
-        campaign_stmt = (
-            select(Campaign)
-            .options(selectinload(Campaign.characters))
-            .where(Campaign.id == campaign_id)
-        )
-        campaign_result = await self.db.execute(campaign_stmt)
-        return campaign_result.scalar_one_or_none()
+        return await self._context_read_repository.get_campaign_with_characters(campaign_id)
 
     async def _ensure_context_catalog(self, campaign: Campaign) -> None:
-        scene_result = await self.db.execute(
-            select(SceneCatalogRecord).where(
-                SceneCatalogRecord.campaign_id == campaign.id)
-        )
-        scenes = list(scene_result.scalars().all())
+        scenes = await self._context_read_repository.list_scenes(campaign.id)
 
         default_scene = next(
             (scene for scene in scenes if scene.scene_id == self.DEFAULT_SCENE_ID), None)
@@ -1691,11 +1678,7 @@ class CombatService:
             )
             self.db.add(default_scene)
 
-        encounter_result = await self.db.execute(
-            select(EncounterCatalogRecord).where(
-                EncounterCatalogRecord.campaign_id == campaign.id)
-        )
-        existing_catalog = list(encounter_result.scalars().all())
+        existing_catalog = await self._context_read_repository.list_campaign_encounters(campaign.id)
         existing_ids = {item.encounter_id for item in existing_catalog}
 
         fixture_states = self._load_fixture_states(campaign.id)
@@ -1731,12 +1714,7 @@ class CombatService:
             campaign.current_scene = self.DEFAULT_SCENE_ID
 
         if campaign.active_encounter_id is None:
-            available_result = await self.db.execute(
-                select(EncounterCatalogRecord)
-                .where(EncounterCatalogRecord.campaign_id == campaign.id)
-                .order_by(EncounterCatalogRecord.encounter_id.asc())
-            )
-            available = list(available_result.scalars().all())
+            available = await self._context_read_repository.list_campaign_encounters(campaign.id)
             if available:
                 campaign.active_encounter_id = available[0].encounter_id
 
@@ -1766,14 +1744,7 @@ class CombatService:
         scene_id: str,
         encounter_id: str,
     ) -> EncounterCatalogRecord | None:
-        result = await self.db.execute(
-            select(EncounterCatalogRecord).where(
-                EncounterCatalogRecord.campaign_id == campaign_id,
-                EncounterCatalogRecord.scene_id == scene_id,
-                EncounterCatalogRecord.encounter_id == encounter_id,
-            )
-        )
-        return result.scalar_one_or_none()
+        return await self._context_read_repository.get_scene_encounter(campaign_id, scene_id, encounter_id)
 
     # ------------------------------------------------------------------
     # Action execution pipeline  (extracted from ws_handler)

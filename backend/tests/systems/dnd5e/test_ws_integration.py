@@ -173,6 +173,32 @@ async def combat_encounter(dm_ctx):
         # Use our updated service to save the state
         session, _ = await service.load_or_create_encounter_state("test_campaign")
         await service.save_full_state(session, enc)
+
+        # Keep campaign context selection aligned with the test encounter.
+        campaign = await db.get(Campaign, "test_campaign")
+        if campaign is not None:
+            campaign.current_scene = "scene.default"
+            campaign.active_encounter_id = enc.id
+
+        existing = await db.execute(
+            select(EncounterCatalogRecord).where(
+                EncounterCatalogRecord.campaign_id == "test_campaign",
+                EncounterCatalogRecord.scene_id == "scene.default",
+                EncounterCatalogRecord.encounter_id == enc.id,
+            )
+        )
+        if existing.scalar_one_or_none() is None:
+            db.add(
+                EncounterCatalogRecord(
+                    campaign_id="test_campaign",
+                    scene_id="scene.default",
+                    encounter_id=enc.id,
+                    name="Combat Encounter",
+                    source="test",
+                    state_json=enc.model_dump(mode="json"),
+                )
+            )
+
         await db.commit()
         return enc
 
@@ -482,6 +508,38 @@ class TestCombat:
         """Starting combat with no combatants returns an error."""
         from src.database import AsyncSessionLocal
         async with AsyncSessionLocal() as db:
+            db.add(
+                Campaign(
+                    id="test_campaign_empty",
+                    name="Empty Campaign",
+                    current_scene="scene.default",
+                    active_encounter_id="enc_test_campaign_empty",
+                    context_version=1,
+                )
+            )
+            db.add(
+                SceneCatalogRecord(
+                    campaign_id="test_campaign_empty",
+                    scene_id="scene.default",
+                    name="Default Scene",
+                )
+            )
+            db.add(
+                EncounterCatalogRecord(
+                    campaign_id="test_campaign_empty",
+                    scene_id="scene.default",
+                    encounter_id="enc_test_campaign_empty",
+                    name="Empty Encounter",
+                    source="test",
+                    state_json=EncounterState(
+                        id="enc_test_campaign_empty",
+                        campaign_id="test_campaign_empty",
+                        combatants=[],
+                    ).model_dump(mode="json"),
+                )
+            )
+            await db.commit()
+
             service = CombatService(db)
             session, _ = await service.load_or_create_encounter_state("test_campaign_empty")
             empty_enc = EncounterState(
@@ -687,6 +745,13 @@ class TestMovement:
                 c for c in combat_encounter.combatants if c.id != active_actor.id)
             target.position.x = active_actor.position.x + 20
             target.position.y = active_actor.position.y
+
+            from src.database import AsyncSessionLocal
+            async with AsyncSessionLocal() as db:
+                service = CombatService(db)
+                session, _ = await service.load_or_create_encounter_state("test_campaign")
+                await service.save_full_state(session, combat_encounter)
+                await db.commit()
 
             snapshot_events = await handler.handle(
                 WsEnvelope(
@@ -939,13 +1004,14 @@ class TestMovement:
         assert events[0].payload["actor_id"] == "goblin_1"
         assert events[0].payload["position"] == {"x": 12, "y": 14}
 
+        latest = await refresh_encounter()
         goblin = next(
-            c for c in combat_encounter.combatants if c.id == "goblin_1")
+            c for c in latest.combatants if c.id == "goblin_1")
         assert goblin.position.x == 12
         assert goblin.position.y == 14
 
         goblin_token = next(
-            t for t in combat_encounter.map.tokens if t.actor_id == "goblin_1")
+            t for t in latest.map.tokens if t.actor_id == "goblin_1")
         assert goblin_token.position.x == 12
         assert goblin_token.position.y == 14
 
