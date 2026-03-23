@@ -1,0 +1,36 @@
+%% Mermaid representation of D2 shared legend
+classDiagram
+
+class SchemaModel {
+  +field_name: type
+}
+
+class TransportModel {
+  +field_name: type
+}
+
+class ServiceClass {
+  +field_name: type
+  +key_method()
+}
+
+class DomainType {
+  +field_name: type
+}
+
+class OrmModel {
+  +column_name: type
+}
+
+class EnumType {
+  +VALUE: value
+}
+
+note for SchemaModel "Equivalent D2 stroke color: #2E86AB"
+note for TransportModel "Equivalent D2 stroke color: #2A9D8F"
+note for ServiceClass "Equivalent D2 stroke color: #F4A261"
+note for DomainType "Equivalent D2 stroke color: #E76F51"
+note for OrmModel "Equivalent D2 stroke color: #6C5CE7"
+note for EnumType "Equivalent D2 stroke color: #C0392B"
+
+note for ServiceClass "Solid arrow in D2 means ownership/composition. Dashed arrow in D2 means dependency or lookup-by-id. Mermaid uses labeled relations to preserve this semantics."

@@ -63,6 +63,23 @@ Layered diagrams:
 - [docs/diagrams/d2/D2.7_domain_policy_objects.d2](../diagrams/d2/D2.7_domain_policy_objects.d2)
 - [docs/diagrams/d2/D2.8_persistence_orm_models.d2](../diagrams/d2/D2.8_persistence_orm_models.d2)
 
+Mermaid mirrors:
+
+- [docs/diagrams/mmd/\_legend.mmd](../diagrams/mmd/_legend.mmd)
+- [docs/diagrams/mmd/D2.1_transport_session.mmd](../diagrams/mmd/D2.1_transport_session.mmd)
+- [docs/diagrams/mmd/D2.2_schema_primitives_enums.mmd](../diagrams/mmd/D2.2_schema_primitives_enums.mmd)
+- [docs/diagrams/mmd/D2.3_definitions_contracts.mmd](../diagrams/mmd/D2.3_definitions_contracts.mmd)
+- [docs/diagrams/mmd/D2.4_runtime_instances_encounter.mmd](../diagrams/mmd/D2.4_runtime_instances_encounter.mmd)
+- [docs/diagrams/mmd/D2.5_event_payload_models.mmd](../diagrams/mmd/D2.5_event_payload_models.mmd)
+- [docs/diagrams/mmd/D2.6_services_application_dtos.mmd](../diagrams/mmd/D2.6_services_application_dtos.mmd)
+- [docs/diagrams/mmd/D2.7_domain_policy_objects.mmd](../diagrams/mmd/D2.7_domain_policy_objects.mmd)
+- [docs/diagrams/mmd/D2.8_persistence_orm_models.mmd](../diagrams/mmd/D2.8_persistence_orm_models.mmd)
+
+Format parity notes:
+
+- Each Mermaid file is a direct representation of the corresponding D2 file and preserves class fields, methods, and labeled relationships.
+- D2 color variables and stroke styling are represented as Mermaid comments or notes because Mermaid classDiagram does not support equivalent per-class stroke configuration in source.
+
 ## Backend Is Truth
 
 Authoritative runtime state classes:

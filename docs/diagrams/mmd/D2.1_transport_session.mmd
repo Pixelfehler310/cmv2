@@ -1,0 +1,69 @@
+%% D2.1 Transport and Session Context (Mermaid mirror)
+classDiagram
+
+namespace TransportLayer {
+  class Visibility {
+    +ALL: all
+    +DM_ONLY: dm_only
+    +ACTOR_OWNER: actor_owner
+    +EXCLUDE_ACTOR: exclude_actor
+  }
+
+  class WsErrorCode {
+    +INVALID_MESSAGE: invalid_message
+    +UNAUTHORIZED: unauthorized
+    +INVALID_TARGET: invalid_target
+    +NOT_YOUR_TURN: not_your_turn
+    +RESOURCE_EXHAUSTED: resource_exhausted
+    +INVALID_ACTION: invalid_action
+    +INTERNAL_ERROR: internal_error
+  }
+
+  class WsEnvelope {
+    +type: str
+    +request_id: str | None
+    +payload: dict[str, Any]
+  }
+
+  class WsOutbound {
+    +type: str
+    +request_id: str | None
+    +payload: dict[str, Any]
+    +visibility: Visibility
+    +target_user_id: str | None
+  }
+
+  class UserRole {
+    +DM: dm
+    +PLAYER: player
+    +SPECTATOR: spectator
+  }
+
+  class ConnectedUser {
+    +user_id: str
+    +display_name: str
+    +role: UserRole
+    +ws: object
+    +connected_at: datetime
+  }
+
+  class CampaignRoom {
+    +campaign_id: str
+    +game_system: str
+    +users: dict[str, ConnectedUser]
+    +is_empty()
+  }
+
+  class SessionContext {
+    +campaign_id: str
+    +user_id: str
+    +display_name: str
+    +role: UserRole
+    +game_system: str
+  }
+}
+
+WsOutbound --> Visibility : uses
+ConnectedUser --> UserRole : has
+CampaignRoom --> ConnectedUser : owns [0..*]
+SessionContext --> UserRole : uses

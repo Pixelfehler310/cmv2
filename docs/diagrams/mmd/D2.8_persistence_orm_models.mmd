@@ -1,0 +1,213 @@
+%% D2.8 Persistence ORM Models (Mermaid mirror)
+classDiagram
+
+namespace CombatPersistence {
+  class EncounterSession {
+    +campaign_id: str
+    +scene_id: str | None
+    +encounter_id: str
+    +phase: str
+    +round_number: int
+    +active_index: int
+    +combat_state_json: dict
+  }
+
+  class CombatantState {
+    +encounter_session_id: str
+    +actor_id: str
+    +initiative_order: int
+    +owner_user_id: str | None
+    +current_hp: int
+    +max_hp: int
+    +pos_x: int
+    +pos_y: int
+    +actor_snapshot: dict
+  }
+
+  class TurnBudgetRecord {
+    +encounter_session_id: str
+    +combatant_id: str
+    +round_number: int
+    +action_available: bool
+    +bonus_action_available: bool
+    +reaction_available: bool
+    +max_movement: int
+    +movement_used: int
+  }
+
+  class ActionLog {
+    +encounter_session_id: str
+    +request_id: str | None
+    +actor_id: str
+    +action_type: str
+    +action_state: str
+    +denial_reason: str | None
+    +authorization_checks: dict
+    +payload: dict
+  }
+
+  class EffectInstanceRecord {
+    +instance_id: str
+    +effect_id: str
+    +source_actor_id: str | None
+    +target_actor_id: str
+    +applied_at_round: int
+    +remaining_duration: int | None
+    +concentration_owner_actor_id: str | None
+    +stack_count: int
+    +snapshot_payload: dict
+    +provenance: dict
+    +encounter_session_id: str | None
+  }
+}
+
+namespace ContentPersistence {
+  class ActionDefinitionRecord {
+    +system: str
+    +action_id: str
+    +name: str
+    +family: str
+    +action_type_cost: str
+    +targeting_mode: str
+    +range: int | None
+    +save_context: dict | None
+    +attack_context: dict | None
+    +resource_costs: list[dict]
+    +effect_intents: list[dict]
+    +tags: list[str]
+    +source_ref: str
+    +content_version: str
+    +enabled: bool
+    +pack_id: str | None
+    +pack_version: str | None
+  }
+
+  class AbilityBindingRecord {
+    +system: str
+    +binding_id: str
+    +action_id: str
+    +actor_template_id: str | None
+    +actor_id: str | None
+    +unlock_conditions: list[dict]
+    +override_payload: dict | None
+    +pack_id: str | None
+    +pack_version: str | None
+  }
+
+  class EffectDefinitionRecord {
+    +system: str
+    +effect_id: str
+    +name: str
+    +family: str
+    +duration: dict
+    +stacking: dict
+    +tags: list[str]
+    +modifiers: list[dict]
+    +grants_conditions: list[str]
+    +periodic: list[dict]
+    +removal_triggers: list[dict]
+    +metadata_json: dict
+    +content_version: str
+    +enabled: bool
+    +pack_id: str | None
+    +pack_version: str | None
+  }
+}
+
+namespace ContextPersistence {
+  class SceneCatalogRecord {
+    +campaign_id: str
+    +scene_id: str
+    +name: str
+  }
+
+  class EncounterCatalogRecord {
+    +campaign_id: str
+    +scene_id: str
+    +encounter_id: str
+    +name: str
+    +source: str
+    +state_json: dict
+  }
+}
+
+namespace CampaignIdentity {
+  class User {
+    +username: str
+    +hashed_password: str | None
+    +is_active: bool
+    +is_superuser: bool
+  }
+
+  class UserSocialAuth {
+    +user_id: UUID
+    +provider: str
+    +provider_user_id: str
+    +email: str | None
+    +extra_data: dict
+  }
+
+  class CampaignRole {
+    +DM
+    +PLAYER
+    +SPECTATOR
+  }
+
+  class CampaignMember {
+    +campaign_id: str
+    +user_id: str
+    +role: CampaignRole
+    +active_character_id: str | None
+  }
+
+  class Campaign {
+    +name: str
+    +description: str | None
+    +dm_id: str | None
+    +current_scene: str | None
+    +active_encounter_id: str | None
+    +context_version: int
+    +active_turn: str | None
+  }
+
+  class Character {
+    +name: str
+    +player_name: str | None
+    +campaign_id: str | None
+    +species_id: str | None
+    +class_id: str | None
+    +background_id: str | None
+    +level: int
+    +xp: int
+    +alignment: str | None
+    +strength: int
+    +dexterity: int
+    +constitution: int
+    +intelligence: int
+    +wisdom: int
+    +charisma: int
+    +max_hp: int
+    +current_hp: int
+    +temp_hp: int
+    +hit_dice: str
+    +armor_class: int
+    +speed: int
+    +initiative: int
+    +inventory: list
+    +spells: list
+    +spell_slots: dict
+    +actions: list
+    +effects: list
+  }
+}
+
+EncounterSession --> CombatantState : owns [0..*]
+EncounterSession --> TurnBudgetRecord : owns [0..*]
+EncounterSession --> ActionLog : owns [0..*]
+CombatantState --> TurnBudgetRecord : owns [0..*]
+ActionDefinitionRecord --> AbilityBindingRecord : referenced by action_id
+EffectDefinitionRecord --> EffectInstanceRecord : referenced by effect_id
+Campaign --> CampaignMember : owns [0..*]
+Campaign --> Character : owns [0..*]
+User --> UserSocialAuth : owns [0..*]
+CampaignMember --> User : references user_id

@@ -1,0 +1,172 @@
+%% D2.2 Shared Schema Primitives and Enums (Mermaid mirror)
+classDiagram
+
+namespace Enums {
+  class Ability {
+    +STR: strength
+    +DEX: dexterity
+    +CON: constitution
+    +INT: intelligence
+    +WIS: wisdom
+    +CHA: charisma
+  }
+
+  class AoeShape {
+    +CONE: cone
+    +SPHERE: sphere
+    +LINE: line
+    +CUBE: cube
+    +CYLINDER: cylinder
+  }
+
+  class EffectType {
+    +BONUS
+    +SET
+    +MULTIPLY
+    +ADVANTAGE
+    +DISADVANTAGE
+    +IMMUNITY
+    +RESISTANCE
+    +VULNERABILITY
+    +DAMAGE_PER_TURN
+    +HEALING_PER_TURN
+    +GRANT_CONDITION
+    +REMOVE_CONDITION
+  }
+
+  class ResetOn {
+    +SHORT_REST
+    +LONG_REST
+    +DAWN
+    +ROUND
+  }
+
+  class Size {
+    +TINY
+    +SMALL
+    +MEDIUM
+    +LARGE
+    +HUGE
+    +GARGANTUAN
+  }
+}
+
+namespace ValueObjects {
+  class AbilityScores {
+    +strength: int
+    +dexterity: int
+    +constitution: int
+    +intelligence: int
+    +wisdom: int
+    +charisma: int
+  }
+
+  class SavingThrows {
+    +strength_save: int | None
+    +dexterity_save: int | None
+    +constitution_save: int | None
+    +intelligence_save: int | None
+    +wisdom_save: int | None
+    +charisma_save: int | None
+  }
+
+  class SpeedBlock {
+    +walk: int
+    +fly: int | None
+    +swim: int | None
+    +climb: int | None
+    +burrow: int | None
+    +hover: bool
+  }
+
+  class Position {
+    +x: int
+    +y: int
+    +elevation: int
+  }
+
+  class Components {
+    +verbal: bool
+    +somatic: bool
+    +material: bool
+    +material_desc: str | None
+  }
+
+  class AreaOfEffect {
+    +shape: AoeShape
+    +size: int
+  }
+
+  class SaveRequirement {
+    +ability: Ability
+    +dc: int
+    +on_fail: str
+    +on_success: str
+  }
+
+  class RechargeRule {
+    +min_roll: int
+    +max_roll: int
+  }
+
+  class UsageLimit {
+    +uses: int
+    +reset_on: ResetOn
+  }
+
+  class AbilityScoreBonus {
+    +ability: Ability
+    +bonus: int
+  }
+
+  class SkillChoice {
+    +options: list[str]
+    +choose: int
+  }
+
+  class ResourceCounter {
+    +name: str
+    +max: int
+    +current: int
+    +resets_on: ResetOn
+  }
+
+  class SpellSlots {
+    +max: int
+    +current: int
+  }
+
+  class SpellcastingProgression {
+    +ability: Ability
+    +type: str
+    +cantrips_known_at_1: int
+    +slots_by_level: dict[int, SpellSlots]
+  }
+
+  class EffectDefinitionLite {
+    +name: str
+    +type: EffectType
+    +target_stat: str
+    +value: int | str
+    +source: str | None
+  }
+
+  class LevelFeature {
+    +level: int
+    +feature_slug: str
+    +effects: list[EffectDefinitionLite]
+    +granted_actions: list
+    +granted_resource: ResourceCounter | None
+  }
+}
+
+AreaOfEffect --> AoeShape : uses
+SaveRequirement --> Ability : uses
+UsageLimit --> ResetOn : uses
+AbilityScoreBonus --> Ability : uses
+ResourceCounter --> ResetOn : uses
+SpellcastingProgression --> Ability : uses
+SpellcastingProgression --> SpellSlots : owns [0..*]
+EffectDefinitionLite --> EffectType : uses
+LevelFeature --> EffectDefinitionLite : owns [0..*]
+LevelFeature --> ResourceCounter : owns [0..1]

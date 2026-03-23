@@ -1,0 +1,185 @@
+%% D2.5 Event Payload Models (Mermaid mirror)
+classDiagram
+
+namespace Inbound {
+  class ActionPayload {
+    +actor_id: str
+    +action_name: str
+    +action_type: str
+    +target_ids: list[str]
+  }
+
+  class RequestActionPayload {
+    +actor_id: str
+    +action_type: str
+    +action_name: str
+    +payload: dict
+    +acting_as_user_id: str | None
+  }
+
+  class MoveTokenPayload {
+    +actor_id: str
+    +path: list[dict]
+    +acting_as_user_id: str | None
+  }
+
+  class RequestMovePreviewPayload {
+    +actor_id: str
+    +acting_as_user_id: str | None
+  }
+
+  class RequestExecutableActionsPayload {
+    +actor_id: str
+    +acting_as_user_id: str | None
+  }
+
+  class RequestAttackPreviewPayload {
+    +actor_id: str
+    +action_id: str
+    +template_origin: dict | None
+    +template_direction: dict | None
+    +acting_as_user_id: str | None
+  }
+
+  class RollDicePayload {
+    +expression: str
+    +purpose: str | None
+  }
+
+  class EndTurnPayload {
+    +actor_id: str
+  }
+
+  class StartCombatPayload
+  class EndCombatPayload
+
+  class ApplyDamagePayload {
+    +actor_id: str
+    +amount: int
+    +damage_type: str
+  }
+
+  class ApplyHealingPayload {
+    +actor_id: str
+    +amount: int
+  }
+
+  class ApplyConditionPayload {
+    +actor_id: str
+    +condition: str
+    +source_id: str | None
+  }
+
+  class RemoveConditionPayload {
+    +actor_id: str
+    +condition: str
+  }
+
+  class AddActorPayload {
+    +definition_slug: str
+    +name: str | None
+    +position: dict | None
+    +owner_user_id: str | None
+  }
+
+  class RemoveActorPayload {
+    +actor_id: str
+  }
+
+  class ChatMessagePayload {
+    +message: str
+  }
+}
+
+namespace Outbound {
+  class ErrorPayload {
+    +message: str
+    +code: str
+  }
+
+  class TurnAdvancedPayload {
+    +active_actor_id: str
+    +round: int
+  }
+
+  class MovementPreviewPayload {
+    +actor_id: str
+    +origin: dict
+    +movement_remaining: int
+    +reachable: list[dict]
+  }
+
+  class AttackPreviewPayload {
+    +actor_id: str
+    +action_id: str
+    +origin: dict
+    +eligible_target_ids: list[str]
+    +eligible_cells: list[dict]
+    +template_projection: dict | None
+  }
+
+  class ActionAuthorizedPayload {
+    +actor_id: str
+    +action_type: str
+    +action_name: str
+  }
+
+  class ActionDeniedPayload {
+    +actor_id: str
+    +action_type: str
+    +reason_code: str
+    +message: str
+  }
+
+  class ActorDamagedPayload {
+    +actor_id: str
+    +amount: int
+    +new_hp: int
+    +source: str
+  }
+
+  class ActorHealedPayload {
+    +actor_id: str
+    +amount: int
+    +new_hp: int
+  }
+
+  class ActorDiedPayload {
+    +actor_id: str
+  }
+
+  class ConditionAddedPayload {
+    +actor_id: str
+    +condition: str
+    +source: str
+  }
+
+  class ConditionRemovedPayload {
+    +actor_id: str
+    +condition: str
+  }
+
+  class CombatStartedPayload {
+    +initiative_order: list[dict]
+  }
+
+  class CombatEndedPayload
+
+  class DiceRolledPayload {
+    +roller_id: str
+    +expression: str
+    +result: int
+  }
+
+  class PongPayload
+}
+
+ActionPayload --> ActionAuthorizedPayload : request/response family
+RequestAttackPreviewPayload --> AttackPreviewPayload : request/response family
+RequestMovePreviewPayload --> MovementPreviewPayload : request/response family
+ApplyDamagePayload --> ActorDamagedPayload : command/event family
+ApplyHealingPayload --> ActorHealedPayload : command/event family
+ApplyConditionPayload --> ConditionAddedPayload : command/event family
+RemoveConditionPayload --> ConditionRemovedPayload : command/event family
+StartCombatPayload --> CombatStartedPayload : command/event family
+EndCombatPayload --> CombatEndedPayload : command/event family

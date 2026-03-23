@@ -1,0 +1,81 @@
+%% D2.6 Service and Application DTO Interactions (Mermaid mirror)
+classDiagram
+
+namespace Application {
+  class ActionExecutionRequest {
+    +actor_id: str
+    +action_type: str
+    +action_name: str
+    +target_ids: list[str]
+    +action_payload: dict[str, Any]
+    +request_id: str | None
+    +raw_payload: dict[str, Any]
+    +require_canonical_action_id: bool
+  }
+
+  class ActionExecutionResult {
+    +events: list[dict[str, Any]]
+  }
+
+  class ActionExecutionApplicationService {
+    -_combat_service: CombatService
+    +execute(request, encounter, encounter_session, ctx)
+    -_build_domain_request(request)
+    -_build_domain_context(request, encounter)
+  }
+}
+
+namespace Services {
+  class CombatService {
+    +execute_action(...)
+    +check_can_act(...)
+    +consume_budget(...)
+    +apply_movement(...)
+    +get_attack_preview(...)
+    +get_executable_actions_snapshot(...)
+    +handle_end_turn(...)
+    +handle_move_token(...)
+    +handle_start_combat(...)
+    +log_action_attempt(...)
+    +sync_effect_instance_records(...)
+    +resolve_effect_intents(...)
+  }
+}
+
+namespace DomainDTOs {
+  class ActionResolutionRequest {
+    +actor_id: str
+    +action_id: str
+    +action_type_cost: str
+    +family: str
+    +targeting_mode: str
+    +target_ids: list[str]
+    +payload: dict[str, Any]
+  }
+
+  class ActionResolutionContext {
+    +campaign_id: str
+    +request_id: str | None
+    +round_number: int
+    +active_actor_id: str | None
+  }
+
+  class ActionResolutionDenial {
+    +reason_code: str
+    +message: str
+    +checks: dict[str, Any] | None
+  }
+
+  class ActionResolutionSuccess {
+    +events: list[dict[str, Any]]
+    +checks: dict[str, Any] | None
+  }
+}
+
+ActionExecutionApplicationService --> ActionExecutionRequest : accepts
+ActionExecutionApplicationService --> ActionExecutionResult : returns
+ActionExecutionApplicationService --> ActionResolutionRequest : maps to
+ActionExecutionApplicationService --> ActionResolutionContext : maps to
+ActionExecutionApplicationService --> CombatService : orchestrates
+CombatService --> ActionResolutionDenial : produces on failure
+CombatService --> ActionResolutionSuccess : produces on success

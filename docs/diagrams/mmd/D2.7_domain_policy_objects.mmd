@@ -1,0 +1,72 @@
+%% D2.7 Domain Policy Objects (Mermaid mirror)
+classDiagram
+
+namespace AuthorizationDomain {
+  class AuthorizationResult {
+    +allowed: bool
+    +reason_code: str | None
+    +message: str | None
+    +checks: dict[str, Any] | None
+  }
+
+  class AuthorizationFunctions {
+    +check_actor_exists(actor_id, actor)
+    +check_user_role_allowed(user_role)
+    +check_actor_ownership(user_role, user_id, actor_owner_user_id)
+    +check_actor_alive(actor)
+    +check_turn_ownership(action_type, turn_phase, active_actor_id, requesting_actor_id)
+    +combine_authorization_checks(*results)
+  }
+}
+
+namespace ActionEconomyDomain {
+  class ActionBudgetCheckResult {
+    +allowed: bool
+    +reason_code: str | None
+    +message: str | None
+    +check_key: str | None
+  }
+
+  class ActionEconomyFunctions {
+    +normalize_action_type(action_type)
+    +can_spend_action_budget(action_type, action_available, bonus_action_available, reaction_available)
+    +apply_action_budget_consumption(action_type, budget_state)
+    +get_or_create_in_memory_budget(turn_budgets, actor_id, max_movement, round_number)
+  }
+}
+
+namespace ResolutionPipeline {
+  class ActionResolutionRequest {
+    +actor_id: str
+    +action_id: str
+    +action_type_cost: str
+    +family: str
+    +targeting_mode: str
+    +target_ids: list[str]
+    +payload: dict[str, Any]
+  }
+
+  class ActionResolutionContext {
+    +campaign_id: str
+    +request_id: str | None
+    +round_number: int
+    +active_actor_id: str | None
+  }
+
+  class ActionResolutionDenial {
+    +reason_code: str
+    +message: str
+    +checks: dict[str, Any] | None
+  }
+
+  class ActionResolutionSuccess {
+    +events: list[dict[str, Any]]
+    +checks: dict[str, Any] | None
+  }
+}
+
+AuthorizationFunctions --> AuthorizationResult : returns
+ActionEconomyFunctions --> ActionBudgetCheckResult : returns
+ActionResolutionRequest --> ActionResolutionContext : paired by request lifecycle
+ActionResolutionDenial --> ActionResolutionRequest : outcome for
+ActionResolutionSuccess --> ActionResolutionRequest : outcome for
