@@ -15,7 +15,7 @@ from src.schemas.context import (
 )
 from src.identity.models import User
 from src.identity.dependencies import get_current_active_user
-from src.systems.dnd5e.services.combat_service import CombatService
+from src.systems.dnd5e.application.context_service import CampaignContextApplicationService
 
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 
@@ -231,7 +231,7 @@ async def get_campaign_context(
 ):
     await _resolve_member_or_raise(db, campaign_id, current_user)
 
-    service = CombatService(db)
+    service = CampaignContextApplicationService(db)
     try:
         campaign = await service.get_context(campaign_id)
     except ValueError as exc:
@@ -253,7 +253,7 @@ async def list_campaign_scenes(
 ):
     await _resolve_member_or_raise(db, campaign_id, current_user)
 
-    service = CombatService(db)
+    service = CampaignContextApplicationService(db)
     try:
         scenes = await service.list_scenes(campaign_id)
     except ValueError as exc:
@@ -271,7 +271,7 @@ async def list_scene_encounters(
 ):
     await _resolve_member_or_raise(db, campaign_id, current_user)
 
-    service = CombatService(db)
+    service = CampaignContextApplicationService(db)
     try:
         encounters = await service.list_encounters(campaign_id, scene_id)
     except ValueError as exc:
@@ -299,7 +299,7 @@ async def select_campaign_context(
         raise HTTPException(
             status_code=403, detail="Only DM can change campaign context")
 
-    service = CombatService(db)
+    service = CampaignContextApplicationService(db)
     try:
         campaign = await service.select_context(campaign_id, request.scene_id, request.encounter_id)
     except ValueError as exc:
