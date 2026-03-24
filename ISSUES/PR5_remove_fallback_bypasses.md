@@ -1,18 +1,19 @@
 # PR5: Remove Fallback Bypasses in Combat Slice
 
-Status: Planned
+Status: In Progress
 Owner: Engineering
 Depends on: PR4
 
 ## Goal
 
-Remove remaining in-memory bypass paths in combat context load and action resolve where they violate authoritative invariants.
+Remove remaining in-memory bypass paths in combat context load and action resolve where they violate authoritative invariants, while replacing payload-based impersonation with explicit delegation mode.
 
 ## Scope
 
 In scope:
 
 - Remove bypass logic that skips authorization, turn ownership, or action economy checks.
+- Replace `acting_as_user_id` payload impersonation behavior with server-side delegation lifecycle commands.
 - Enforce one authoritative execution path per command in this slice.
 - Keep explicit denied/error outcomes for non-authorized or invalid requests.
 
@@ -41,6 +42,7 @@ Tests likely:
 2. Ensure all command paths produce explicit terminal outcomes (success, denied, error).
 3. Remove dead compatibility code that conflicts with MVP target architecture.
 4. Add regression tests for previous bypass scenarios.
+5. Add regression tests for delegation lifecycle and delegated authorization behavior.
 
 ## Definition of Done
 
@@ -48,6 +50,7 @@ Tests likely:
 2. Turn, ownership, and budget enforcement is uniform.
 3. Legacy fallback branches removed or explicitly gated for non-production use.
 4. Regression tests prove bypass scenarios are closed.
+5. Delegated execution is auditable (`authenticated_user_id` + `effective_user_id`) and policy-constrained.
 
 ## Verification
 

@@ -16,7 +16,7 @@ import re
 from src.config import settings
 from src.database import Base
 from src.core.ws_protocol import WsEnvelope, WsOutbound, Visibility
-from src.core.sessions.models import SessionContext, UserRole
+from src.core.sessions.models import ConnectedUser, SessionContext, UserRole
 from src.core.sessions.manager import SessionManager
 
 import src.systems.dnd5e.ws_handler as ws_handler_module
@@ -361,19 +361,41 @@ class TestPermissions:
         assert events[0].payload["reason_code"] == "invalid_action"
 
     @pytest.mark.anyio
-    async def test_dm_can_impersonate_player_for_request_action(self, handler, dm_ctx, mgr, combat_encounter):
-        envelope = WsEnvelope(
-            type="request_action",
-            request_id="req_dm_impersonated_denied",
-            payload={
-                "actor_id": "goblin_1",
-                "action_type": "action",
-                "action_name": "attack",
-                "acting_as_user_id": "player_1",
-            },
+    async def test_dm_can_delegate_to_player_for_request_action(self, handler, dm_ctx, mgr, combat_encounter):
+        mgr.register_connection(
+            dm_ctx.campaign_id,
+            ConnectedUser(user_id="dm_user", display_name="DM", role=UserRole.DM, ws=object()),
+        )
+        mgr.register_connection(
+            dm_ctx.campaign_id,
+            ConnectedUser(user_id="player_1", display_name="Player 1", role=UserRole.PLAYER, ws=object()),
         )
 
-        events = await handler.handle(envelope, dm_ctx, mgr)
+        start_events = await handler.handle(
+            WsEnvelope(
+                type="delegate_start",
+                request_id="req_delegate_start_action",
+                payload={"target_user_id": "player_1"},
+            ),
+            dm_ctx,
+            mgr,
+        )
+        assert len(start_events) == 1
+        assert start_events[0].type == "delegation_started"
+
+        events = await handler.handle(
+            WsEnvelope(
+                type="request_action",
+                request_id="req_dm_delegated_denied",
+                payload={
+                    "actor_id": "goblin_1",
+                    "action_type": "action",
+                    "action_name": "attack",
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
 
         assert len(events) == 1
         assert events[0].type == "action_denied"
@@ -397,6 +419,92 @@ class TestPermissions:
         assert len(events) == 1
         assert events[0].type == "action_denied"
         assert events[0].payload["reason_code"] == "unauthorized"
+
+    @pytest.mark.anyio
+    async def test_player_cannot_start_delegation(self, handler, player_ctx, mgr):
+        events = await handler.handle(
+            WsEnvelope(
+                type="delegate_start",
+                request_id="req_delegate_start_player_denied",
+                payload={"target_user_id": "player_2"},
+            ),
+            player_ctx,
+            mgr,
+        )
+
+        assert len(events) == 1
+        assert events[0].type == "command_denied"
+        assert events[0].payload["reason_code"] == "unauthorized"
+
+    @pytest.mark.anyio
+    async def test_mutating_command_denied_when_encounter_session_missing(self, handler, dm_ctx, mgr, monkeypatch):
+        original_load = CombatService.load_or_create_encounter_state
+
+        async def _missing_session(self, campaign_id: str):
+            return None, EncounterState(id="enc_missing", campaign_id=campaign_id, combatants=[])
+
+        monkeypatch.setattr(CombatService, "load_or_create_encounter_state", _missing_session)
+
+        try:
+            events = await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_missing_session_denied",
+                    payload={
+                        "actor_id": "fighter_1",
+                        "action_type": "action",
+                        "action_name": "attack",
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+        finally:
+            monkeypatch.setattr(CombatService, "load_or_create_encounter_state", original_load)
+
+        assert len(events) == 1
+        assert events[0].type == "action_denied"
+        assert events[0].payload["reason_code"] == "encounter_session_required"
+
+    @pytest.mark.anyio
+    async def test_dm_delegation_status_and_stop(self, handler, dm_ctx, mgr):
+        mgr.register_connection(
+            dm_ctx.campaign_id,
+            ConnectedUser(user_id="dm_user", display_name="DM", role=UserRole.DM, ws=object()),
+        )
+        mgr.register_connection(
+            dm_ctx.campaign_id,
+            ConnectedUser(user_id="player_1", display_name="Player 1", role=UserRole.PLAYER, ws=object()),
+        )
+
+        started = await handler.handle(
+            WsEnvelope(
+                type="delegate_start",
+                request_id="req_delegate_status_start",
+                payload={"target_user_id": "player_1"},
+            ),
+            dm_ctx,
+            mgr,
+        )
+        assert len(started) == 1
+        assert started[0].type == "delegation_started"
+
+        status = await handler.handle(
+            WsEnvelope(type="delegate_status", payload={}),
+            dm_ctx,
+            mgr,
+        )
+        assert len(status) == 1
+        assert status[0].type == "delegation_status"
+        assert status[0].payload["active_delegation"]["target_user_id"] == "player_1"
+
+        stopped = await handler.handle(
+            WsEnvelope(type="delegate_stop", request_id="req_delegate_status_stop", payload={}),
+            dm_ctx,
+            mgr,
+        )
+        assert len(stopped) == 1
+        assert stopped[0].type == "delegation_stopped"
 
     @pytest.mark.anyio
     async def test_command_requires_request_id(self, handler, dm_ctx, mgr, combat_encounter):
@@ -1043,18 +1151,40 @@ class TestMovement:
         assert events[0].type == "actor_moved"
 
     @pytest.mark.anyio
-    async def test_dm_can_impersonate_player_for_move_token(self, handler, dm_ctx, mgr, combat_encounter):
-        envelope = WsEnvelope(
-            type="move_token",
-            request_id="req_move_impersonated_denied",
-            payload={
-                "actor_id": "goblin_1",
-                "path": [{"x": 8, "y": 8}],
-                "acting_as_user_id": "player_1",
-            },
+    async def test_dm_can_delegate_to_player_for_move_token(self, handler, dm_ctx, mgr, combat_encounter):
+        mgr.register_connection(
+            dm_ctx.campaign_id,
+            ConnectedUser(user_id="dm_user", display_name="DM", role=UserRole.DM, ws=object()),
+        )
+        mgr.register_connection(
+            dm_ctx.campaign_id,
+            ConnectedUser(user_id="player_1", display_name="Player 1", role=UserRole.PLAYER, ws=object()),
         )
 
-        events = await handler.handle(envelope, dm_ctx, mgr)
+        start_events = await handler.handle(
+            WsEnvelope(
+                type="delegate_start",
+                request_id="req_delegate_start_move",
+                payload={"target_user_id": "player_1"},
+            ),
+            dm_ctx,
+            mgr,
+        )
+        assert len(start_events) == 1
+        assert start_events[0].type == "delegation_started"
+
+        events = await handler.handle(
+            WsEnvelope(
+                type="move_token",
+                request_id="req_move_delegated_denied",
+                payload={
+                    "actor_id": "goblin_1",
+                    "path": [{"x": 8, "y": 8}],
+                },
+            ),
+            dm_ctx,
+            mgr,
+        )
 
         assert len(events) == 1
         assert events[0].type == "command_denied"

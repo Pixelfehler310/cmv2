@@ -296,6 +296,13 @@ class CombatService:
         path: list[dict[str, int]],
         request_id: str | None,
     ) -> AuthorizationResult:
+        if encounter_session is None:
+            return AuthorizationResult(
+                False,
+                "encounter_session_required",
+                "Encounter session is required for combat command execution",
+            )
+
         actor = self._find_actor(encounter, actor_id)
         if actor is None:
             return AuthorizationResult(False, "invalid_target", f"Actor {actor_id} not found")
@@ -316,15 +323,9 @@ class CombatService:
             return checks
 
         distance = self._path_distance(actor.position, path)
-        if encounter_session is None:
-            budget_state = self._get_or_create_in_memory_budget(
-                encounter, actor_id)
-            movement_remaining = max(
-                int(budget_state["max_movement"]) - int(budget_state["movement_used"]), 0)
-        else:
-            budget = await self._get_or_create_budget(encounter_session, actor_id, encounter.round_number, actor.speed.walk)
-            movement_remaining = max(
-                budget.max_movement - budget.movement_used, 0)
+        budget = await self._get_or_create_budget(encounter_session, actor_id, encounter.round_number, actor.speed.walk)
+        movement_remaining = max(
+            budget.max_movement - budget.movement_used, 0)
 
         if distance > movement_remaining:
             checks_data = checks.checks or {}
@@ -348,31 +349,22 @@ class CombatService:
                 checks=checks_data,
             )
 
-        if encounter_session is None:
-            budget_state["movement_used"] = int(
-                budget_state["movement_used"]) + distance
-            budget_state["movement_remaining"] = max(
-                int(budget_state["max_movement"]) -
-                int(budget_state["movement_used"]),
-                0,
-            )
-        else:
-            budget.movement_used += distance
-            await self.db.flush()
-            await self.log_action_attempt(
-                encounter_session,
-                request_id=request_id,
-                actor_id=actor_id,
-                action_type="move",
-                action_state="authorized",
-                payload={"path": path},
-                checks={
-                    **(checks.checks or {}),
-                    "movement_required": distance,
-                    "movement_remaining": max(budget.max_movement - budget.movement_used, 0),
-                },
-                denial_reason=None,
-            )
+        budget.movement_used += distance
+        await self.db.flush()
+        await self.log_action_attempt(
+            encounter_session,
+            request_id=request_id,
+            actor_id=actor_id,
+            action_type="move",
+            action_state="authorized",
+            payload={"path": path},
+            checks={
+                **(checks.checks or {}),
+                "movement_required": distance,
+                "movement_remaining": max(budget.max_movement - budget.movement_used, 0),
+            },
+            denial_reason=None,
+        )
 
         return AuthorizationResult(True, checks=checks.checks)
 
@@ -744,9 +736,6 @@ class CombatService:
         normalized = self.normalize_action_type(action_type)
 
         if encounter_session is None:
-            budget_state = self._get_or_create_in_memory_budget(
-                encounter, actor_id)
-            apply_action_budget_consumption(normalized, budget_state)
             return
 
         budget = await self._get_or_create_budget(encounter_session, actor_id, encounter.round_number, actor.speed.walk)
@@ -775,9 +764,6 @@ class CombatService:
             return
 
         if encounter_session is None:
-            budget_state = self._get_or_create_in_memory_budget(
-                encounter, active.id)
-            budget_state["reaction_available"] = True
             return
 
         budget = await self._get_or_create_budget(
@@ -976,9 +962,8 @@ class CombatService:
                 actor_id=actor.id,
                 template_candidates=template_candidates,
             )
-        except Exception:
-            # Fallback is handled by legacy candidate projection.
-            return []
+        except Exception as exc:
+            raise RuntimeError("Failed to load action bindings for actor") from exc
 
         if not bindings:
             return []
@@ -999,8 +984,8 @@ class CombatService:
 
         try:
             action_defs = await self._action_catalog_repository.list_action_definitions_by_ids(action_ids)
-        except Exception:
-            return []
+        except Exception as exc:
+            raise RuntimeError("Failed to load action definitions for actor bindings") from exc
 
         action_by_id = {action.action_id: action for action in action_defs}
         projected: list[dict[str, Any]] = []
@@ -1455,6 +1440,9 @@ class CombatService:
         checks: dict[str, Any] = {
             "role": ctx.role.value,
             "actor_exists": True,
+            "authenticated_user_id": ctx.authenticated_user_id or ctx.user_id,
+            "effective_user_id": ctx.user_id,
+            "delegation_active": bool(ctx.delegation_active),
         }
 
         combatant = None
@@ -1686,6 +1674,15 @@ class CombatService:
         Returns a list of domain-event dicts (not WsOutbound).  The handler
         wraps these into WsOutbound envelopes.
         """
+        if encounter_session is None:
+            return [{
+                "type": "denied",
+                "reason_code": "encounter_session_required",
+                "message": "Encounter session is required for combat command execution",
+                "actor_id": actor_id,
+                "action_type": action_type,
+            }]
+
         auth = await self.check_can_act(
             encounter_session, encounter,
             actor_id=actor_id, action_type=action_type, ctx=ctx,
@@ -1815,8 +1812,10 @@ class CombatService:
                          "actor_id": actor_id, "action_type": action_type}]
             targets.append(target)
 
-        family = canonical_meta.family if canonical_meta.found and canonical_meta.family else resolve_action_family(
-            action_name, action_payload, targets)
+        if canonical_meta.found:
+            family = canonical_meta.family
+        else:
+            family = resolve_action_family(action_name, action_payload, targets)
         if family is None:
             if encounter_session is not None:
                 await self.log_action_attempt(
@@ -2491,7 +2490,6 @@ class CombatService:
         actor_id: str,
         path: list[dict[str, int]],
         request_id: str | None,
-        acting_as_user_id: str | None = None,
     ) -> dict[str, Any]:
         """Validate and apply movement. Returns result dict."""
         if not path:

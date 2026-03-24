@@ -28,6 +28,9 @@ from .event_types import (
     ActionPayload,
     AddActorPayload,
     ChatMessagePayload,
+    DelegateStartPayload,
+    DelegateStopPayload,
+    DelegateStatusPayload,
     EndTurnPayload,
     MoveTokenPayload,
     RequestAttackPreviewPayload,
@@ -67,6 +70,8 @@ COMMAND_EVENT_TYPES = {
     "apply_healing",
     "apply_condition",
     "remove_condition",
+    "delegate_start",
+    "delegate_stop",
 }
 
 ACTION_EVENT_TYPES = {"action", "request_action"}
@@ -102,22 +107,35 @@ class Dnd5eWsHandler(ISystemHandler):
     """
 
     @staticmethod
-    def _resolve_impersonated_ctx(ctx: SessionContext, acting_as_user_id: Optional[str]) -> SessionContext:
-        """Allow DMs to simulate player-level auth checks for debug tooling."""
-        if ctx.role != UserRole.DM:
-            return ctx
+    def _get_effective_user_context(
+        ctx: SessionContext, mgr: SessionManager
+    ) -> SessionContext:
+        """Resolve effective user identity from server-side delegation state.
+        
+        Returns: SessionContext with effective_user_id and delegation_active set.
+        If delegation is active, effective_user_id differs from user_id (authenticated).
+        """
+        effective_user_id = mgr.resolve_effective_user_id(ctx.campaign_id, ctx.user_id)
+        delegation_active = effective_user_id != ctx.user_id
 
-        candidate = (acting_as_user_id or "").strip()
-        if not candidate:
+        if delegation_active:
+            # Create new context with delegated identity but keep original auth info
+            return SessionContext(
+                campaign_id=ctx.campaign_id,
+                user_id=effective_user_id,
+                authenticated_user_id=ctx.user_id,
+                display_name=ctx.display_name,
+                role=UserRole.PLAYER,
+                game_system=ctx.game_system,
+                effective_user_id=effective_user_id,
+                delegation_active=True,
+            )
+        else:
+            # Normal context, update delegation flags
+            ctx.authenticated_user_id = ctx.user_id
+            ctx.effective_user_id = ctx.user_id
+            ctx.delegation_active = False
             return ctx
-
-        return SessionContext(
-            campaign_id=ctx.campaign_id,
-            user_id=candidate,
-            display_name=ctx.display_name,
-            role=UserRole.PLAYER,
-            game_system=ctx.game_system,
-        )
 
     async def on_connect(
         self, ctx: SessionContext, mgr: SessionManager
@@ -183,11 +201,27 @@ class Dnd5eWsHandler(ISystemHandler):
 
         # --- Dispatch ---
         _results: list[WsOutbound] | None = None
-        print(f"DEBUG: handler.handle using AsyncSessionLocal ID={id(AsyncSessionLocal)}")
         async with AsyncSessionLocal() as db:
             service = CombatService(db)
             action_execution_service = ActionExecutionApplicationService(service)
             encounter_session, encounter = await service.load_or_create_encounter_state(ctx.campaign_id)
+            
+            # Resolve effective user identity from delegation state (for command authorization)
+            effective_ctx = self._get_effective_user_context(ctx, mgr)
+
+            if encounter_session is None and event_type in MUTATING_COMMAND_TYPES:
+                return self._attach_request_id(
+                    [
+                        self._denied(
+                            event_type,
+                            "Encounter session is required for combat command execution",
+                            "encounter_session_required",
+                            ctx,
+                            envelope.request_id,
+                        )
+                    ],
+                    envelope.request_id,
+                )
 
             if event_type == "ping":
                 _results = self._handle_ping(ctx)
@@ -201,6 +235,15 @@ class Dnd5eWsHandler(ISystemHandler):
             elif event_type == "chat_message":
                 _results = self._handle_chat_message(envelope, ctx)
 
+            elif event_type == "delegate_start":
+                _results = self._handle_delegate_start(envelope, ctx, mgr)
+
+            elif event_type == "delegate_stop":
+                _results = self._handle_delegate_stop(envelope, ctx, mgr)
+
+            elif event_type == "delegate_status":
+                _results = self._handle_delegate_status(ctx, mgr)
+
             elif event_type == "action":
                 _results = await self._handle_action(
                     encounter,
@@ -209,6 +252,7 @@ class Dnd5eWsHandler(ISystemHandler):
                     service,
                     envelope,
                     ctx,
+                    effective_ctx,
                 )
 
             elif event_type == "request_action":
@@ -219,19 +263,20 @@ class Dnd5eWsHandler(ISystemHandler):
                     service,
                     envelope,
                     ctx,
+                    effective_ctx,
                 )
 
             elif event_type == "request_executable_actions":
-                _results = await self._handle_request_executable_actions(encounter, encounter_session, service, envelope, ctx)
+                _results = await self._handle_request_executable_actions(encounter, encounter_session, service, envelope, ctx, effective_ctx)
 
             elif event_type == "request_attack_preview":
-                _results = await self._handle_request_attack_preview(encounter, encounter_session, service, envelope, ctx)
+                _results = await self._handle_request_attack_preview(encounter, encounter_session, service, envelope, ctx, effective_ctx)
 
             elif event_type == "request_move_preview":
-                _results = await self._handle_request_move_preview(encounter, encounter_session, service, envelope, ctx)
+                _results = await self._handle_request_move_preview(encounter, encounter_session, service, envelope, ctx, effective_ctx)
 
             elif event_type == "move_token":
-                _results = await self._handle_move_token(encounter, encounter_session, service, envelope, ctx)
+                _results = await self._handle_move_token(encounter, encounter_session, service, envelope, ctx, effective_ctx)
 
             elif event_type == "add_actor":
                 _results = await self._handle_add_actor(encounter, encounter_session, service, envelope)
@@ -351,6 +396,126 @@ class Dnd5eWsHandler(ISystemHandler):
             )
         ]
 
+    def _handle_delegate_start(
+        self, envelope: WsEnvelope, ctx: SessionContext, mgr: SessionManager
+    ) -> list[WsOutbound]:
+        """Start delegation: DM assumes control as target player."""
+        # Only DM can start delegation
+        if ctx.role != UserRole.DM:
+            return [
+                self._denied(
+                    "delegate_start",
+                    "Only DM can start delegation",
+                    "unauthorized",
+                    ctx,
+                    envelope.request_id,
+                )
+            ]
+
+        try:
+            payload = DelegateStartPayload.model_validate(envelope.payload)
+        except Exception:
+            return [self._error("Invalid delegate_start payload", WsErrorCode.INVALID_MESSAGE, ctx)]
+
+        success, reason = mgr.start_delegation(ctx.campaign_id, ctx.user_id, payload.target_user_id)
+        if not success:
+            return [
+                self._denied(
+                    "delegate_start",
+                    f"Delegation failed: {reason}",
+                    reason,
+                    ctx,
+                    envelope.request_id,
+                )
+            ]
+
+        # Get target user details for the success payload
+        target_user = None
+        room = mgr.get_room(ctx.campaign_id)
+        if room:
+            target_user = room.users.get(payload.target_user_id)
+
+        target_display_name = target_user.display_name if target_user else payload.target_user_id
+
+        return [
+            WsOutbound(
+                type="delegation_started",
+                request_id=envelope.request_id,
+                payload={
+                    "delegating_user_id": ctx.user_id,
+                    "target_user_id": payload.target_user_id,
+                    "target_display_name": target_display_name,
+                },
+                visibility=Visibility.ALL,
+            )
+        ]
+
+    def _handle_delegate_stop(
+        self, envelope: WsEnvelope, ctx: SessionContext, mgr: SessionManager
+    ) -> list[WsOutbound]:
+        """Stop delegation: DM exits delegated mode."""
+        # Only DM can stop delegation
+        if ctx.role != UserRole.DM:
+            return [
+                self._denied(
+                    "delegate_stop",
+                    "Only DM can stop delegation",
+                    "unauthorized",
+                    ctx,
+                    envelope.request_id,
+                )
+            ]
+
+        success = mgr.stop_delegation(ctx.campaign_id, ctx.user_id)
+        if not success:
+            return [
+                self._denied(
+                    "delegate_stop",
+                    "No active delegation to stop",
+                    "no_active_delegation",
+                    ctx,
+                    envelope.request_id,
+                )
+            ]
+
+        return [
+            WsOutbound(
+                type="delegation_stopped",
+                request_id=envelope.request_id,
+                payload={
+                    "delegating_user_id": ctx.user_id,
+                },
+                visibility=Visibility.ALL,
+            )
+        ]
+
+    def _handle_delegate_status(
+        self, ctx: SessionContext, mgr: SessionManager
+    ) -> list[WsOutbound]:
+        """Query current delegation state."""
+        target_user_id = mgr.get_delegation(ctx.campaign_id, ctx.user_id)
+
+        active_delegation = None
+        if target_user_id:
+            room = mgr.get_room(ctx.campaign_id)
+            target_user = room.users.get(target_user_id) if room else None
+            active_delegation = {
+                "delegating_user_id": ctx.user_id,
+                "target_user_id": target_user_id,
+                "target_display_name": target_user.display_name if target_user else target_user_id,
+            }
+
+        return [
+            WsOutbound(
+                type="delegation_status",
+                payload={
+                    "active_delegation": active_delegation,
+                },
+                visibility=Visibility.ACTOR_OWNER,
+                target_user_id=ctx.user_id,
+            )
+        ]
+
     async def _handle_action(
         self,
         encounter: EncounterState,
@@ -359,11 +524,19 @@ class Dnd5eWsHandler(ISystemHandler):
         service: CombatService,
         envelope: WsEnvelope,
         ctx: SessionContext,
+        effective_ctx: SessionContext,
     ) -> list[WsOutbound]:
         try:
             payload = ActionPayload.model_validate(envelope.payload)
         except Exception:
             return [self._error("Invalid action payload", WsErrorCode.INVALID_MESSAGE, ctx)]
+
+        raw_payload = payload.model_dump(mode="json")
+        raw_payload["auth_context"] = {
+            "authenticated_user_id": effective_ctx.authenticated_user_id or ctx.user_id,
+            "effective_user_id": effective_ctx.user_id,
+            "delegation_active": bool(effective_ctx.delegation_active),
+        }
 
         request = ActionExecutionRequest(
             actor_id=payload.actor_id,
@@ -372,14 +545,14 @@ class Dnd5eWsHandler(ISystemHandler):
             target_ids=payload.target_ids,
             action_payload={},
             request_id=envelope.request_id,
-            raw_payload=payload.model_dump(mode="json"),
+            raw_payload=raw_payload,
             require_canonical_action_id=True,
         )
         execution = await action_execution_service.execute(
             request=request,
             encounter=encounter,
             encounter_session=encounter_session,
-            ctx=ctx,
+            ctx=effective_ctx,
         )
         domain_events = execution.events
         return self._domain_events_to_outbound(domain_events, ctx)
@@ -392,14 +565,21 @@ class Dnd5eWsHandler(ISystemHandler):
         service: CombatService,
         envelope: WsEnvelope,
         ctx: SessionContext,
+        effective_ctx: SessionContext,
     ) -> list[WsOutbound]:
         try:
             payload = RequestActionPayload.model_validate(envelope.payload)
         except Exception:
             return [self._error("Invalid request_action payload", WsErrorCode.INVALID_MESSAGE, ctx)]
 
-        effective_ctx = self._resolve_impersonated_ctx(
-            ctx, payload.acting_as_user_id)
+        # Note: acting_as_user_id in payload is ignored; server-side delegation state is authoritative
+
+        raw_payload = payload.model_dump(mode="json")
+        raw_payload["auth_context"] = {
+            "authenticated_user_id": effective_ctx.authenticated_user_id or ctx.user_id,
+            "effective_user_id": effective_ctx.user_id,
+            "delegation_active": bool(effective_ctx.delegation_active),
+        }
 
         requested_target_ids = []
         raw_target_ids = payload.payload.get(
@@ -415,17 +595,17 @@ class Dnd5eWsHandler(ISystemHandler):
             target_ids=requested_target_ids,
             action_payload=payload.payload,
             request_id=envelope.request_id,
-            raw_payload=payload.model_dump(mode="json"),
+            raw_payload=raw_payload,
             require_canonical_action_id=True,
         )
         execution = await action_execution_service.execute(
             request=request,
             encounter=encounter,
             encounter_session=encounter_session,
-            ctx=effective_ctx,
+            ctx=effective_ctx,  # Use effective (delegated) identity for authorization
         )
         domain_events = execution.events
-        return self._domain_events_to_outbound(domain_events, ctx)
+        return self._domain_events_to_outbound(domain_events, ctx)  # Original ctx for visibility
 
     async def _handle_request_executable_actions(
         self,
@@ -434,6 +614,7 @@ class Dnd5eWsHandler(ISystemHandler):
         service: CombatService,
         envelope: WsEnvelope,
         ctx: SessionContext,
+        effective_ctx: SessionContext,
     ) -> list[WsOutbound]:
         try:
             payload = RequestExecutableActionsPayload.model_validate(
@@ -441,8 +622,7 @@ class Dnd5eWsHandler(ISystemHandler):
         except Exception:
             return [self._error_raw("Invalid request_executable_actions payload", WsErrorCode.INVALID_MESSAGE)]
 
-        effective_ctx = self._resolve_impersonated_ctx(
-            ctx, payload.acting_as_user_id)
+        # Note: acting_as_user_id in payload is ignored; server-side delegation state is authoritative
         snapshot = await service.get_executable_actions_snapshot(
             encounter_session, encounter, effective_ctx, payload.actor_id,
         )
@@ -479,6 +659,7 @@ class Dnd5eWsHandler(ISystemHandler):
         service: CombatService,
         envelope: WsEnvelope,
         ctx: SessionContext,
+        effective_ctx: SessionContext,
     ) -> list[WsOutbound]:
         try:
             payload = RequestAttackPreviewPayload.model_validate(
@@ -486,8 +667,7 @@ class Dnd5eWsHandler(ISystemHandler):
         except Exception:
             return [self._error_raw("Invalid request_attack_preview payload", WsErrorCode.INVALID_MESSAGE)]
 
-        effective_ctx = self._resolve_impersonated_ctx(
-            ctx, payload.acting_as_user_id)
+        # Note: acting_as_user_id in payload is ignored; server-side delegation state is authoritative
         preview = await service.get_attack_preview(
             encounter_session, encounter, effective_ctx,
             payload.actor_id, payload.action_id,
@@ -530,6 +710,7 @@ class Dnd5eWsHandler(ISystemHandler):
         service: CombatService,
         envelope: WsEnvelope,
         ctx: SessionContext,
+        effective_ctx: SessionContext,
     ) -> list[WsOutbound]:
         try:
             payload = RequestMovePreviewPayload.model_validate(
@@ -537,8 +718,7 @@ class Dnd5eWsHandler(ISystemHandler):
         except Exception:
             return [self._error_raw("Invalid request_move_preview payload", WsErrorCode.INVALID_MESSAGE)]
 
-        effective_ctx = self._resolve_impersonated_ctx(
-            ctx, payload.acting_as_user_id)
+        # Note: acting_as_user_id in payload is ignored; server-side delegation state is authoritative
         preview = await service.get_movement_preview(
             encounter_session, encounter, effective_ctx, payload.actor_id,
         )
@@ -576,19 +756,16 @@ class Dnd5eWsHandler(ISystemHandler):
         service: CombatService,
         envelope: WsEnvelope,
         ctx: SessionContext,
+        effective_ctx: SessionContext,
     ) -> list[WsOutbound]:
         try:
             payload = MoveTokenPayload.model_validate(envelope.payload)
         except Exception:
             return [self._error_raw("Invalid move_token payload", WsErrorCode.INVALID_MESSAGE)]
 
-        effective_ctx = self._resolve_impersonated_ctx(
-            ctx, payload.acting_as_user_id)
-
         result = await service.handle_move_token(
             encounter, encounter_session, effective_ctx,
             payload.actor_id, payload.path, envelope.request_id,
-            acting_as_user_id=payload.acting_as_user_id,
         )
 
         if not result.get("allowed"):

@@ -43,6 +43,7 @@ ACTION_DENIED_REASON_CODES: set[str] = {
 COMMAND_DENIED_REASON_CODES: set[str] = {
     "forbidden",
     "invalid_message",
+    "encounter_session_required",
     "invalid_turn_phase",
     "no_active_actor",
     "not_your_turn",

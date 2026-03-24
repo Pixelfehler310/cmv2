@@ -3,6 +3,25 @@
 ## Overview
 The backend is built using **FastAPI** (Python) and follows a **Modular Monolith** architecture. It serves as the source of truth for game data, rules processing, and campaign state.
 
+## WebSocket Combat Contract (Current)
+
+The D&D 5e websocket combat flow is authoritative and server-validated.
+
+1. Command events require `request_id`.
+2. Terminal outcomes are explicit: success event, `action_denied` / `command_denied`, or `error`.
+3. Payload-based impersonation (`acting_as_user_id`) is no longer authoritative for command authorization.
+4. Delegation is server-side lifecycle state managed through explicit commands:
+	- `delegate_start` (DM only)
+	- `delegate_stop` (DM only)
+	- `delegate_status`
+5. Delegated authorization uses effective identity, and audit context tracks both identities:
+	- `authenticated_user_id` (socket owner)
+	- `effective_user_id` (delegated player when active)
+
+### Denial Reason Additions
+
+- `encounter_session_required`: returned when mutating combat commands are attempted without a valid encounter session.
+
 ## 1. File Structure
 The backend code is located in `backend/src/` and is organized into the following modules:
 

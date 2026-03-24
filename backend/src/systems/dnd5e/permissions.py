@@ -18,6 +18,9 @@ from src.core.ws_protocol import WsErrorCode
 # Events only the DM can send
 _DM_ONLY_EVENTS: set[str] = {
     "action",
+    "delegate_start",
+    "delegate_stop",
+    "delegate_status",
     "start_combat",
     "end_combat",
     "end_turn",

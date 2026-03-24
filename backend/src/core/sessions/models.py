@@ -54,6 +54,8 @@ class CampaignRoom(BaseModel):
     campaign_id: str
     game_system: str = "dnd5e"
     users: dict[str, ConnectedUser] = Field(default_factory=dict)
+    # Delegation state: keyed by delegating_user_id -> target_user_id being controlled
+    active_delegations: dict[str, str] = Field(default_factory=dict)
 
     def is_empty(self) -> bool:
         return len(self.users) == 0
@@ -64,9 +66,18 @@ class CampaignRoom(BaseModel):
 # ---------------------------------------------------------------------------
 
 class SessionContext(BaseModel):
-    """Lightweight context passed to handlers on every event."""
+    """Lightweight context passed to handlers on every event.
+    
+    Tracks both authenticated identity (user_id, role) and delegation state:
+    - authenticated_user_id: the actual socket owner
+    - effective_user_id: player being controlled (when delegation_active)
+    - delegation_active: true when effective identity differs from authenticated
+    """
     campaign_id: str
-    user_id: str
+    user_id: str  # Authenticated user (socket owner)
+    authenticated_user_id: Optional[str] = None  # Original socket owner when delegating
     display_name: str = ""
     role: UserRole = UserRole.PLAYER
     game_system: str = "dnd5e"
+    effective_user_id: Optional[str] = None  # Delegated player identity
+    delegation_active: bool = False  # True when delegation is active

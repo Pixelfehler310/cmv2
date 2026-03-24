@@ -154,6 +154,69 @@ class SessionManager:
             )
 
     # ------------------------------------------------------------------
+    # Delegation
+    # ------------------------------------------------------------------
+
+    def start_delegation(self, campaign_id: str, controlling_user_id: str, target_user_id: str) -> tuple[bool, str]:
+        """Start delegation: controlling_user takes control as target_user.
+        
+        Returns: (success, reason_code_or_message)
+        Fails if target_user not connected or already in delegation.
+        """
+        room = self._rooms.get(campaign_id)
+        if room is None:
+            return False, "campaign_not_found"
+
+        # Verify target user is connected
+        if target_user_id not in room.users:
+            return False, "target_user_not_connected"
+
+        # Already delegating from this user?
+        if controlling_user_id in room.active_delegations:
+            return False, "already_delegating"
+
+        room.active_delegations[controlling_user_id] = target_user_id
+        logger.info(
+            "Delegation started: campaign=%s controlling_user=%s target_user=%s",
+            campaign_id, controlling_user_id, target_user_id,
+        )
+        return True, ""
+
+    def stop_delegation(self, campaign_id: str, controlling_user_id: str) -> bool:
+        """Stop delegation: controlling_user resumes normal authority.
+        
+        Returns: True if delegation was active and stopped, False otherwise.
+        """
+        room = self._rooms.get(campaign_id)
+        if room is None:
+            return False
+
+        if controlling_user_id not in room.active_delegations:
+            return False
+
+        del room.active_delegations[controlling_user_id]
+        logger.info(
+            "Delegation stopped: campaign=%s controlling_user=%s",
+            campaign_id, controlling_user_id,
+        )
+        return True
+
+    def get_delegation(self, campaign_id: str, controlling_user_id: str) -> Optional[str]:
+        """Get current delegation for a user, or None if not delegating.
+        
+        Returns: target_user_id if delegating, None otherwise.
+        """
+        room = self._rooms.get(campaign_id)
+        if room is None:
+            return None
+        return room.active_delegations.get(controlling_user_id)
+
+    def resolve_effective_user_id(self, campaign_id: str, user_id: str) -> str:
+        """Get effective user_id: if delegating, return target; else return user_id."""
+        target = self.get_delegation(campaign_id, user_id)
+        return target if target else user_id
+
+    # ------------------------------------------------------------------
     # Visibility logic
     # ------------------------------------------------------------------
 

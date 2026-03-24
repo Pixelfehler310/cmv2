@@ -127,6 +127,25 @@ class ChatMessagePayload(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Delegation Lifecycle (Inbound)
+# ---------------------------------------------------------------------------
+
+class DelegateStartPayload(BaseModel):
+    """Payload for `delegate_start` event — DM assumes control as target player."""
+    target_user_id: str
+
+
+class DelegateStopPayload(BaseModel):
+    """Payload for `delegate_stop` event — DM exits delegated mode."""
+    pass
+
+
+class DelegateStatusPayload(BaseModel):
+    """Payload for `delegate_status` event — Query current delegation state."""
+    pass
+
+
+# ---------------------------------------------------------------------------
 # Outbound Payloads (Server → Client)
 # ---------------------------------------------------------------------------
 
@@ -228,3 +247,26 @@ class DiceRolledPayload(BaseModel):
 class PongPayload(BaseModel):
     """Payload for `pong` response."""
     pass
+
+
+class DelegationStartedPayload(BaseModel):
+    """Payload for `delegation_started` event — confirms DM now controls as target player."""
+    delegating_user_id: str
+    target_user_id: str
+    target_display_name: str
+
+
+class DelegationStoppedPayload(BaseModel):
+    """Payload for `delegation_stopped` event — confirms DM exited delegated mode."""
+    delegating_user_id: str
+
+
+class DelegationStatusPayload(BaseModel):
+    """Payload for `delegation_status` event — reports current delegation state."""
+    active_delegation: Optional[dict] = None  # {delegating_user_id, target_user_id, target_display_name} or None
+
+
+class DelegationDeniedPayload(BaseModel):
+    """Payload for `delegation_denied` event — delegation request was rejected."""
+    reason_code: str
+    message: str
