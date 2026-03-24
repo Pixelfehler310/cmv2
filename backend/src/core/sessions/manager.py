@@ -101,7 +101,8 @@ class SessionManager:
         if room is None:
             return
 
-        payload = event.model_dump(mode="json", exclude={"visibility", "target_user_id"})
+        payload = event.model_dump(mode="json", exclude={
+                                   "visibility", "target_user_id"})
 
         for user in room.users.values():
             if self._should_receive(user, event):
@@ -141,7 +142,8 @@ class SessionManager:
             )
             return
 
-        payload = event.model_dump(mode="json", exclude={"visibility", "target_user_id"})
+        payload = event.model_dump(mode="json", exclude={
+                                   "visibility", "target_user_id"})
         try:
             await user.ws.send_json(payload)
         except Exception as exc:
@@ -159,7 +161,7 @@ class SessionManager:
 
     def start_delegation(self, campaign_id: str, controlling_user_id: str, target_user_id: str) -> tuple[bool, str]:
         """Start delegation: controlling_user takes control as target_user.
-        
+
         Returns: (success, reason_code_or_message)
         Fails if target_user not connected or already in delegation.
         """
@@ -184,7 +186,7 @@ class SessionManager:
 
     def stop_delegation(self, campaign_id: str, controlling_user_id: str) -> bool:
         """Stop delegation: controlling_user resumes normal authority.
-        
+
         Returns: True if delegation was active and stopped, False otherwise.
         """
         room = self._rooms.get(campaign_id)
@@ -203,7 +205,7 @@ class SessionManager:
 
     def get_delegation(self, campaign_id: str, controlling_user_id: str) -> Optional[str]:
         """Get current delegation for a user, or None if not delegating.
-        
+
         Returns: target_user_id if delegating, None otherwise.
         """
         room = self._rooms.get(campaign_id)

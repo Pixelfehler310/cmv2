@@ -111,11 +111,12 @@ class Dnd5eWsHandler(ISystemHandler):
         ctx: SessionContext, mgr: SessionManager
     ) -> SessionContext:
         """Resolve effective user identity from server-side delegation state.
-        
+
         Returns: SessionContext with effective_user_id and delegation_active set.
         If delegation is active, effective_user_id differs from user_id (authenticated).
         """
-        effective_user_id = mgr.resolve_effective_user_id(ctx.campaign_id, ctx.user_id)
+        effective_user_id = mgr.resolve_effective_user_id(
+            ctx.campaign_id, ctx.user_id)
         delegation_active = effective_user_id != ctx.user_id
 
         if delegation_active:
@@ -203,9 +204,10 @@ class Dnd5eWsHandler(ISystemHandler):
         _results: list[WsOutbound] | None = None
         async with AsyncSessionLocal() as db:
             service = CombatService(db)
-            action_execution_service = ActionExecutionApplicationService(service)
+            action_execution_service = ActionExecutionApplicationService(
+                service)
             encounter_session, encounter = await service.load_or_create_encounter_state(ctx.campaign_id)
-            
+
             # Resolve effective user identity from delegation state (for command authorization)
             effective_ctx = self._get_effective_user_context(ctx, mgr)
 
@@ -291,7 +293,8 @@ class Dnd5eWsHandler(ISystemHandler):
                 _results = await self._handle_start_combat(encounter, encounter_session, service, envelope)
 
             elif event_type == "end_combat":
-                _results = self._handle_end_combat(encounter, encounter_session, service)
+                _results = self._handle_end_combat(
+                    encounter, encounter_session, service)
 
             elif event_type == "apply_damage":
                 _results = await self._handle_apply_damage(encounter, encounter_session, service, envelope)
@@ -362,7 +365,8 @@ class Dnd5eWsHandler(ISystemHandler):
         except Exception:
             return [self._error("Invalid roll_dice payload", WsErrorCode.INVALID_MESSAGE, ctx)]
 
-        result = service.handle_roll_dice(payload.expression, payload.purpose, ctx.user_id)
+        result = service.handle_roll_dice(
+            payload.expression, payload.purpose, ctx.user_id)
         return [
             WsOutbound(
                 type="dice_rolled",
@@ -417,7 +421,8 @@ class Dnd5eWsHandler(ISystemHandler):
         except Exception:
             return [self._error("Invalid delegate_start payload", WsErrorCode.INVALID_MESSAGE, ctx)]
 
-        success, reason = mgr.start_delegation(ctx.campaign_id, ctx.user_id, payload.target_user_id)
+        success, reason = mgr.start_delegation(
+            ctx.campaign_id, ctx.user_id, payload.target_user_id)
         if not success:
             return [
                 self._denied(
@@ -602,10 +607,12 @@ class Dnd5eWsHandler(ISystemHandler):
             request=request,
             encounter=encounter,
             encounter_session=encounter_session,
-            ctx=effective_ctx,  # Use effective (delegated) identity for authorization
+            # Use effective (delegated) identity for authorization
+            ctx=effective_ctx,
         )
         domain_events = execution.events
-        return self._domain_events_to_outbound(domain_events, ctx)  # Original ctx for visibility
+        # Original ctx for visibility
+        return self._domain_events_to_outbound(domain_events, ctx)
 
     async def _handle_request_executable_actions(
         self,
@@ -785,7 +792,6 @@ class Dnd5eWsHandler(ISystemHandler):
                 ]
             return [self._error_raw(result.get("error", "Movement failed"), WsErrorCode.INVALID_ACTION)]
 
-
         return [
             WsOutbound(
                 type="actor_moved",
@@ -834,11 +840,11 @@ class Dnd5eWsHandler(ISystemHandler):
         except Exception:
             return [self._error_raw("Invalid remove_actor payload", WsErrorCode.INVALID_MESSAGE)]
 
-        result = service.handle_remove_actor(encounter, actor_id=payload.actor_id)
+        result = service.handle_remove_actor(
+            encounter, actor_id=payload.actor_id)
 
         if "error" in result:
             return [self._error_raw(result["error"], WsErrorCode.INVALID_TARGET)]
-
 
         return [
             WsOutbound(
@@ -887,7 +893,6 @@ class Dnd5eWsHandler(ISystemHandler):
             )
             for event in result.get("tick_events", [])
         ]
-
 
         turn_event = WsOutbound(
             type="turn_advanced",
@@ -988,11 +993,11 @@ class Dnd5eWsHandler(ISystemHandler):
         except Exception:
             return [self._error_raw("Invalid apply_healing payload", WsErrorCode.INVALID_MESSAGE)]
 
-        result = service.handle_apply_healing(encounter, payload.actor_id, payload.amount)
+        result = service.handle_apply_healing(
+            encounter, payload.actor_id, payload.amount)
 
         if "error" in result:
             return [self._error_raw(result["error"], WsErrorCode.INVALID_TARGET)]
-
 
         return [
             WsOutbound(
@@ -1015,8 +1020,8 @@ class Dnd5eWsHandler(ISystemHandler):
             return [self._error_raw("Invalid apply_condition payload", WsErrorCode.INVALID_MESSAGE)]
 
         # Determine source (actor owned by the current user)
-        source_id = next((c.id for c in encounter.combatants if c.owner_user_id == ctx.user_id), None)
-
+        source_id = next(
+            (c.id for c in encounter.combatants if c.owner_user_id == ctx.user_id), None)
 
         result = service.handle_apply_condition(
             encounter, payload.actor_id, payload.condition, source_id=source_id
@@ -1024,7 +1029,6 @@ class Dnd5eWsHandler(ISystemHandler):
 
         if "error" in result:
             return [self._error_raw(result["error"], WsErrorCode.INVALID_ACTION)]
-
 
         return [
             WsOutbound(
@@ -1046,11 +1050,11 @@ class Dnd5eWsHandler(ISystemHandler):
         except Exception:
             return [self._error_raw("Invalid remove_condition payload", WsErrorCode.INVALID_MESSAGE)]
 
-        result = service.handle_remove_condition(encounter, payload.actor_id, payload.condition)
+        result = service.handle_remove_condition(
+            encounter, payload.actor_id, payload.condition)
 
         if "error" in result:
             return [self._error_raw(result["error"], WsErrorCode.INVALID_ACTION)]
-
 
         return [
             WsOutbound(
@@ -1132,8 +1136,8 @@ class Dnd5eWsHandler(ISystemHandler):
     ) -> None:
         """Save encounter state if we have a persistent session, it's a mutating command, and no errors."""
         should_save = (
-            encounter_session is not None 
-            and event_type in MUTATING_COMMAND_TYPES 
+            encounter_session is not None
+            and event_type in MUTATING_COMMAND_TYPES
             and not self._is_error_only(events)
         )
         if should_save:

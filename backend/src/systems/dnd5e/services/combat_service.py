@@ -963,7 +963,8 @@ class CombatService:
                 template_candidates=template_candidates,
             )
         except Exception as exc:
-            raise RuntimeError("Failed to load action bindings for actor") from exc
+            raise RuntimeError(
+                "Failed to load action bindings for actor") from exc
 
         if not bindings:
             return []
@@ -985,7 +986,8 @@ class CombatService:
         try:
             action_defs = await self._action_catalog_repository.list_action_definitions_by_ids(action_ids)
         except Exception as exc:
-            raise RuntimeError("Failed to load action definitions for actor bindings") from exc
+            raise RuntimeError(
+                "Failed to load action definitions for actor bindings") from exc
 
         action_by_id = {action.action_id: action for action in action_defs}
         projected: list[dict[str, Any]] = []
@@ -1815,7 +1817,8 @@ class CombatService:
         if canonical_meta.found:
             family = canonical_meta.family
         else:
-            family = resolve_action_family(action_name, action_payload, targets)
+            family = resolve_action_family(
+                action_name, action_payload, targets)
         if family is None:
             if encounter_session is not None:
                 await self.log_action_attempt(

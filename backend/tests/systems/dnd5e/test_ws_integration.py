@@ -364,11 +364,13 @@ class TestPermissions:
     async def test_dm_can_delegate_to_player_for_request_action(self, handler, dm_ctx, mgr, combat_encounter):
         mgr.register_connection(
             dm_ctx.campaign_id,
-            ConnectedUser(user_id="dm_user", display_name="DM", role=UserRole.DM, ws=object()),
+            ConnectedUser(user_id="dm_user", display_name="DM",
+                          role=UserRole.DM, ws=object()),
         )
         mgr.register_connection(
             dm_ctx.campaign_id,
-            ConnectedUser(user_id="player_1", display_name="Player 1", role=UserRole.PLAYER, ws=object()),
+            ConnectedUser(user_id="player_1", display_name="Player 1",
+                          role=UserRole.PLAYER, ws=object()),
         )
 
         start_events = await handler.handle(
@@ -443,7 +445,8 @@ class TestPermissions:
         async def _missing_session(self, campaign_id: str):
             return None, EncounterState(id="enc_missing", campaign_id=campaign_id, combatants=[])
 
-        monkeypatch.setattr(CombatService, "load_or_create_encounter_state", _missing_session)
+        monkeypatch.setattr(
+            CombatService, "load_or_create_encounter_state", _missing_session)
 
         try:
             events = await handler.handle(
@@ -460,7 +463,8 @@ class TestPermissions:
                 mgr,
             )
         finally:
-            monkeypatch.setattr(CombatService, "load_or_create_encounter_state", original_load)
+            monkeypatch.setattr(
+                CombatService, "load_or_create_encounter_state", original_load)
 
         assert len(events) == 1
         assert events[0].type == "action_denied"
@@ -470,11 +474,13 @@ class TestPermissions:
     async def test_dm_delegation_status_and_stop(self, handler, dm_ctx, mgr):
         mgr.register_connection(
             dm_ctx.campaign_id,
-            ConnectedUser(user_id="dm_user", display_name="DM", role=UserRole.DM, ws=object()),
+            ConnectedUser(user_id="dm_user", display_name="DM",
+                          role=UserRole.DM, ws=object()),
         )
         mgr.register_connection(
             dm_ctx.campaign_id,
-            ConnectedUser(user_id="player_1", display_name="Player 1", role=UserRole.PLAYER, ws=object()),
+            ConnectedUser(user_id="player_1", display_name="Player 1",
+                          role=UserRole.PLAYER, ws=object()),
         )
 
         started = await handler.handle(
@@ -499,7 +505,8 @@ class TestPermissions:
         assert status[0].payload["active_delegation"]["target_user_id"] == "player_1"
 
         stopped = await handler.handle(
-            WsEnvelope(type="delegate_stop", request_id="req_delegate_status_stop", payload={}),
+            WsEnvelope(type="delegate_stop",
+                       request_id="req_delegate_status_stop", payload={}),
             dm_ctx,
             mgr,
         )
@@ -1154,11 +1161,13 @@ class TestMovement:
     async def test_dm_can_delegate_to_player_for_move_token(self, handler, dm_ctx, mgr, combat_encounter):
         mgr.register_connection(
             dm_ctx.campaign_id,
-            ConnectedUser(user_id="dm_user", display_name="DM", role=UserRole.DM, ws=object()),
+            ConnectedUser(user_id="dm_user", display_name="DM",
+                          role=UserRole.DM, ws=object()),
         )
         mgr.register_connection(
             dm_ctx.campaign_id,
-            ConnectedUser(user_id="player_1", display_name="Player 1", role=UserRole.PLAYER, ws=object()),
+            ConnectedUser(user_id="player_1", display_name="Player 1",
+                          role=UserRole.PLAYER, ws=object()),
         )
 
         start_events = await handler.handle(

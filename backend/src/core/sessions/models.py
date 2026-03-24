@@ -39,7 +39,8 @@ class ConnectedUser(BaseModel):
     display_name: str
     role: UserRole
     ws: object  # WebSocket or mock — skip strict type validation
-    connected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    connected_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +68,7 @@ class CampaignRoom(BaseModel):
 
 class SessionContext(BaseModel):
     """Lightweight context passed to handlers on every event.
-    
+
     Tracks both authenticated identity (user_id, role) and delegation state:
     - authenticated_user_id: the actual socket owner
     - effective_user_id: player being controlled (when delegation_active)
@@ -75,7 +76,8 @@ class SessionContext(BaseModel):
     """
     campaign_id: str
     user_id: str  # Authenticated user (socket owner)
-    authenticated_user_id: Optional[str] = None  # Original socket owner when delegating
+    # Original socket owner when delegating
+    authenticated_user_id: Optional[str] = None
     display_name: str = ""
     role: UserRole = UserRole.PLAYER
     game_system: str = "dnd5e"
