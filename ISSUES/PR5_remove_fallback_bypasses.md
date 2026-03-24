@@ -1,6 +1,6 @@
 # PR5: Remove Fallback Bypasses in Combat Slice
 
-Status: In Progress
+Status: Completed (2026-03-24)
 Owner: Engineering
 Depends on: PR4
 
@@ -58,6 +58,13 @@ Tests likely:
 2. docker compose --profile test run --rm backend-test pytest tests/systems/dnd5e/test_combat_service.py -q
 3. docker compose --profile test run --rm backend-test pytest tests/systems/dnd5e/test_campaign_character_loading.py -q
 4. docker compose logs backend --tail=200
+
+## Verification Result (2026-03-24)
+
+- `docker compose --profile test run --rm backend-test pytest tests/systems/dnd5e/test_ws_integration.py -q` -> passed (`71 passed`).
+- `docker compose --profile test run --rm backend-test pytest tests/systems/dnd5e/test_combat_service.py -q` -> passed (`7 passed`).
+- `docker compose --profile test run --rm backend-test pytest tests/systems/dnd5e/test_campaign_character_loading.py -q` -> passed (`2 passed`).
+- `docker compose logs backend --tail=200` -> reviewed; no `ERROR` or traceback entries in the sampled output.
 
 ## Risks
 

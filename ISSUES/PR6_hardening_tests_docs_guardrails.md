@@ -59,6 +59,16 @@ Potential new docs:
 4. docker compose --profile test run --rm backend-test pytest tests/systems/dnd5e/test_action_resolver.py -q
 5. docker compose --profile test run --rm backend-test python scripts/generate_types.py --check
 
+## Readiness Verification Result (2026-03-24)
+
+- `docker compose --profile test run --rm backend-test pytest tests/campaigns/test_campaigns_router.py -q` -> passed (`10 passed`).
+- `docker compose --profile test run --rm backend-test pytest tests/systems/dnd5e/test_ws_integration.py -q` -> passed (`71 passed`).
+- `docker compose --profile test run --rm backend-test pytest tests/systems/dnd5e/test_combat_service.py -q` -> passed (`7 passed`).
+- `docker compose --profile test run --rm backend-test pytest tests/systems/dnd5e/test_action_resolver.py -q` -> passed (`16 passed`).
+- `docker compose --profile test run --rm -e PYTHONPATH=/app backend-test python scripts/generate_types.py --check` -> passed (`Contract artifacts are in sync`).
+
+Note: In this workspace/container setup, `generate_types.py` requires `PYTHONPATH=/app` for `src.*` imports to resolve when invoked directly.
+
 ## Risks
 
 - Test brittleness if fixtures are overly coupled to implementation details.
