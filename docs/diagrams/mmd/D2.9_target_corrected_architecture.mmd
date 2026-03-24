@@ -1,0 +1,703 @@
+%% D2.9 Target Corrected Architecture (implements review fixes)
+%% Scope: Combat runtime correctness + content CRUD completeness + architecture boundaries
+classDiagram
+
+%% ---------------------------------------------------------------------------
+%% Runtime Hierarchy: Campaign -> Scene -> optional active Encounter
+%% ---------------------------------------------------------------------------
+namespace RuntimeHierarchy {
+  class Campaign {
+    +id: str
+    +name: str
+    +current_scene_id: str | None
+    +context_version: int
+  }
+
+  class SceneState {
+    +id: str
+    +campaign_id: str
+    +name: str
+    +scene_type: STANDARD | ENCOUNTER | REST | NARRATIVE
+    +map: MapState
+    +available_encounter_ids: list[str]
+    +active_encounter_id: str | None
+  }
+
+  class EncounterState {
+    +id: str
+    +scene_id: str
+    +campaign_id: str
+    +round_number: int
+    +turn_phase: pre_combat | active | post_combat
+    +active_index: int
+    +active_actor_id: str | None
+    +combatants: list[ActorInstance]
+    +turn_budgets: dict[str, TurnBudget]
+    +global_effects: list[EffectInstanceRuntime]
+  }
+
+  class TurnBudget {
+    +action_available: bool
+    +bonus_action_available: bool
+    +reaction_available: bool
+    +free_interaction_available: bool
+    +max_movement: int
+    +movement_used: int
+    +movement_remaining: int
+    +round_number: int
+  }
+
+  class ActorInstance {
+    +id: str
+    +definition_slug: str
+    +owner_user_id: str | None
+    +name: str
+    +actor_type: pc | npc | monster | summon
+    +current_hp: int
+    +max_hp: int
+    +temp_hp: int
+    +armor_class: int
+    +position: Position
+    +conditions: list[ConditionInstance]
+    +effects: list[EffectInstanceRuntime]
+    +resources: ResourcePool
+  }
+
+  class EffectInstanceRuntime {
+    +id: str
+    +effect_id: str
+    +name: str
+    +source_id: str | None
+    +target_id: str
+    +type: str
+    +target_stat: str
+    +value: int | str
+    +duration_type: str
+    +remaining_rounds: int | None
+    +applied_at_round: int
+    +tick_intent: dict
+    +requires_concentration: bool
+    +concentration_owner_actor_id: str | None
+    +removal_triggers: list[str]
+    +source_pack_id: str | None
+    +source_pack_version: str | None
+  }
+
+  class ConditionInstance {
+    +condition: str
+    +source_id: str | None
+    +source_effect_id: str | None
+    +remaining_rounds: int | None
+  }
+
+  class ResourcePool {
+    +counters: dict[str, ResourceCounter]
+  }
+
+  class ResourceCounter {
+    +name: str
+    +max: int
+    +current: int
+    +resets_on: short_rest | long_rest | dawn | round
+  }
+
+  class MapState {
+    +width: int
+    +height: int
+    +grid_type: str
+    +difficult_terrain: list[Position]
+    +tokens: list[MapToken]
+  }
+
+  class MapToken {
+    +actor_id: str
+    +position: Position
+    +size: str
+  }
+
+  class Position {
+    +x: int
+    +y: int
+    +elevation: int
+  }
+}
+
+%% ---------------------------------------------------------------------------
+%% World Context Runtime: first-class campaign context entities
+%% ---------------------------------------------------------------------------
+namespace WorldContextRuntime {
+  class RegionState {
+    +id: str
+    +campaign_id: str
+    +name: str
+    +description: str
+    +climate: str | None
+    +faction_ids: list[str]
+    +place_ids: list[str]
+  }
+
+  class PlaceState {
+    +id: str
+    +campaign_id: str
+    +region_id: str
+    +name: str
+    +place_type: city | town | village | dungeon | wilderness | landmark
+    +description: str
+    +scene_ids: list[str]
+    +faction_ids: list[str]
+    +npc_ids: list[str]
+  }
+
+  class FactionState {
+    +id: str
+    +campaign_id: str
+    +name: str
+    +description: str
+    +goals: str | None
+    +beliefs: str | None
+    +alignment_hint: str | None
+  }
+
+  class NpcState {
+    +id: str
+    +campaign_id: str
+    +place_id: str | None
+    +faction_id: str | None
+    +name: str
+    +role: str
+    +actor_template_id: str | None
+    +disposition: allied | neutral | hostile
+    +notes: str
+  }
+}
+
+%% ---------------------------------------------------------------------------
+%% Content Schema (renamed from ambiguous "Contracts")
+%% ---------------------------------------------------------------------------
+namespace ContentSchema {
+  class ContentLifecycleStatus {
+    +DRAFT
+    +PUBLISHED
+    +DEPRECATED
+    +ARCHIVED
+  }
+
+  class ActionDefinitionContent {
+    +action_id: str
+    +name: str
+    +description: str
+    +family: str
+    +action_type_cost: action | bonus_action | reaction | move | free_interaction
+    +targeting_mode: single_target | aoe | self
+    +range: int | None
+    +save_context: dict | None
+    +attack_context: dict | None
+    +resource_costs: list[dict]
+    +effect_intents: list[dict]
+    +tags: list[str]
+    +status: ContentLifecycleStatus
+    +content_version: str
+    +source_pack_id: str
+    +source_pack_version: str
+    +author: str
+    +last_modified_by: str | None
+    +created_at: datetime
+    +updated_at: datetime
+    +replacement_id: str | None
+    +deprecation_notes: str
+    +enabled: bool
+  }
+
+  class EffectDefinitionContent {
+    +effect_id: str
+    +name: str
+    +description: str
+    +family: str
+    +duration: dict
+    +stacking: dict
+    +modifiers: list[dict]
+    +grants_conditions: list[str]
+    +periodic: list[dict]
+    +removal_triggers: list[dict]
+    +tags: list[str]
+    +status: ContentLifecycleStatus
+    +content_version: str
+    +source_pack_id: str
+    +source_pack_version: str
+    +author: str
+    +last_modified_by: str | None
+    +created_at: datetime
+    +updated_at: datetime
+    +replacement_id: str | None
+    +deprecation_notes: str
+    +enabled: bool
+  }
+
+  class AbilityBindingContent {
+    +binding_id: str
+    +action_id: str
+    +actor_template_id: str | None
+    +actor_id: str | None
+    +unlock_conditions: list[dict]
+    +override_payload: dict | None
+    +source_pack_id: str
+    +source_pack_version: str
+    +status: ContentLifecycleStatus
+  }
+
+  class ContentPackMetadata {
+    +pack_id: str
+    +name: str
+    +version: str
+    +description: str
+    +author: str
+    +status: ContentLifecycleStatus
+    +dependencies: list[str]
+    +migration_notes: str
+    +created_at: datetime
+    +updated_at: datetime
+  }
+}
+
+%% ---------------------------------------------------------------------------
+%% Events: stricter payload shape for combat correctness
+%% ---------------------------------------------------------------------------
+namespace CombatEvents {
+  class ActionPayload {
+    +actor_id: str
+    +action_id: str
+    +action_type_cost: action | bonus_action | reaction | move | free_interaction
+    +targeting_mode: single_target | aoe | self
+    +target_actor_ids: list[str]
+    +target_positions: list[Position]
+    +aoe_template: dict | None
+  }
+
+  class MoveTokenPayload {
+    +actor_id: str
+    +path: list[Position]
+    +intended_distance: int
+  }
+
+  class MovementPreviewPayload {
+    +actor_id: str
+    +origin: Position
+    +movement_remaining: int
+    +reachable: list[dict]
+  }
+}
+
+%% ---------------------------------------------------------------------------
+%% Application + Repository boundaries
+%% ---------------------------------------------------------------------------
+namespace ApplicationLayer {
+  class ActionExecutionApplicationService {
+    +execute(request, encounter, ctx)
+  }
+
+  class ContextApplicationService {
+    +get_context(campaign_id)
+    +select_scene(campaign_id, scene_id)
+    +select_encounter(campaign_id, scene_id, encounter_id)
+  }
+
+  class ContentPackApplicationService {
+    +create_pack(payload)
+    +import_pack(payload)
+    +publish_pack(pack_id)
+    +deprecate_pack(pack_id)
+    +update_definition(payload)
+  }
+
+  class CompendiumApplicationService {
+    +create_item(payload)
+    +update_item(payload)
+    +delete_item(item_id)
+    +create_monster(payload)
+    +update_monster(payload)
+    +delete_monster(monster_id)
+    +create_spell(payload)
+    +update_spell(payload)
+    +delete_spell(spell_id)
+    +create_feature(payload)
+    +update_feature(payload)
+    +delete_feature(feature_id)
+    +create_feat(payload)
+    +update_feat(payload)
+    +delete_feat(feat_id)
+  }
+
+  class WorldContextApplicationService {
+    +create_region(campaign_id, payload)
+    +update_region(region_id, payload)
+    +create_place(campaign_id, payload)
+    +update_place(place_id, payload)
+    +create_npc(campaign_id, payload)
+    +update_npc(npc_id, payload)
+    +create_faction(campaign_id, payload)
+    +update_faction(faction_id, payload)
+  }
+}
+
+namespace RepositoryLayer {
+  class SceneRepository {
+    +load_scene(campaign_id, scene_id)
+    +save_scene(scene)
+    +list_scenes(campaign_id)
+  }
+
+  class EncounterRepository {
+    +load_active_encounter(campaign_id, scene_id)
+    +save_encounter(encounter)
+    +save_turn_budgets(encounter_id, budgets)
+  }
+
+  class CombatLogRepository {
+    +append_action_log(event)
+    +list_logs(campaign_id, limit)
+  }
+
+  class ContentRepository {
+    +create_action(definition)
+    +update_action(definition)
+    +create_effect(definition)
+    +update_effect(definition)
+    +upsert_binding(binding)
+    +get_content_pack(pack_id, version)
+  }
+
+  class CompendiumRepository {
+    +create_item(definition)
+    +update_item(definition)
+    +delete_item(item_id)
+    +create_monster(definition)
+    +update_monster(definition)
+    +delete_monster(monster_id)
+    +create_spell(definition)
+    +update_spell(definition)
+    +delete_spell(spell_id)
+    +create_feature(definition)
+    +update_feature(definition)
+    +delete_feature(feature_id)
+    +create_feat(definition)
+    +update_feat(definition)
+    +delete_feat(feat_id)
+  }
+
+  class WorldContextRepository {
+    +create_region(region)
+    +update_region(region)
+    +list_regions(campaign_id)
+    +create_place(place)
+    +update_place(place)
+    +list_places(campaign_id)
+    +create_npc(npc)
+    +update_npc(npc)
+    +list_npcs(campaign_id)
+    +create_faction(faction)
+    +update_faction(faction)
+    +list_factions(campaign_id)
+  }
+}
+
+namespace DomainPolicies {
+  class AuthorizationPolicy {
+    +check_actor_exists(actor_id, actor)
+    +check_user_role_allowed(user_role)
+    +check_actor_ownership(user_role, user_id, owner_user_id)
+    +check_turn_ownership(action_type, turn_phase, active_actor_id, requesting_actor_id)
+  }
+
+  class ActionEconomyPolicy {
+    +normalize_action_type(action_type)
+    +can_spend_action_budget(action_type, budget)
+    +consume_action_budget(action_type, budget)
+    +use_free_interaction(budget)
+  }
+
+  class ActionResolutionPolicy {
+    +resolve_targets(action_definition, payload, map_state)
+    +resolve_action_effects(action_definition, targets, context)
+    +build_outbound_events(result)
+  }
+}
+
+%% ---------------------------------------------------------------------------
+%% Persistence boundaries (generic vs DND5e-specific split)
+%% ---------------------------------------------------------------------------
+namespace PersistenceGeneric {
+  class User {
+    +id: str
+    +username: str
+    +is_active: bool
+  }
+
+  class CampaignRecord {
+    +id: str
+    +name: str
+    +current_scene_id: str | None
+    +context_version: int
+  }
+
+  class SceneRecord {
+    +id: str
+    +campaign_id: str
+    +name: str
+    +scene_type: str
+    +state_json: dict
+  }
+
+  class CampaignMemberRecord {
+    +campaign_id: str
+    +user_id: str
+    +role: str
+    +active_character_id: str | None
+  }
+}
+
+namespace PersistenceDnd5e {
+  class EncounterSessionRecord {
+    +id: str
+    +campaign_id: str
+    +scene_id: str
+    +phase: str
+    +round_number: int
+    +active_index: int
+    +combat_state_json: dict
+  }
+
+  class CombatantStateRecord {
+    +id: str
+    +encounter_session_id: str
+    +actor_id: str
+    +initiative_order: int
+    +actor_snapshot: dict
+  }
+
+  class TurnBudgetRecord {
+    +id: str
+    +encounter_session_id: str
+    +combatant_id: str
+    +round_number: int
+    +action_available: bool
+    +bonus_action_available: bool
+    +reaction_available: bool
+    +free_interaction_available: bool
+    +max_movement: int
+    +movement_used: int
+    +persisted_at: datetime
+  }
+
+  class ActionDefinitionRecord {
+    +id: str
+    +action_id: str
+    +name: str
+    +description: str
+    +status: str
+    +content_version: str
+    +pack_id: str
+    +pack_version: str
+    +author: str
+    +last_modified_by: str | None
+    +enabled: bool
+  }
+
+  class EffectDefinitionRecord {
+    +id: str
+    +effect_id: str
+    +name: str
+    +description: str
+    +status: str
+    +content_version: str
+    +pack_id: str
+    +pack_version: str
+    +author: str
+    +last_modified_by: str | None
+    +enabled: bool
+  }
+
+  class ItemDefinitionRecord {
+    +id: str
+    +item_id: str
+    +name: str
+    +description: str
+    +status: str
+    +content_version: str
+    +pack_id: str
+    +pack_version: str
+    +author: str
+    +last_modified_by: str | None
+    +enabled: bool
+  }
+
+  class MonsterDefinitionRecord {
+    +id: str
+    +monster_id: str
+    +name: str
+    +description: str
+    +status: str
+    +content_version: str
+    +pack_id: str
+    +pack_version: str
+    +author: str
+    +last_modified_by: str | None
+    +enabled: bool
+  }
+
+  class SpellDefinitionRecord {
+    +id: str
+    +spell_id: str
+    +name: str
+    +description: str
+    +status: str
+    +content_version: str
+    +pack_id: str
+    +pack_version: str
+    +author: str
+    +last_modified_by: str | None
+    +enabled: bool
+  }
+
+  class FeatureDefinitionRecord {
+    +id: str
+    +feature_id: str
+    +name: str
+    +description: str
+    +status: str
+    +content_version: str
+    +pack_id: str
+    +pack_version: str
+    +author: str
+    +last_modified_by: str | None
+    +enabled: bool
+  }
+
+  class FeatDefinitionRecord {
+    +id: str
+    +feat_id: str
+    +name: str
+    +description: str
+    +status: str
+    +content_version: str
+    +pack_id: str
+    +pack_version: str
+    +author: str
+    +last_modified_by: str | None
+    +enabled: bool
+  }
+
+  class RegionRecord {
+    +id: str
+    +campaign_id: str
+    +name: str
+    +description: str
+    +climate: str | None
+    +created_at: datetime
+    +updated_at: datetime
+  }
+
+  class PlaceRecord {
+    +id: str
+    +campaign_id: str
+    +region_id: str | None
+    +name: str
+    +place_type: str
+    +description: str
+    +created_at: datetime
+    +updated_at: datetime
+  }
+
+  class NpcRecord {
+    +id: str
+    +campaign_id: str
+    +place_id: str | None
+    +faction_id: str | None
+    +name: str
+    +role: str
+    +actor_template_id: str | None
+    +disposition: str
+    +notes: str
+    +created_at: datetime
+    +updated_at: datetime
+  }
+
+  class FactionRecord {
+    +id: str
+    +campaign_id: str
+    +name: str
+    +description: str
+    +goals: str | None
+    +beliefs: str | None
+    +created_at: datetime
+    +updated_at: datetime
+  }
+}
+
+%% ---------------------------------------------------------------------------
+%% Key relations
+%% ---------------------------------------------------------------------------
+Campaign --> SceneState : contains [1..*]
+SceneState --> EncounterState : optional active_encounter [0..1]
+Campaign --> RegionState : owns [0..*]
+RegionState --> PlaceState : owns [0..*]
+PlaceState --> SceneState : contextualizes [0..*]
+Campaign --> FactionState : owns [0..*]
+FactionState --> PlaceState : influences [0..*]
+Campaign --> NpcState : owns [0..*]
+NpcState --> PlaceState : located_in [0..1]
+NpcState --> FactionState : affiliated_with [0..1]
+EncounterState --> ActorInstance : owns [0..*]
+EncounterState --> TurnBudget : owns [0..*]
+EncounterState --> EffectInstanceRuntime : owns [0..*]
+SceneState --> MapState : owns
+MapState --> MapToken : owns [0..*]
+MapToken --> ActorInstance : references actor_id
+ActorInstance --> EffectInstanceRuntime : owns [0..*]
+
+ActionDefinitionContent --> EffectDefinitionContent : references via effect_intents
+AbilityBindingContent --> ActionDefinitionContent : binds action_id
+ContentPackMetadata --> ActionDefinitionContent : owns [0..*]
+ContentPackMetadata --> EffectDefinitionContent : owns [0..*]
+ContentPackMetadata --> AbilityBindingContent : owns [0..*]
+
+ActionExecutionApplicationService --> SceneRepository : queries
+ActionExecutionApplicationService --> EncounterRepository : reads/writes
+ActionExecutionApplicationService --> CombatLogRepository : logs
+ActionExecutionApplicationService --> AuthorizationPolicy : validates
+ActionExecutionApplicationService --> ActionEconomyPolicy : budgets
+ActionExecutionApplicationService --> ActionResolutionPolicy : resolves
+
+ContentPackApplicationService --> ContentRepository : CRUD
+ContentRepository --> ActionDefinitionRecord : persists
+ContentRepository --> EffectDefinitionRecord : persists
+
+CompendiumApplicationService --> CompendiumRepository : CRUD
+CompendiumRepository --> ItemDefinitionRecord : persists
+CompendiumRepository --> MonsterDefinitionRecord : persists
+CompendiumRepository --> SpellDefinitionRecord : persists
+CompendiumRepository --> FeatureDefinitionRecord : persists
+CompendiumRepository --> FeatDefinitionRecord : persists
+
+WorldContextApplicationService --> WorldContextRepository : CRUD
+WorldContextRepository --> RegionRecord : persists
+WorldContextRepository --> PlaceRecord : persists
+WorldContextRepository --> NpcRecord : persists
+WorldContextRepository --> FactionRecord : persists
+
+SceneRepository --> SceneRecord : persists
+EncounterRepository --> EncounterSessionRecord : persists
+EncounterRepository --> CombatantStateRecord : persists
+EncounterRepository --> TurnBudgetRecord : persists
+
+CampaignRecord --> SceneRecord : contains [1..*]
+CampaignRecord --> RegionRecord : contains [0..*]
+CampaignRecord --> PlaceRecord : contains [0..*]
+CampaignRecord --> NpcRecord : contains [0..*]
+CampaignRecord --> FactionRecord : contains [0..*]
+RegionRecord --> PlaceRecord : contains [0..*]
+PlaceRecord --> SceneRecord : contextualizes [0..*]
+PlaceRecord --> NpcRecord : hosts [0..*]
+FactionRecord --> NpcRecord : includes [0..*]
+SceneRecord --> EncounterSessionRecord : optional combat specialization [0..1]
+CampaignRecord --> CampaignMemberRecord : owns [0..*]
+CampaignMemberRecord --> User : references user_id

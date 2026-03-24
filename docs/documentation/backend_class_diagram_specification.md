@@ -74,6 +74,11 @@ Mermaid mirrors:
 - [docs/diagrams/mmd/D2.6_services_application_dtos.mmd](../diagrams/mmd/D2.6_services_application_dtos.mmd)
 - [docs/diagrams/mmd/D2.7_domain_policy_objects.mmd](../diagrams/mmd/D2.7_domain_policy_objects.mmd)
 - [docs/diagrams/mmd/D2.8_persistence_orm_models.mmd](../diagrams/mmd/D2.8_persistence_orm_models.mmd)
+- [docs/diagrams/mmd/D2.9_target_corrected_architecture.mmd](../diagrams/mmd/D2.9_target_corrected_architecture.mmd)
+
+Target database layer (DBML):
+
+- [docs/diagrams/dbml/D2.9_target_database_layer.dbml](../diagrams/dbml/D2.9_target_database_layer.dbml)
 
 Format parity notes:
 
@@ -222,3 +227,7 @@ Next implementation increments:
 - docker compose --profile test run --rm backend-test pytest tests/systems/dnd5e/test_combat_service.py -q
 - docker compose --profile test run --rm backend-test pytest tests/systems/dnd5e/test_ws_integration.py -q
 - docker compose logs backend --tail=200
+
+## Review Document
+
+- [docs/documentation/backend_diagram_correctness_review.md](backend_diagram_correctness_review.md)
