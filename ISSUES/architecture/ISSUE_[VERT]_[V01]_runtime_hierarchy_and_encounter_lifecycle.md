@@ -1,6 +1,6 @@
 # ISSUE [VERT][V01]: Runtime Hierarchy and Scene Combat Lifecycle
 
-Status: Planned
+Status: Active Planning
 Owner: Systems DnD5e
 Depends on: ISSUE [VERT][V00]
 
@@ -36,4 +36,21 @@ Out of scope:
 
 ## Decomposition Policy
 
-Create child issues only when V01 becomes active.
+V01 is the current active module and deep child issues are enabled.
+
+## Child Issue Plan (Sequenced)
+
+1. ISSUE [VERT][V01-01]: Baseline and Drift Audit.
+2. ISSUE [VERT][V01-02]: Lifecycle Contract Freeze.
+3. ISSUE [VERT][V01-03]: Ownership and Repository Boundary Lock.
+4. ISSUE [VERT][V01-04]: Application Transition Orchestration.
+5. ISSUE [VERT][V01-05]: WS and REST Interface Convergence.
+6. ISSUE [VERT][V01-06]: Test Matrix and Completion Gate.
+
+Execution rule:
+
+- Complete each issue in sequence unless a dependency exception is explicitly documented.
+
+Module completion rule:
+
+- V01 can only close when V01-06 gate passes and V00 module DoD is satisfied.

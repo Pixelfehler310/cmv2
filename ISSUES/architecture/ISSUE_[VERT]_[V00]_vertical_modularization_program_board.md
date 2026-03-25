@@ -33,11 +33,31 @@ Out of scope:
 5. V05 Compendium CRUD and Definition Catalog.
 6. V06 Event Contracts and Frontend Projection.
 
+## Active Module Window
+
+Primary active module:
+
+- V01 Runtime Hierarchy and Scene Combat Lifecycle
+
+Optional prep module:
+
+- None (hold prep while V01 decomposition executes)
+
+Active child issue set:
+
+1. V01-01 Baseline and Drift Audit.
+2. V01-02 Lifecycle Contract Freeze.
+3. V01-03 Ownership and Repository Boundary Lock.
+4. V01-04 Application Transition Orchestration.
+5. V01-05 WS and REST Interface Convergence.
+6. V01-06 Test Matrix and Completion Gate.
+
 ## Program Rules
 
 1. Keep one primary active module and one optional prep module.
 2. Create deep child issues only for the active module.
 3. Every PR must map to one primary module issue.
+4. Child issues for inactive modules are not created until activation is explicit in this board.
 
 ## Definition of Done Gate (Per Module)
 

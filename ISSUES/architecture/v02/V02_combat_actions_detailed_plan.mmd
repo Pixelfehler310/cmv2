@@ -1,0 +1,113 @@
+flowchart TD
+    %% V02 Program Flow: Combat Actions, Turn Economy, and Effects
+
+    A0["V02 Start\nPrereq: V01 complete and contracts stable"] --> P0
+
+    subgraph P0["P0 Alignment and Baseline"]
+        P0A["Inventory action execution paths\nWS + REST + domain entrypoints"]
+        P0B["Baseline deterministic scenarios\nnormal + denied + edge cases"]
+        P0C["Capture drift and risk register\nstate races, policy gaps, event mismatch"]
+        P0D{"P0 Exit Gate\nScope/dependencies approved?"}
+        P0A --> P0B --> P0C --> P0D
+    end
+
+    P0D -->|yes| P1
+    P0D -->|no| P0R["Refine scope and dependency map"] --> P0A
+
+    subgraph P1["P1 Contract and Invariant Freeze"]
+        P1A["Freeze action command contract\nactor_id, action_type, target refs, request_id"]
+        P1B["Freeze action outcome contract\nstate delta + event set + deny reason"]
+        P1C["Define deny taxonomy\nnot_turn, insufficient_budget, invalid_target, policy_blocked"]
+        P1D["Define invariants\nsingle turn owner, non-negative budget, deterministic effect order"]
+        P1E{"P1 Exit Gate\nContracts/invariants stable?"}
+        P1A --> P1B --> P1C --> P1D --> P1E
+    end
+
+    P1E -->|yes| P2
+    P1E -->|no| P1R["Revise contracts and invariants"] --> P1A
+
+    subgraph P2["P2 Persistence and Ownership Boundaries"]
+        P2A["Map write authority\nTurnBudgetRuntime, ActionResolutionRuntime, EffectInstanceRuntime"]
+        P2B["Lock repository boundaries\napplication owns orchestration, repository owns persistence"]
+        P2C["Define effect persistence lifecycle\napply, tick, expire, remove, concentration_drop"]
+        P2D{"P2 Exit Gate\nNo multi-writer ambiguity?"}
+        P2A --> P2B --> P2C --> P2D
+    end
+
+    P2D -->|yes| P3
+    P2D -->|no| P2R["Resolve ownership collisions"] --> P2A
+
+    subgraph P3["P3 Application and Domain Implementation"]
+        P3A["Implement ActionExecutionApplicationService orchestration"]
+        P3B["Apply DomainPolicies\nturn budget checks, legality, effect policy"]
+        P3C["Emit deterministic outcome envelope\naccepted|denied + reason + resulting deltas"]
+        P3D["Enforce idempotency/correlation\nrequest_id based duplicate handling"]
+        P3E{"P3 Exit Gate\nBehavior matches frozen contracts?"}
+        P3A --> P3B --> P3C --> P3D --> P3E
+    end
+
+    P3E -->|yes| P4
+    P3E -->|no| P3R["Adjust service/policy implementation"] --> P3A
+
+    subgraph P4["P4 Transport and External Interfaces"]
+        P4A["Converge WS and REST handlers\nshared application contracts"]
+        P4B["Stabilize payload shapes\nidentical denied taxonomy and outcome structure"]
+        P4C["Define event ordering contract\naction_requested -> action_resolved -> effect_events"]
+        P4D{"P4 Exit Gate\nExternal behavior deterministic?"}
+        P4A --> P4B --> P4C --> P4D
+    end
+
+    P4D -->|yes| P5
+    P4D -->|no| P4R["Fix interface divergence"] --> P4A
+
+    subgraph P5["P5 Frontend Projection and Type Sync"]
+        P5A["Regenerate shared contract artifacts/types"]
+        P5B["Validate projection uses backend truth\nno client-side rule duplication"]
+        P5C["Check denied reason rendering mappings"]
+        P5D{"P5 Exit Gate\nProjection contract-stable?"}
+        P5A --> P5B --> P5C --> P5D
+    end
+
+    P5D -->|yes| P6
+    P5D -->|no| P5R["Resolve type/projection drift"] --> P5A
+
+    subgraph P6["P6 Test Matrix and Observability Hardening"]
+        P6A["Contract tests\naction accepted/denied matrix"]
+        P6B["Invariant tests\nbudget monotonicity, turn ownership, effect lifecycle order"]
+        P6C["Integration tests\nWS and REST parity + deterministic replay"]
+        P6D["Observability checks\nstructured logs include request_id and reason"]
+        P6E{"P6 Exit Gate\nRequired suites green and deterministic?"}
+        P6A --> P6B --> P6C --> P6D --> P6E
+    end
+
+    P6E -->|yes| P7
+    P6E -->|no| P6R["Stabilize flaky paths and tighten assertions"] --> P6A
+
+    subgraph P7["P7 Closure and Handoff"]
+        P7A["Publish V02 completion note\nscope, constraints, residual risks"]
+        P7B["Create targeted follow-up issues\nonly for deferred material risk"]
+        P7C["Handoff constraints to V03 and V06"]
+        P7D["Mark V02 complete"]
+        P7A --> P7B --> P7C --> P7D
+    end
+
+    %% Cross-cutting quality controls
+    QC1["Quality Control A\nSingle backend source of truth"]
+    QC2["Quality Control B\nDeny taxonomy machine-readable and stable"]
+    QC3["Quality Control C\nNo frontend authority creep"]
+    QC4["Quality Control D\nContract drift checks always green"]
+
+    QC1 -.applies to.-> P1
+    QC1 -.applies to.-> P3
+    QC2 -.applies to.-> P1
+    QC2 -.applies to.-> P4
+    QC3 -.applies to.-> P5
+    QC4 -.applies to.-> P6
+
+    %% Candidate child issue mapping
+    C1["V02-01 Baseline and Drift Audit"] --> P0
+    C2["V02-02 Action and Deny Contract Freeze"] --> P1
+    C3["V02-03 TurnBudget and Effect Ownership Lock"] --> P2
+    C4["V02-04 Action Execution Orchestration"] --> P3
+    C5["V02-05 WS/REST Convergence and Event Determinism"] --> P4
+    C6["V02-06 Test Matrix and Completion Gate"] --> P6

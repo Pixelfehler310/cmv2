@@ -5,6 +5,15 @@ Related module issue: ISSUE [VERT][V01]
 Related playbook: docs/architecture/shared/05_vertical_module_execution_plan.md
 Related diagram: V01_runtime_hierarchy_detailed_plan.mmd
 
+Detailed issue set:
+
+- ISSUE [VERT][V01-01] baseline_and_drift_audit
+- ISSUE [VERT][V01-02] lifecycle_contract_freeze
+- ISSUE [VERT][V01-03] ownership_and_repository_boundary_lock
+- ISSUE [VERT][V01-04] application_transition_orchestration
+- ISSUE [VERT][V01-05] ws_and_rest_interface_convergence
+- ISSUE [VERT][V01-06] test_matrix_and_completion_gate
+
 ## What V01 Is Trying to Achieve
 
 V01 stabilizes the scene-first runtime backbone:
@@ -138,6 +147,11 @@ Exit signal:
 4. V01-04 Application Transition Orchestration.
 5. V01-05 WS and REST Interface Convergence.
 6. V01-06 V01 Test Matrix and Completion Gate.
+
+Planning status:
+
+- Child issue definitions are now authored.
+- Next step is execution kickoff from V01-01.
 
 ## Verification Commands (Draft)
 
