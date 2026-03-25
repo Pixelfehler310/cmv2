@@ -144,7 +144,8 @@ async def test_load_all_aggregates_all_sections():
     loader.import_definitions.assert_awaited_once_with(
         mock_session, overwrite=False)
     loader.import_items.assert_awaited_once_with(mock_session, overwrite=False)
-    loader.import_spells.assert_awaited_once_with(mock_session, overwrite=False)
+    loader.import_spells.assert_awaited_once_with(
+        mock_session, overwrite=False)
     loader.import_monsters.assert_awaited_once_with(
         mock_session, overwrite=False)
     loader.import_campaigns.assert_awaited_once_with(
@@ -178,7 +179,8 @@ async def test_load_all_fails_fast_when_monster_import_raises():
     loader.import_definitions.assert_awaited_once_with(
         mock_session, overwrite=False)
     loader.import_items.assert_awaited_once_with(mock_session, overwrite=False)
-    loader.import_spells.assert_awaited_once_with(mock_session, overwrite=False)
+    loader.import_spells.assert_awaited_once_with(
+        mock_session, overwrite=False)
     loader.import_monsters.assert_awaited_once_with(
         mock_session, overwrite=False)
     loader.import_campaigns.assert_not_awaited()

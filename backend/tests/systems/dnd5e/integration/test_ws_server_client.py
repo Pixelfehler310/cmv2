@@ -39,7 +39,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 
 from sqlalchemy.pool import StaticPool
 
-# Use in-memory SQLite with StaticPool to ensure state persists across ALL sessions 
+# Use in-memory SQLite with StaticPool to ensure state persists across ALL sessions
 # created from this engine during a single test run.
 test_engine = create_async_engine(
     "sqlite+aiosqlite:///:memory:",
@@ -53,12 +53,14 @@ TestAsyncSessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
+
 @pytest.fixture(autouse=True)
 def setup_test_db(monkeypatch):
     """Override the real DB with an in-memory one for all tests in this module."""
     monkeypatch.setattr(db_module, "AsyncSessionLocal", TestAsyncSessionLocal)
     monkeypatch.setattr(db_module, "engine", test_engine)
-    monkeypatch.setattr("src.systems.dnd5e.ws_handler.AsyncSessionLocal", TestAsyncSessionLocal)
+    monkeypatch.setattr(
+        "src.systems.dnd5e.ws_handler.AsyncSessionLocal", TestAsyncSessionLocal)
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +109,7 @@ async def _setup_combat_encounter(campaign_id: str = "ws_test_campaign") -> Enco
             ),
         ],
     )
-    
+
     async with database.AsyncSessionLocal() as db:
         service = CombatService(db)
         session, _ = await service.load_or_create_encounter_state(campaign_id)
@@ -138,7 +140,7 @@ async def _setup_combat_encounter(campaign_id: str = "ws_test_campaign") -> Enco
             )
 
         await db.commit()
-        
+
     return enc
 
 
