@@ -45,8 +45,19 @@ namespace CombatExecutionDomain {
     +actor_id: str
     +action_type: action | bonus_action | reaction | free
     +action_ref: str
+    +target_mode: explicit | area | self | derived
     +target_refs: list[str]
+    +target_spec: dict | None
     +parameters: dict
+  }
+
+  class TargetSnapshot {
+    +snapshot_id: str
+    +request_id: str
+    +selection_type: actor_list | area_shape | derived
+    +selected_actor_ids: list[str]
+    +area_ref: str | None
+    +capture_step: on_execute | on_tick
   }
 
   class ActionExecutionOutcome {
@@ -75,20 +86,51 @@ namespace CombatExecutionDomain {
     +remove(reason_code)
   }
 
+  class ZoneEffectRuntime {
+    +zone_id: str
+    +source_actor_id: str
+    +shape_type: sphere | cube | line | custom
+    +shape_parameters: dict
+    +duration_remaining: int
+    +entry_policy: apply_on_enter | apply_on_start_turn | apply_on_end_turn
+    +remain_policy: none | after_full_turn | per_tick
+    +occupant_actor_ids: list[str]
+    +refresh_occupants(encounter_state)
+    +apply_tick_effects(trigger)
+    +expire_zone()
+  }
+
+  class ActionResultPlan {
+    +plan_id: str
+    +request_id: str
+    +immediate_results: list[str]
+    +deferred_results: list[str]
+    +zone_results: list[str]
+    +execution_order: list[str]
+  }
+
   class CombatInvariants {
     +single_budget_per_actor_turn(encounter, actor)
     +budget_spend_matches_action_type(budget, action_type)
     +reaction_window_valid(encounter, actor, trigger)
     +single_concentration_per_actor(actor)
     +effect_lifecycle_order_valid(effect, transition)
+    +target_snapshot_stable_per_request(request_id)
+    +deterministic_tick_order(encounter, trigger)
+    +zone_occupancy_recalc_before_tick(zone, trigger)
   }
 }
 
 namespace ApplicationLayer {
   class ActionExecutionApplicationService {
     +execute_action(request)
+    +resolve_targets(request)
+    +plan_action_results(request, targets)
+    +apply_immediate_results(result_plan)
+    +materialize_deferred_effects(result_plan)
     +advance_turn(campaign_id, scene_id)
     +tick_effects(campaign_id, scene_id, trigger)
+    +tick_zone_effects(campaign_id, scene_id, trigger)
     +remove_effect(campaign_id, scene_id, effect_id, reason_code)
     +break_concentration(campaign_id, scene_id, actor_id, reason_code)
   }
@@ -120,11 +162,21 @@ namespace PolicyLayer {
     +validate_reaction_trigger(encounter, actor, trigger)
   }
 
+  class TargetResolutionPolicy {
+    +validate_target_spec(request, encounter)
+    +resolve_explicit_targets(request, encounter)
+    +resolve_area_targets(request, encounter)
+    +resolve_derived_targets(request, encounter)
+    +validate_line_of_effect(source, target_or_area)
+  }
+
   class EffectLifecyclePolicy {
     +validate_effect_apply(effect_def, target_state)
     +validate_effect_stack(existing_effects, incoming_effect)
     +validate_effect_tick(effect, trigger)
     +validate_concentration_drop(actor, reason_code)
+    +validate_zone_tick(zone_effect, trigger)
+    +validate_remain_in_zone_threshold(zone_effect, actor_state)
   }
 }
 
@@ -143,6 +195,18 @@ namespace RepositoryLayer {
     +list_active_effects(campaign_id, scene_id)
     +save_effect(effect_runtime)
     +remove_effect(effect_id)
+  }
+
+  class ZoneEffectRepository {
+    +list_active_zones(campaign_id, scene_id)
+    +save_zone(zone_runtime)
+    +remove_zone(zone_id)
+  }
+
+  class TargetSnapshotRepository {
+    +save_snapshot(snapshot)
+    +load_snapshot(request_id)
+    +remove_snapshot(snapshot_id)
   }
 
   class UnitOfWork {
@@ -169,9 +233,13 @@ namespace TransportLayer {
 
   class CombatEventsMapper {
     +to_action_resolved_event(result)
+    +to_targets_resolved_event(result)
+    +to_zone_created_event(result)
     +to_turn_budget_updated_event(result)
     +to_effect_applied_event(result)
+    +to_effect_ticked_event(result)
     +to_effect_removed_event(result)
+    +to_zone_expired_event(result)
     +to_denied_event(result)
   }
 }
@@ -185,6 +253,26 @@ namespace EventContracts {
     +action_ref: str
     +spent_budget: list[str]
     +request_id: str
+  }
+
+  class TargetsResolvedEvent {
+    +event_type: targets_resolved
+    +campaign_id: str
+    +scene_id: str
+    +actor_id: str
+    +request_id: str
+    +target_snapshot_id: str
+    +resolved_actor_ids: list[str]
+    +target_mode: explicit | area | self | derived
+  }
+
+  class ZoneLifecycleEvent {
+    +event_type: zone_created | zone_ticked | zone_expired
+    +campaign_id: str
+    +scene_id: str
+    +zone_id: str
+    +request_id: str
+    +occupant_actor_ids: list[str]
   }
 
   class TurnBudgetUpdatedEvent {
@@ -218,8 +306,19 @@ namespace EventContracts {
 namespace TestingAndGates {
   class V02ContractTests {
     +test_execute_action_contract_shapes()
+    +test_targets_resolved_contract_shapes()
+    +test_zone_lifecycle_event_contract_shapes()
     +test_denied_reason_taxonomy_stable()
     +test_effect_lifecycle_event_contract_shapes()
+  }
+
+  class V02ActionExecutionTests {
+    +test_action_with_immediate_and_zone_results()
+    +test_area_target_snapshot_is_deterministic()
+    +test_execute_action_denied_when_targeting_invalid()
+    +test_execute_action_creates_expected_result_plan_order()
+    +test_tick_after_full_turn_applies_delayed_zone_effect()
+    +test_same_inputs_produce_same_result_and_events()
   }
 
   class V02InvariantTests {
@@ -227,6 +326,8 @@ namespace TestingAndGates {
     +test_reaction_window_enforcement()
     +test_single_concentration_per_actor()
     +test_effect_lifecycle_order_constraints()
+    +test_zone_occupancy_recalc_before_tick()
+    +test_target_snapshot_stability()
   }
 
   class V02IntegrationTests {
@@ -238,8 +339,10 @@ namespace TestingAndGates {
 
   class V02CompletionGate {
     +contracts_stable: bool
+    +targeting_contract_frozen: bool
     +deny_taxonomy_frozen: bool
     +effects_policy_green: bool
+    +action_execution_matrix_green: bool
     +integration_green: bool
     +drift_check_green: bool
   }
@@ -248,18 +351,24 @@ namespace TestingAndGates {
 ActionExecutionApplicationService --> CombatEncounterRepository : loads/saves
 ActionExecutionApplicationService --> CombatActorRepository : loads/saves
 ActionExecutionApplicationService --> EffectInstanceRepository : loads/saves
+ActionExecutionApplicationService --> ZoneEffectRepository : loads/saves
+ActionExecutionApplicationService --> TargetSnapshotRepository : loads/saves
 ActionExecutionApplicationService --> UnitOfWork : transaction boundary
 
 ActionExecutionApplicationService --> CombatAuthorizationPolicy : authorize
 ActionExecutionApplicationService --> TurnEconomyPolicy : validate budgets
+ActionExecutionApplicationService --> TargetResolutionPolicy : resolve targets
 ActionExecutionApplicationService --> EffectLifecyclePolicy : validate effects
 TurnEconomyPolicy --> CombatInvariants : enforce
+TargetResolutionPolicy --> CombatInvariants : enforce
 EffectLifecyclePolicy --> CombatInvariants : enforce
 
 CombatActionsWsHandler --> ActionExecutionApplicationService : invoke
 CombatActionsRouter --> ActionExecutionApplicationService : invoke
 CombatEventsMapper --> ActionExecutionResult : map result
 CombatEventsMapper --> ActionResolvedEvent : emits
+CombatEventsMapper --> TargetsResolvedEvent : emits
+CombatEventsMapper --> ZoneLifecycleEvent : emits
 CombatEventsMapper --> TurnBudgetUpdatedEvent : emits
 CombatEventsMapper --> EffectLifecycleEvent : emits
 CombatEventsMapper --> CommandDeniedEvent : emits
@@ -267,11 +376,17 @@ CombatEventsMapper --> CommandDeniedEvent : emits
 CombatEncounterRuntime --> CombatActorRuntime : contains [1..*]
 CombatActorRuntime --> TurnBudgetRuntime : owns [1]
 CombatEncounterRuntime --> EffectInstanceRuntime : tracks [0..*]
+CombatEncounterRuntime --> ZoneEffectRuntime : tracks [0..*]
+ActionExecutionRequest --> TargetSnapshot : resolves into [0..1]
+ActionExecutionRequest --> ActionResultPlan : plans [1]
+ZoneEffectRuntime --> TargetSnapshot : uses for occupancy [0..*]
 
 V02ContractTests --> ActionExecutionApplicationService : verify contracts
+V02ActionExecutionTests --> ActionExecutionApplicationService : verify orchestration
 V02InvariantTests --> CombatInvariants : verify rules
 V02IntegrationTests --> CombatActionsWsHandler : verify ws flow
 V02IntegrationTests --> CombatActionsRouter : verify rest flow
 V02CompletionGate --> V02ContractTests : requires pass
+V02CompletionGate --> V02ActionExecutionTests : requires pass
 V02CompletionGate --> V02InvariantTests : requires pass
 V02CompletionGate --> V02IntegrationTests : requires pass
