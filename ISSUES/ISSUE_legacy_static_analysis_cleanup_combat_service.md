@@ -2,7 +2,7 @@
 
 Status: Planned
 Owner: Engineering
-Related: PR3_action_execution_app_service_and_repositories.md
+Related: Completed combat-slice refactor (PR1-PR5)
 
 ## Goal
 
@@ -15,15 +15,18 @@ During PR3 implementation and verification, integration/runtime tests passed, bu
 ## Affected Areas
 
 Primary file:
+
 - backend/src/systems/dnd5e/services/combat_service.py
 
 Known warning clusters:
+
 1. SQLAlchemy rowcount typing mismatch around reset encounter state.
 2. Potentially unbound local variables in movement budget flow.
 3. SQLAlchemy expression typing in monster lookup predicate appends.
 4. Canonical effect definition strict typing conversion warnings.
 
 Representative references:
+
 - backend/src/systems/dnd5e/services/combat_service.py:252
 - backend/src/systems/dnd5e/services/combat_service.py:341
 - backend/src/systems/dnd5e/services/combat_service.py:349
@@ -35,11 +38,13 @@ Representative references:
 ## Scope
 
 In scope:
+
 - Eliminate current static-analysis warnings listed above.
 - Keep behavior and event contracts unchanged.
 - Add focused tests only where control-flow/type fixes could alter behavior.
 
 Out of scope:
+
 - New features or schema changes.
 - Broad refactors unrelated to warning resolution.
 

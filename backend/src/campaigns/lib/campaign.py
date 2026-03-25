@@ -1,4 +1,4 @@
-from sqlalchemy import String, Integer, JSON, ForeignKey, Enum
+from sqlalchemy import String, Integer, JSON, ForeignKey, Enum, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 from src.common.mixins import UUIDMixin, TimestampMixin
@@ -13,6 +13,13 @@ class CampaignRole(str, enum.Enum):
 
 class CampaignMember(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "campaign_members"
+    __table_args__ = (
+        UniqueConstraint(
+            "campaign_id",
+            "user_id",
+            name="uq_campaign_members_campaign_id_user_id",
+        ),
+    )
 
     campaign_id: Mapped[str] = mapped_column(ForeignKey("campaigns.id"))
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))

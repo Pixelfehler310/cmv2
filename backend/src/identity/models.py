@@ -1,4 +1,4 @@
-from sqlalchemy import String, Boolean, ForeignKey, JSON
+from sqlalchemy import String, Boolean, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 from src.common.mixins import UUIDMixin, TimestampMixin
@@ -13,16 +13,25 @@ class User(Base, UUIDMixin, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    social_auths: Mapped[list["UserSocialAuth"]] = relationship("UserSocialAuth", back_populates="user")
+    social_auths: Mapped[list["UserSocialAuth"]] = relationship(
+        "UserSocialAuth", back_populates="user")
 
 
 class UserSocialAuth(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "user_social_auths"
+    __table_args__ = (
+        UniqueConstraint(
+            "provider",
+            "provider_user_id",
+            name="uq_user_social_auths_provider_provider_user_id",
+        ),
+    )
 
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     provider: Mapped[str] = mapped_column(String)  # 'google', 'discord'
-    provider_user_id: Mapped[str] = mapped_column(String)  # Unique ID from provider
+    provider_user_id: Mapped[str] = mapped_column(
+        String)  # Unique ID from provider
     email: Mapped[str] = mapped_column(String, nullable=True)
-    extra_data: Mapped[dict] = mapped_column(JSON, default={})
+    extra_data: Mapped[dict] = mapped_column(JSON, default=dict)
 
     user: Mapped["User"] = relationship("User", back_populates="social_auths")

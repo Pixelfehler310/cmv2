@@ -1,4 +1,4 @@
-from sqlalchemy import String, Integer, JSON
+from sqlalchemy import String, Integer, JSON, Float
 from sqlalchemy.orm import Mapped, mapped_column
 from src.database import Base
 from src.common.mixins import UUIDMixin, TimestampMixin
@@ -32,7 +32,7 @@ class Monster(Base, UUIDMixin, TimestampMixin):
     senses: Mapped[dict] = mapped_column(JSON, default=dict)
     languages: Mapped[str] = mapped_column(String)
     challenge_rating: Mapped[float] = mapped_column(
-        Integer)  # Can be fraction? 1/4. Store as float 0.25
+        Float)  # Can be fraction (for example 0.25 for CR 1/4)
     xp: Mapped[int] = mapped_column(Integer)
 
     # Actions & Traits

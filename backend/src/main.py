@@ -12,7 +12,9 @@ from .systems.dnd5e.encounter_router import router as dnd5e_encounter_router
 from .systems.dnd5e.lib import combat_models as _dnd5e_combat_models  # noqa: F401
 from .systems.dnd5e.lib import context_models as _dnd5e_context_models  # noqa: F401
 from .systems.dnd5e.lib import content_models as _dnd5e_content_models  # noqa: F401
+from .campaigns.lib import faction as _campaign_faction_models  # noqa: F401
 from .database import engine, Base
+from .schema_migrations import apply_schema_migrations
 from sqlalchemy import inspect, text
 import logging
 from pathlib import Path
@@ -80,6 +82,8 @@ def _apply_schema_backfills(sync_conn) -> None:
         if "scene_id" not in encounter_session_columns:
             sync_conn.execute(
                 text("ALTER TABLE dnd5e_encounter_sessions ADD COLUMN scene_id VARCHAR"))
+
+    apply_schema_migrations(sync_conn)
 
 
 app = FastAPI(

@@ -1,4 +1,4 @@
-from sqlalchemy import String, Integer, JSON, Boolean
+from sqlalchemy import String, Integer, JSON, Float
 from sqlalchemy.orm import Mapped, mapped_column
 from src.database import Base
 from src.common.mixins import UUIDMixin, TimestampMixin
@@ -11,8 +11,7 @@ class Item(Base, UUIDMixin, TimestampMixin):
     description: Mapped[str] = mapped_column(String)
     type: Mapped[str] = mapped_column(String)  # Weapon, Armor, Potion, etc.
     rarity: Mapped[str] = mapped_column(String)
-    # Stored as float in logic, but let's use Integer for now or Float? Python float is fine. SQLAlchemy Float.
-    weight: Mapped[float] = mapped_column(Integer, default=0)
+    weight: Mapped[float] = mapped_column(Float, default=0)
     price: Mapped[int] = mapped_column(Integer, default=0)  # In copper pieces
 
     # JSONB for dynamic properties
