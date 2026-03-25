@@ -270,7 +270,8 @@ class CombatService:
             EncounterSession.campaign_id == campaign_id)
         result = await self.db.execute(stmt)
         await self.db.commit()
-        return result.rowcount > 0
+        deleted_count = int(getattr(result, "rowcount", 0) or 0)
+        return deleted_count > 0
 
     async def start_combat(self, encounter_session: EncounterSession, encounter: EncounterState) -> list[dict[str, str]]:
         initiatives: list[InitiativeEntry] = []
@@ -338,7 +339,7 @@ class CombatService:
             budget.max_movement - budget.movement_used, 0)
 
         if distance > movement_remaining:
-            checks_data = checks.checks or {}
+            checks_data: dict[str, Any] = dict(checks.checks or {})
             checks_data["movement_remaining"] = movement_remaining
             checks_data["movement_required"] = distance
             if encounter_session is not None:
@@ -948,7 +949,9 @@ class CombatService:
         if not lowered_candidates:
             return None
 
-        predicates = [func.lower(Monster.name).in_(list(lowered_candidates))]
+        predicates: list[Any] = [
+            func.lower(Monster.name).in_(list(lowered_candidates))
+        ]
         if definition_slug:
             lowered_slug = definition_slug.lower()
             predicates.append(func.lower(func.replace(
@@ -1453,6 +1456,8 @@ class CombatService:
         actor_check = check_actor_exists(actor_id, actor)
         if not actor_check.allowed:
             return actor_check
+        if actor is None:
+            return AuthorizationResult(False, "invalid_target", f"Actor {actor_id} not found")
 
         role_check = check_user_role_allowed(ctx.role)
         if not role_check.allowed:
@@ -2237,19 +2242,36 @@ class CombatService:
                 "provenance": effect_provenance_payload(request_id, action_name, actor.id),
             }}]
 
-        definition = CanonicalEffectDefinition(
-            effect_id=effect_record.effect_id,
-            name=effect_record.name,
-            family=effect_record.family,
-            duration=effect_record.duration or {},
-            stacking=effect_record.stacking or {},
-            tags=effect_record.tags or [],
-            modifiers=effect_record.modifiers or [],
-            grants_conditions=effect_record.grants_conditions or [],
-            periodic=effect_record.periodic or [],
-            removal_triggers=effect_record.removal_triggers or [],
-            metadata=effect_record.metadata_json or {},
-        )
+        duration = effect_record.duration if isinstance(effect_record.duration, dict) else {}
+        stacking = effect_record.stacking if isinstance(effect_record.stacking, dict) else {}
+        metadata = effect_record.metadata_json if isinstance(effect_record.metadata_json, dict) else {}
+        tags = [tag for tag in (effect_record.tags or []) if isinstance(tag, str)]
+        grants_conditions = [
+            condition for condition in (effect_record.grants_conditions or []) if isinstance(condition, str)
+        ]
+        modifiers = [
+            modifier for modifier in (effect_record.modifiers or []) if isinstance(modifier, dict)
+        ]
+        periodic = [
+            item for item in (effect_record.periodic or []) if isinstance(item, dict)
+        ]
+        removal_triggers = [
+            trigger for trigger in (effect_record.removal_triggers or []) if isinstance(trigger, dict)
+        ]
+
+        definition = CanonicalEffectDefinition.model_validate({
+            "effect_id": effect_record.effect_id,
+            "name": effect_record.name,
+            "family": effect_record.family,
+            "duration": duration,
+            "stacking": stacking,
+            "tags": tags,
+            "modifiers": modifiers,
+            "grants_conditions": grants_conditions,
+            "periodic": periodic,
+            "removal_triggers": removal_triggers,
+            "metadata": metadata,
+        })
 
         events: list[dict[str, Any]] = []
         resolved_targets = self._resolve_effect_targets(

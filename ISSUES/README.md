@@ -10,7 +10,6 @@ Status summary:
 Current focus:
 
 1. PR6 hardening tests/docs/guardrails.
-2. Open architecture-risk issues (schema integrity, action workflow hardening, static-analysis cleanup).
 
 Cross-cutting constraints:
 
