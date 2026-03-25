@@ -1,6 +1,6 @@
 # CMV2 DnD5e Event Specification (Code-First)
 
-Status: authoritative as-built snapshot from runtime code on March 23, 2026.
+Status: authoritative as-built snapshot from runtime code on March 25, 2026.
 
 ## 1. Scope and Sources
 
@@ -257,6 +257,35 @@ From CombatService domain flow:
 Domain `denied` maps to transport `action_denied`.
 Domain `error` maps to transport `error` (`invalid_action`).
 
+### Roll authority policy (server authoritative)
+
+- Action execution is server-authoritative by default.
+- Client-supplied roll-control fields in `request_action.payload` are denied unless explicitly enabled.
+- Runtime policy switch: `ALLOW_CLIENT_ROLL_OVERRIDES` (default `False`).
+- Denied response when blocked:
+  - event: `action_denied`
+  - `reason_code`: `roll_override_not_allowed`
+  - payload includes `disallowed_fields[]` for diagnostics.
+
+### Deterministic ordering guarantees for action commands
+
+- For successful `action` and `request_action`:
+  - first emitted event is always `action_authorized`
+  - zero or more resolver/effect events follow (`attack_result`, `save_result`, `actor_damaged`, `effect_applied`, etc.)
+- For denied execution, terminal response is exactly one `action_denied`.
+- For transport/schema failures, terminal response is `error`.
+- `request_id` is attached to all outbound events emitted for that command.
+
+### AoE and save flow contract (current implementation)
+
+- AoE target resolution is deterministic for a given encounter state and template inputs.
+- Template validation denial reasons include:
+  - `template_out_of_range`
+  - `target_not_in_template`
+  - `no_resolved_targets`
+- Save-family actions emit per-target `save_result` entries and apply downstream outcome events (`actor_damaged`, effects) in resolver order.
+- Interactive mid-resolution pauses (for example player-prompted save/reaction windows) are not part of the current runtime contract.
+
 ## 5.3 Preview Commands
 
 ### `request_executable_actions`
@@ -441,7 +470,8 @@ Denied envelope payload shape (built by `_denied`):
   "reason_code": "<reason>",
   "message": "<human-readable>",
   "actor_id": "optional",
-  "action_type": "optional"
+  "action_type": "optional",
+  "disallowed_fields": ["optional-roll-field-path"]
 }
 ```
 
@@ -495,6 +525,7 @@ Canonical sets exist in `reason_codes.py` and include values such as:
 - Economy: `movement_exhausted`, `action_exhausted`, `bonus_action_exhausted`, `reaction_exhausted`
 - Targeting and action: `invalid_action`, `invalid_target`, `unsupported_action`, `no_resolved_targets`
 - Template and geometry: `invalid_template_origin`, `template_out_of_range`, `target_not_in_template`
+- Roll authority: `roll_override_not_allowed`
 - Effect engine: `effect_not_found`, `target_invalid`, `stacking_limit_reached`
 
 Implementation note:
@@ -518,8 +549,9 @@ After each known handled event, `_save_if_persistent` saves full state if:
 
 Note:
 
-- `CombatService.execute_action` also saves state internally for session-backed action flow.
-- This creates overlapping save responsibility between service and handler for action events.
+- `action` and `request_action` persistence is service-owned (`CombatService.execute_action`).
+- Handler-owned persistence applies only to transport mutating commands in `MUTATING_COMMAND_TYPES`.
+- This enforces a single authoritative write path for action execution.
 
 ## 9. Known Contract Drift and Gaps
 
