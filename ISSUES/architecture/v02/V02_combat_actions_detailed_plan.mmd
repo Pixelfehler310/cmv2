@@ -1,113 +1,277 @@
-flowchart TD
-    %% V02 Program Flow: Combat Actions, Turn Economy, and Effects
+%% V02 Detailed Module Diagram
+%% Scope: Combat Actions, Turn Economy, and Effect Lifecycle
+%% Derived from D2.9 and V02 vertical planning phase
+classDiagram
 
-    A0["V02 Start\nPrereq: V01 complete and contracts stable"] --> P0
+namespace CombatExecutionDomain {
+  class CombatEncounterRuntime {
+    +id: str
+    +campaign_id: str
+    +scene_id: str
+    +round_number: int
+    +active_actor_id: str | None
+    +advance_turn(next_actor_id)
+    +increment_round_if_needed()
+  }
 
-    subgraph P0["P0 Alignment and Baseline"]
-        P0A["Inventory action execution paths\nWS + REST + domain entrypoints"]
-        P0B["Baseline deterministic scenarios\nnormal + denied + edge cases"]
-        P0C["Capture drift and risk register\nstate races, policy gaps, event mismatch"]
-        P0D{"P0 Exit Gate\nScope/dependencies approved?"}
-        P0A --> P0B --> P0C --> P0D
-    end
+  class CombatActorRuntime {
+    +actor_id: str
+    +initiative_order: int
+    +hp_current: int
+    +concentration_effect_id: str | None
+    +can_take_reaction: bool
+    +reset_turn_flags()
+    +set_concentration(effect_id)
+    +clear_concentration()
+  }
 
-    P0D -->|yes| P1
-    P0D -->|no| P0R["Refine scope and dependency map"] --> P0A
+  class TurnBudgetRuntime {
+    +actor_id: str
+    +turn_id: str
+    +action_available: bool
+    +bonus_action_available: bool
+    +reaction_available: bool
+    +movement_remaining: int
+    +spend_action()
+    +spend_bonus_action()
+    +spend_reaction()
+    +spend_movement(distance)
+  }
 
-    subgraph P1["P1 Contract and Invariant Freeze"]
-        P1A["Freeze action command contract\nactor_id, action_type, target refs, request_id"]
-        P1B["Freeze action outcome contract\nstate delta + event set + deny reason"]
-        P1C["Define deny taxonomy\nnot_turn, insufficient_budget, invalid_target, policy_blocked"]
-        P1D["Define invariants\nsingle turn owner, non-negative budget, deterministic effect order"]
-        P1E{"P1 Exit Gate\nContracts/invariants stable?"}
-        P1A --> P1B --> P1C --> P1D --> P1E
-    end
+  class ActionExecutionRequest {
+    +request_id: str
+    +campaign_id: str
+    +scene_id: str
+    +actor_id: str
+    +action_type: action | bonus_action | reaction | free
+    +action_ref: str
+    +target_refs: list[str]
+    +parameters: dict
+  }
 
-    P1E -->|yes| P2
-    P1E -->|no| P1R["Revise contracts and invariants"] --> P1A
+  class ActionExecutionOutcome {
+    +status: resolved | denied | error
+    +reason_code: str | None
+    +spent_budget: list[str]
+    +hp_delta: dict[str, int]
+    +applied_effect_ids: list[str]
+    +removed_effect_ids: list[str]
+    +log_entries: list[str]
+  }
 
-    subgraph P2["P2 Persistence and Ownership Boundaries"]
-        P2A["Map write authority\nTurnBudgetRuntime, ActionResolutionRuntime, EffectInstanceRuntime"]
-        P2B["Lock repository boundaries\napplication owns orchestration, repository owns persistence"]
-        P2C["Define effect persistence lifecycle\napply, tick, expire, remove, concentration_drop"]
-        P2D{"P2 Exit Gate\nNo multi-writer ambiguity?"}
-        P2A --> P2B --> P2C --> P2D
-    end
+  class EffectInstanceRuntime {
+    +id: str
+    +source_actor_id: str
+    +target_actor_id: str
+    +effect_ref: str
+    +stack_key: str | None
+    +duration_type: rounds | turns | instant
+    +duration_remaining: int | None
+    +concentration_required: bool
+    +is_active: bool
+    +apply()
+    +tick(trigger)
+    +expire()
+    +remove(reason_code)
+  }
 
-    P2D -->|yes| P3
-    P2D -->|no| P2R["Resolve ownership collisions"] --> P2A
+  class CombatInvariants {
+    +single_budget_per_actor_turn(encounter, actor)
+    +budget_spend_matches_action_type(budget, action_type)
+    +reaction_window_valid(encounter, actor, trigger)
+    +single_concentration_per_actor(actor)
+    +effect_lifecycle_order_valid(effect, transition)
+  }
+}
 
-    subgraph P3["P3 Application and Domain Implementation"]
-        P3A["Implement ActionExecutionApplicationService orchestration"]
-        P3B["Apply DomainPolicies\nturn budget checks, legality, effect policy"]
-        P3C["Emit deterministic outcome envelope\naccepted|denied + reason + resulting deltas"]
-        P3D["Enforce idempotency/correlation\nrequest_id based duplicate handling"]
-        P3E{"P3 Exit Gate\nBehavior matches frozen contracts?"}
-        P3A --> P3B --> P3C --> P3D --> P3E
-    end
+namespace ApplicationLayer {
+  class ActionExecutionApplicationService {
+    +execute_action(request)
+    +advance_turn(campaign_id, scene_id)
+    +tick_effects(campaign_id, scene_id, trigger)
+    +remove_effect(campaign_id, scene_id, effect_id, reason_code)
+    +break_concentration(campaign_id, scene_id, actor_id, reason_code)
+  }
 
-    P3E -->|yes| P4
-    P3E -->|no| P3R["Adjust service/policy implementation"] --> P3A
+  class ActionExecutionResult {
+    +status: ok | denied | error
+    +reason_code: str | None
+    +campaign_id: str
+    +scene_id: str
+    +actor_id: str | None
+    +round_number: int | None
+    +active_actor_id: str | None
+    +outcome: ActionExecutionOutcome | None
+    +context_version: int | None
+  }
+}
 
-    subgraph P4["P4 Transport and External Interfaces"]
-        P4A["Converge WS and REST handlers\nshared application contracts"]
-        P4B["Stabilize payload shapes\nidentical denied taxonomy and outcome structure"]
-        P4C["Define event ordering contract\naction_requested -> action_resolved -> effect_events"]
-        P4D{"P4 Exit Gate\nExternal behavior deterministic?"}
-        P4A --> P4B --> P4C --> P4D
-    end
+namespace PolicyLayer {
+  class CombatAuthorizationPolicy {
+    +can_execute_action(user_role, actor_membership)
+    +can_advance_turn(user_role)
+    +can_resolve_reaction(user_role, actor_membership)
+  }
 
-    P4D -->|yes| P5
-    P4D -->|no| P4R["Fix interface divergence"] --> P4A
+  class TurnEconomyPolicy {
+    +validate_action_window(encounter, actor, request)
+    +validate_budget_availability(budget, action_type)
+    +validate_movement_budget(budget, distance)
+    +validate_reaction_trigger(encounter, actor, trigger)
+  }
 
-    subgraph P5["P5 Frontend Projection and Type Sync"]
-        P5A["Regenerate shared contract artifacts/types"]
-        P5B["Validate projection uses backend truth\nno client-side rule duplication"]
-        P5C["Check denied reason rendering mappings"]
-        P5D{"P5 Exit Gate\nProjection contract-stable?"}
-        P5A --> P5B --> P5C --> P5D
-    end
+  class EffectLifecyclePolicy {
+    +validate_effect_apply(effect_def, target_state)
+    +validate_effect_stack(existing_effects, incoming_effect)
+    +validate_effect_tick(effect, trigger)
+    +validate_concentration_drop(actor, reason_code)
+  }
+}
 
-    P5D -->|yes| P6
-    P5D -->|no| P5R["Resolve type/projection drift"] --> P5A
+namespace RepositoryLayer {
+  class CombatEncounterRepository {
+    +load_combat_encounter(campaign_id, scene_id)
+    +save_combat_encounter(encounter)
+  }
 
-    subgraph P6["P6 Test Matrix and Observability Hardening"]
-        P6A["Contract tests\naction accepted/denied matrix"]
-        P6B["Invariant tests\nbudget monotonicity, turn ownership, effect lifecycle order"]
-        P6C["Integration tests\nWS and REST parity + deterministic replay"]
-        P6D["Observability checks\nstructured logs include request_id and reason"]
-        P6E{"P6 Exit Gate\nRequired suites green and deterministic?"}
-        P6A --> P6B --> P6C --> P6D --> P6E
-    end
+  class CombatActorRepository {
+    +load_actor_states(campaign_id, scene_id)
+    +save_actor_state(actor_runtime)
+  }
 
-    P6E -->|yes| P7
-    P6E -->|no| P6R["Stabilize flaky paths and tighten assertions"] --> P6A
+  class EffectInstanceRepository {
+    +list_active_effects(campaign_id, scene_id)
+    +save_effect(effect_runtime)
+    +remove_effect(effect_id)
+  }
 
-    subgraph P7["P7 Closure and Handoff"]
-        P7A["Publish V02 completion note\nscope, constraints, residual risks"]
-        P7B["Create targeted follow-up issues\nonly for deferred material risk"]
-        P7C["Handoff constraints to V03 and V06"]
-        P7D["Mark V02 complete"]
-        P7A --> P7B --> P7C --> P7D
-    end
+  class UnitOfWork {
+    +begin()
+    +commit()
+    +rollback()
+  }
+}
 
-    %% Cross-cutting quality controls
-    QC1["Quality Control A\nSingle backend source of truth"]
-    QC2["Quality Control B\nDeny taxonomy machine-readable and stable"]
-    QC3["Quality Control C\nNo frontend authority creep"]
-    QC4["Quality Control D\nContract drift checks always green"]
+namespace TransportLayer {
+  class CombatActionsWsHandler {
+    +handle_execute_action(command)
+    +handle_advance_turn(command)
+    +handle_tick_effects(command)
+    +handle_remove_effect(command)
+  }
 
-    QC1 -.applies to.-> P1
-    QC1 -.applies to.-> P3
-    QC2 -.applies to.-> P1
-    QC2 -.applies to.-> P4
-    QC3 -.applies to.-> P5
-    QC4 -.applies to.-> P6
+  class CombatActionsRouter {
+    +post_execute_action()
+    +post_advance_turn()
+    +post_tick_effects()
+    +post_remove_effect()
+  }
 
-    %% Candidate child issue mapping
-    C1["V02-01 Baseline and Drift Audit"] --> P0
-    C2["V02-02 Action and Deny Contract Freeze"] --> P1
-    C3["V02-03 TurnBudget and Effect Ownership Lock"] --> P2
-    C4["V02-04 Action Execution Orchestration"] --> P3
-    C5["V02-05 WS/REST Convergence and Event Determinism"] --> P4
-    C6["V02-06 Test Matrix and Completion Gate"] --> P6
+  class CombatEventsMapper {
+    +to_action_resolved_event(result)
+    +to_turn_budget_updated_event(result)
+    +to_effect_applied_event(result)
+    +to_effect_removed_event(result)
+    +to_denied_event(result)
+  }
+}
+
+namespace EventContracts {
+  class ActionResolvedEvent {
+    +event_type: action_resolved
+    +campaign_id: str
+    +scene_id: str
+    +actor_id: str
+    +action_ref: str
+    +spent_budget: list[str]
+    +request_id: str
+  }
+
+  class TurnBudgetUpdatedEvent {
+    +event_type: turn_budget_updated
+    +campaign_id: str
+    +scene_id: str
+    +actor_id: str
+    +turn_id: str
+    +budget_snapshot: dict
+    +request_id: str
+  }
+
+  class EffectLifecycleEvent {
+    +event_type: effect_applied | effect_ticked | effect_removed
+    +campaign_id: str
+    +scene_id: str
+    +effect_id: str
+    +target_actor_id: str
+    +reason_code: str | None
+    +request_id: str
+  }
+
+  class CommandDeniedEvent {
+    +event_type: command_denied
+    +reason_code: str
+    +message: str
+    +request_id: str
+  }
+}
+
+namespace TestingAndGates {
+  class V02ContractTests {
+    +test_execute_action_contract_shapes()
+    +test_denied_reason_taxonomy_stable()
+    +test_effect_lifecycle_event_contract_shapes()
+  }
+
+  class V02InvariantTests {
+    +test_budget_spend_matches_action_type()
+    +test_reaction_window_enforcement()
+    +test_single_concentration_per_actor()
+    +test_effect_lifecycle_order_constraints()
+  }
+
+  class V02IntegrationTests {
+    +test_action_to_effect_ws_flow()
+    +test_action_to_effect_rest_flow()
+    +test_cross_round_tick_and_expire_flow()
+    +test_deterministic_replay_same_inputs_same_outcome()
+  }
+
+  class V02CompletionGate {
+    +contracts_stable: bool
+    +deny_taxonomy_frozen: bool
+    +effects_policy_green: bool
+    +integration_green: bool
+    +drift_check_green: bool
+  }
+}
+
+ActionExecutionApplicationService --> CombatEncounterRepository : loads/saves
+ActionExecutionApplicationService --> CombatActorRepository : loads/saves
+ActionExecutionApplicationService --> EffectInstanceRepository : loads/saves
+ActionExecutionApplicationService --> UnitOfWork : transaction boundary
+
+ActionExecutionApplicationService --> CombatAuthorizationPolicy : authorize
+ActionExecutionApplicationService --> TurnEconomyPolicy : validate budgets
+ActionExecutionApplicationService --> EffectLifecyclePolicy : validate effects
+TurnEconomyPolicy --> CombatInvariants : enforce
+EffectLifecyclePolicy --> CombatInvariants : enforce
+
+CombatActionsWsHandler --> ActionExecutionApplicationService : invoke
+CombatActionsRouter --> ActionExecutionApplicationService : invoke
+CombatEventsMapper --> ActionExecutionResult : map result
+CombatEventsMapper --> ActionResolvedEvent : emits
+CombatEventsMapper --> TurnBudgetUpdatedEvent : emits
+CombatEventsMapper --> EffectLifecycleEvent : emits
+CombatEventsMapper --> CommandDeniedEvent : emits
+
+CombatEncounterRuntime --> CombatActorRuntime : contains [1..*]
+CombatActorRuntime --> TurnBudgetRuntime : owns [1]
+CombatEncounterRuntime --> EffectInstanceRuntime : tracks [0..*]
+
+V02ContractTests --> ActionExecutionApplicationService : verify contracts
+V02InvariantTests --> CombatInvariants : verify rules
+V02IntegrationTests --> CombatActionsWsHandler : verify ws flow
+V02IntegrationTests --> CombatActionsRouter : verify rest flow
+V02CompletionGate --> V02ContractTests : requires pass
+V02CompletionGate --> V02InvariantTests : requires pass
+V02CompletionGate --> V02IntegrationTests : requires pass
