@@ -22,12 +22,15 @@ from starlette.testclient import TestClient
 from src.main import app
 from src.config import settings
 from src import database
+from src.campaigns.lib.campaign import Campaign
 from src.systems.dnd5e.services.combat_service import CombatService
+from src.systems.dnd5e.lib.context_models import SceneCatalogRecord, EncounterCatalogRecord
 from src.systems.dnd5e.schemas.encounter import EncounterState
 from src.systems.dnd5e.schemas.instances import ActorInstance, ConditionInstance
 from src.systems.dnd5e.schemas.enums import ActorType, ConditionType
 from src.systems.dnd5e.schemas.common import AbilityScores
 from src import database as db_module
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
 # ---------------------------------------------------------------------------
@@ -109,6 +112,31 @@ async def _setup_combat_encounter(campaign_id: str = "ws_test_campaign") -> Enco
         service = CombatService(db)
         session, _ = await service.load_or_create_encounter_state(campaign_id)
         await service.save_full_state(session, enc)
+
+        campaign = await db.get(Campaign, campaign_id)
+        if campaign is not None:
+            campaign.current_scene = "scene.default"
+            campaign.active_encounter_id = enc.id
+
+        existing = await db.execute(
+            select(EncounterCatalogRecord).where(
+                EncounterCatalogRecord.campaign_id == campaign_id,
+                EncounterCatalogRecord.scene_id == "scene.default",
+                EncounterCatalogRecord.encounter_id == enc.id,
+            )
+        )
+        if existing.scalar_one_or_none() is None:
+            db.add(
+                EncounterCatalogRecord(
+                    campaign_id=campaign_id,
+                    scene_id="scene.default",
+                    encounter_id=enc.id,
+                    name="WS Test Encounter",
+                    source="test",
+                    state_json=enc.model_dump(mode="json"),
+                )
+            )
+
         await db.commit()
         
     return enc
@@ -125,6 +153,40 @@ async def cleanup_db():
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+
+    async with TestAsyncSessionLocal() as db:
+        db.add(
+            Campaign(
+                id="ws_test_campaign",
+                name="WS Server Client Campaign",
+                current_scene="scene.default",
+                active_encounter_id="enc_ws_seed",
+                context_version=1,
+            )
+        )
+        db.add(
+            SceneCatalogRecord(
+                campaign_id="ws_test_campaign",
+                scene_id="scene.default",
+                name="Default Scene",
+            )
+        )
+        db.add(
+            EncounterCatalogRecord(
+                campaign_id="ws_test_campaign",
+                scene_id="scene.default",
+                encounter_id="enc_ws_seed",
+                name="Seed Encounter",
+                source="test",
+                state_json=EncounterState(
+                    id="enc_ws_seed",
+                    campaign_id="ws_test_campaign",
+                    combatants=[],
+                ).model_dump(mode="json"),
+            )
+        )
+        await db.commit()
+
     yield
 
 

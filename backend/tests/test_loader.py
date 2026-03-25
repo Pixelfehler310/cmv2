@@ -141,12 +141,16 @@ async def test_load_all_aggregates_all_sections():
     assert summary["characters"]["inserted"] == 12
     assert summary["content_packs"]["imported"] == 1
 
-    loader.import_definitions.assert_awaited_once_with(mock_session)
-    loader.import_items.assert_awaited_once_with(mock_session)
-    loader.import_spells.assert_awaited_once_with(mock_session)
-    loader.import_monsters.assert_awaited_once_with(mock_session)
-    loader.import_campaigns.assert_awaited_once_with(mock_session)
-    loader.import_characters.assert_awaited_once_with(mock_session)
+    loader.import_definitions.assert_awaited_once_with(
+        mock_session, overwrite=False)
+    loader.import_items.assert_awaited_once_with(mock_session, overwrite=False)
+    loader.import_spells.assert_awaited_once_with(mock_session, overwrite=False)
+    loader.import_monsters.assert_awaited_once_with(
+        mock_session, overwrite=False)
+    loader.import_campaigns.assert_awaited_once_with(
+        mock_session, overwrite=False)
+    loader.import_characters.assert_awaited_once_with(
+        mock_session, overwrite=False)
     loader.import_content_packs.assert_awaited_once_with(mock_session)
 
 
@@ -171,10 +175,12 @@ async def test_load_all_fails_fast_when_monster_import_raises():
     with pytest.raises(ValueError, match="strict canonical migration failed"):
         await loader.load_all(mock_session)
 
-    loader.import_definitions.assert_awaited_once_with(mock_session)
-    loader.import_items.assert_awaited_once_with(mock_session)
-    loader.import_spells.assert_awaited_once_with(mock_session)
-    loader.import_monsters.assert_awaited_once_with(mock_session)
+    loader.import_definitions.assert_awaited_once_with(
+        mock_session, overwrite=False)
+    loader.import_items.assert_awaited_once_with(mock_session, overwrite=False)
+    loader.import_spells.assert_awaited_once_with(mock_session, overwrite=False)
+    loader.import_monsters.assert_awaited_once_with(
+        mock_session, overwrite=False)
     loader.import_campaigns.assert_not_awaited()
     loader.import_characters.assert_not_awaited()
     loader.import_content_packs.assert_not_awaited()

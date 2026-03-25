@@ -1,15 +1,3 @@
-from src.schemas.spell import SpellCreate, SpellResponse
-from src.schemas.monster import MonsterCreate, MonsterResponse
-from src.schemas.item import ItemCreate, ItemResponse
-from src.schemas.definitions import BackgroundResponse, ClassResponse, SpeciesResponse
-from src.schemas.character import CharacterCreate, CharacterResponse
-from src.schemas.campaign import CampaignCreate, CampaignResponse
-from src.schemas.context import (
-    CampaignContextResponse,
-    EncounterOptionResponse,
-    SceneOptionResponse,
-    SelectCampaignContextRequest,
-)
 import argparse
 import difflib
 import json
@@ -25,6 +13,19 @@ from pydantic import BaseModel
 # Add backend to path to allow imports
 BACKEND_DIR = Path(__file__).parent.parent
 sys.path.append(str(BACKEND_DIR))
+
+from src.schemas.spell import SpellCreate, SpellResponse
+from src.schemas.monster import MonsterCreate, MonsterResponse
+from src.schemas.item import ItemCreate, ItemResponse
+from src.schemas.definitions import BackgroundResponse, ClassResponse, SpeciesResponse
+from src.schemas.character import CharacterCreate, CharacterResponse
+from src.schemas.campaign import CampaignCreate, CampaignResponse
+from src.schemas.context import (
+    CampaignContextResponse,
+    EncounterOptionResponse,
+    SceneOptionResponse,
+    SelectCampaignContextRequest,
+)
 
 
 OUTPUT_SCHEMA = BACKEND_DIR / "schema.json"

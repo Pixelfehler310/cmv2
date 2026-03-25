@@ -26,6 +26,7 @@ async def test_create_campaign(client):
         name="New Campaign",
         description="Test Desc",
         dm_id="dm1",
+        context_version=1,
         characters=[]
     )
     mock_session.execute.return_value = mock_result
@@ -54,7 +55,7 @@ async def test_get_campaigns(client):
     mock_result = MagicMock()
     # Modifying iter to yield (Campaign, Role) tuple
     mock_result.__iter__.return_value = [
-        (Campaign(id="c1", name="Camp 1", description="Desc", dm_id="dm1", characters=[]), "DM")
+        (Campaign(id="c1", name="Camp 1", description="Desc", dm_id="dm1", context_version=1, characters=[]), "DM")
     ]
     mock_session.execute.return_value = mock_result
     
