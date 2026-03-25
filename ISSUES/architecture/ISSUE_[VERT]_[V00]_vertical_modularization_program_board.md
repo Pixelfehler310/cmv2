@@ -26,7 +26,7 @@ Out of scope:
 
 ## Module Order (Initial)
 
-1. V01 Runtime Hierarchy and Encounter Lifecycle.
+1. V01 Runtime Hierarchy and Scene Combat Lifecycle.
 2. V02 Combat Actions, Turn Economy, and Effects.
 3. V03 World Context Runtime.
 4. V04 Content Schema and Pack Lifecycle.

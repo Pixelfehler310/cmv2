@@ -1,4 +1,4 @@
-# V01 Planning Overview: Runtime Hierarchy and Encounter Lifecycle
+# V01 Planning Overview: Runtime Hierarchy and Scene Combat Lifecycle
 
 Status: Draft for Planning
 Related module issue: ISSUE [VERT][V01]
@@ -8,13 +8,13 @@ Related diagram: V01_runtime_hierarchy_detailed_plan.mmd
 ## What V01 Is Trying to Achieve
 
 V01 stabilizes the scene-first runtime backbone:
-Campaign -> Scene -> optional active Encounter.
+Campaign -> Scene with optional combat state.
 
 This module exists to make lifecycle authority explicit before deeper combat, world context, and projection work.
 
 ## Why V01 Comes First
 
-1. All later modules depend on stable scene and encounter activation semantics.
+1. All later modules depend on stable scene selection and combat-state transition semantics.
 2. Ambiguous lifecycle ownership causes cross-module churn and contract drift.
 3. Deterministic transitions in V01 reduce downstream refactor risk.
 
@@ -22,10 +22,10 @@ This module exists to make lifecycle authority explicit before deeper combat, wo
 
 In scope:
 
-1. Campaign, scene, and encounter lifecycle transitions.
-2. Activation and deactivation of active encounter per scene.
+1. Campaign and scene lifecycle transitions.
+2. Combat start and combat end transitions inside scene state.
 3. Ownership and persistence boundaries for runtime hierarchy state.
-4. Transport-to-service interface behavior for select scene and encounter lifecycle commands.
+4. Transport-to-service interface behavior for scene and scene-combat lifecycle commands.
 
 Out of scope:
 
@@ -37,14 +37,14 @@ Out of scope:
 
 1. Campaign aggregate write authority.
 2. Scene aggregate write authority.
-3. Encounter lifecycle aggregate write authority.
-4. Single-writer rule for active encounter pointer on scene.
+3. Scene combat state write authority.
+4. Single-writer rule for scene combat-state transitions.
 
 ## Phase Plan for V01 (Using the Playbook)
 
 ### P0 Alignment and Baseline
 
-1. Confirm current implementation paths for scene selection and encounter activation.
+1. Confirm current implementation paths for scene selection and combat start/end on scene.
 2. Confirm existing docs and tests covering lifecycle flows.
 3. Record baseline commands and observed behavior.
 
@@ -56,14 +56,13 @@ Exit signal:
 
 1. Define command contracts for:
    - select scene
-   - activate encounter
    - start combat
    - end combat
 2. Define denied/error reason code expectations.
 3. Freeze lifecycle invariants:
    - scene-campaign ownership
-   - encounter-scene ownership
-   - at most one active encounter per scene
+   - combat state belongs to selected scene
+   - scene has at most one active combat state
    - allowed phase transitions
 
 Exit signal:
@@ -73,7 +72,7 @@ Exit signal:
 ### P2 Persistence and Ownership Boundaries
 
 1. Map each lifecycle state field to one write authority.
-2. Ensure repository boundaries are explicit for campaign/scene/encounter writes.
+2. Ensure repository boundaries are explicit for campaign/scene writes (including scene combat state).
 3. Remove or flag ambiguous write paths.
 
 Exit signal:
@@ -102,7 +101,7 @@ Exit signal:
 
 ### P5 Frontend Projection and Type Sync
 
-1. Validate projection inputs for scene and encounter lifecycle events.
+1. Validate projection inputs for scene and scene-combat lifecycle events.
 2. Regenerate and verify shared contract artifacts as needed.
 3. Confirm no frontend-side lifecycle authority creep.
 
@@ -114,7 +113,7 @@ Exit signal:
 
 1. Contract tests for each lifecycle command.
 2. Invariant tests for ownership and phase transition rules.
-3. Integration tests for end-to-end scene to encounter lifecycle flow.
+3. Integration tests for end-to-end scene to combat-state lifecycle flow.
 4. Log checks for transition traceability.
 
 Exit signal:

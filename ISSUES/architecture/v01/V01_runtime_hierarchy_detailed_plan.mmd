@@ -1,5 +1,5 @@
 %% V01 Detailed Module Diagram
-%% Scope: Runtime Hierarchy and Encounter Lifecycle
+%% Scope: Runtime Hierarchy and Scene Combat Lifecycle
 %% Derived from D2.9 and V01 vertical planning phase
 classDiagram
 
@@ -15,30 +15,26 @@ namespace RuntimeHierarchyDomain {
   class SceneRuntimeAggregate {
     +id: str
     +campaign_id: str
-    +scene_type: STANDARD | ENCOUNTER | REST | NARRATIVE
-    +available_encounter_ids: list[str]
-    +active_encounter_id: str | None
-    +activate_encounter(encounter_id)
-    +deactivate_encounter()
+    +name: str
+    +combat_state: SceneCombatState | None
+    +start_combat()
+    +end_combat()
   }
 
-  class EncounterLifecycleAggregate {
-    +id: str
-    +campaign_id: str
-    +scene_id: str
+  class SceneCombatState {
     +phase: pre_combat | active | post_combat
     +round_number: int
     +active_actor_id: str | None
-    +start_combat()
+    +start()
     +advance_turn()
-    +end_combat()
+    +end()
   }
 
   class LifecycleInvariants {
     +scene_belongs_to_campaign(campaign_id, scene)
-    +encounter_belongs_to_scene(scene_id, encounter)
-    +only_one_active_encounter_per_scene(scene)
-    +encounter_phase_transition_allowed(current_phase, next_phase)
+    +combat_state_belongs_to_scene(scene_id, combat_state)
+    +only_one_combat_state_per_scene(scene)
+    +combat_phase_transition_allowed(current_phase, next_phase)
   }
 }
 
@@ -46,10 +42,8 @@ namespace ApplicationLayer {
   class RuntimeHierarchyApplicationService {
     +get_context(campaign_id)
     +select_scene(campaign_id, scene_id)
-    +activate_encounter(campaign_id, scene_id, encounter_id)
-    +deactivate_encounter(campaign_id, scene_id)
-    +start_combat(campaign_id, scene_id, encounter_id)
-    +end_combat(campaign_id, scene_id, encounter_id)
+    +start_combat(campaign_id, scene_id)
+    +end_combat(campaign_id, scene_id)
   }
 
   class RuntimeHierarchyResult {
@@ -57,7 +51,7 @@ namespace ApplicationLayer {
     +reason_code: str | None
     +campaign_id: str
     +scene_id: str | None
-    +encounter_id: str | None
+    +combat_active: bool | None
     +context_version: int | None
   }
 }
@@ -65,15 +59,14 @@ namespace ApplicationLayer {
 namespace PolicyLayer {
   class RuntimeHierarchyAuthorizationPolicy {
     +can_select_scene(user_role, campaign_membership)
-    +can_activate_encounter(user_role)
     +can_start_combat(user_role)
     +can_end_combat(user_role)
   }
 
   class RuntimeHierarchyTransitionPolicy {
     +validate_scene_transition(campaign, target_scene)
-    +validate_encounter_activation(scene, encounter)
-    +validate_encounter_phase_transition(encounter, target_phase)
+    +validate_combat_start(scene)
+    +validate_combat_phase_transition(combat_state, target_phase)
   }
 }
 
@@ -89,12 +82,6 @@ namespace RepositoryLayer {
     +save_scene(scene)
   }
 
-  class EncounterRepository {
-    +load_active_encounter(campaign_id, scene_id)
-    +load_encounter(campaign_id, scene_id, encounter_id)
-    +save_encounter(encounter)
-  }
-
   class UnitOfWork {
     +begin()
     +commit()
@@ -105,21 +92,18 @@ namespace RepositoryLayer {
 namespace TransportLayer {
   class RuntimeHierarchyWsHandler {
     +handle_select_scene(command)
-    +handle_activate_encounter(command)
     +handle_start_combat(command)
     +handle_end_combat(command)
   }
 
   class RuntimeHierarchyRouter {
     +post_select_scene()
-    +post_activate_encounter()
     +post_start_combat()
     +post_end_combat()
   }
 
   class RuntimeHierarchyEventMapper {
     +to_scene_selected_event(result)
-    +to_encounter_activated_event(result)
     +to_combat_started_event(result)
     +to_combat_ended_event(result)
     +to_denied_event(result)
@@ -135,20 +119,10 @@ namespace EventContracts {
     +request_id: str
   }
 
-  class EncounterActivatedEvent {
-    +event_type: encounter_activated
-    +campaign_id: str
-    +scene_id: str
-    +encounter_id: str
-    +context_version: int
-    +request_id: str
-  }
-
   class CombatLifecycleEvent {
     +event_type: combat_started | combat_ended
     +campaign_id: str
     +scene_id: str
-    +encounter_id: str
     +phase: pre_combat | active | post_combat
     +round_number: int
     +request_id: str
@@ -165,19 +139,18 @@ namespace EventContracts {
 namespace TestingAndGates {
   class V01ContractTests {
     +test_select_scene_contract()
-    +test_activate_encounter_contract()
     +test_start_end_combat_contract()
   }
 
   class V01InvariantTests {
-    +test_single_active_encounter_per_scene()
+    +test_single_combat_state_per_scene()
     +test_scene_campaign_ownership_constraint()
     +test_phase_transition_rules()
   }
 
   class V01IntegrationTests {
-    +test_scene_to_encounter_flow_ws()
-    +test_scene_to_encounter_flow_rest()
+    +test_scene_to_combat_flow_ws()
+    +test_scene_to_combat_flow_rest()
     +test_persistence_consistency_after_lifecycle_commands()
   }
 
@@ -191,7 +164,6 @@ namespace TestingAndGates {
 
 RuntimeHierarchyApplicationService --> CampaignRepository : loads/saves
 RuntimeHierarchyApplicationService --> SceneRepository : loads/saves
-RuntimeHierarchyApplicationService --> EncounterRepository : loads/saves
 RuntimeHierarchyApplicationService --> UnitOfWork : transaction boundary
 
 RuntimeHierarchyApplicationService --> RuntimeHierarchyAuthorizationPolicy : authorize
@@ -202,12 +174,11 @@ RuntimeHierarchyWsHandler --> RuntimeHierarchyApplicationService : invoke
 RuntimeHierarchyRouter --> RuntimeHierarchyApplicationService : invoke
 RuntimeHierarchyEventMapper --> RuntimeHierarchyResult : map result
 RuntimeHierarchyEventMapper --> SceneSelectedEvent : emits
-RuntimeHierarchyEventMapper --> EncounterActivatedEvent : emits
 RuntimeHierarchyEventMapper --> CombatLifecycleEvent : emits
 RuntimeHierarchyEventMapper --> CommandDeniedEvent : emits
 
 CampaignRuntimeAggregate --> SceneRuntimeAggregate : contains [1..*]
-SceneRuntimeAggregate --> EncounterLifecycleAggregate : active [0..1]
+SceneRuntimeAggregate --> SceneCombatState : optional [0..1]
 
 V01ContractTests --> RuntimeHierarchyApplicationService : verify contracts
 V01InvariantTests --> LifecycleInvariants : verify rules
