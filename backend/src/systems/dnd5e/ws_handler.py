@@ -77,8 +77,6 @@ COMMAND_EVENT_TYPES = {
 ACTION_EVENT_TYPES = {"action", "request_action"}
 
 MUTATING_COMMAND_TYPES = {
-    "action",
-    "request_action",
     "move_token",
     "add_actor",
     "remove_actor",
@@ -1134,7 +1132,11 @@ class Dnd5eWsHandler(ISystemHandler):
         events: list[WsOutbound],
         event_type: str,
     ) -> None:
-        """Save encounter state if we have a persistent session, it's a mutating command, and no errors."""
+        """Save encounter state for transport-owned mutating commands.
+
+        Action and request_action persistence is intentionally service-owned to
+        keep a single authoritative write path.
+        """
         should_save = (
             encounter_session is not None
             and event_type in MUTATING_COMMAND_TYPES

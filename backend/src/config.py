@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     ADMIN_USERNAME: str | None = None
     LOAD_MOCK_DATA: bool = False
     ALLOW_LEGACY_ACTION_NAMES: bool = False
+    ALLOW_CLIENT_ROLL_OVERRIDES: bool = False
 
     # OAuth Settings
     GOOGLE_CLIENT_ID: str | None = None

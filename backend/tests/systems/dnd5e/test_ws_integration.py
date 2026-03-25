@@ -361,6 +361,112 @@ class TestPermissions:
         assert events[0].payload["reason_code"] == "invalid_action"
 
     @pytest.mark.anyio
+    async def test_request_action_roll_override_denied_by_policy(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        monkeypatch.setattr(settings, "ALLOW_CLIENT_ROLL_OVERRIDES", False)
+
+        original_builder = CombatService._build_bound_action_candidates
+
+        async def canonical_only(self, actor):
+            if actor.id != combat_encounter.combatants[combat_encounter.active_index].id:
+                return []
+            return [_canonical_candidate("canonical_policy_attack", "Canonical Policy Attack")]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
+
+        try:
+            await handler.handle(WsEnvelope(type="start_combat", request_id="req_roll_policy_start"), dm_ctx, mgr)
+            active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+            target_actor_id = next(
+                actor.id for actor in combat_encounter.combatants if actor.id != active_actor_id
+            )
+
+            events = await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_roll_policy_denied",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "action",
+                        "action_name": "canonical_policy_attack",
+                        "payload": {
+                            "target_ids": [target_actor_id],
+                            "roll_override": 20,
+                        },
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+        finally:
+            monkeypatch.setattr(
+                CombatService, "_build_bound_action_candidates", original_builder)
+
+        assert len(events) == 1
+        assert events[0].type == "action_denied"
+        assert events[0].payload["reason_code"] == "roll_override_not_allowed"
+
+    @pytest.mark.anyio
+    async def test_request_action_event_order_authorized_before_results(self, handler, dm_ctx, mgr, combat_encounter, monkeypatch):
+        original_builder = CombatService._build_bound_action_candidates
+
+        async def canonical_only(self, actor):
+            if actor.id != combat_encounter.combatants[combat_encounter.active_index].id:
+                return []
+            return [
+                {
+                    "action_id": "canonical_order_attack",
+                    "name": "Canonical Order Attack",
+                    "label": "Canonical Order Attack",
+                    "family": "attack",
+                    "action_type_cost": "action",
+                    "targeting_mode": "single_target",
+                    "range": 30,
+                    "save_context": None,
+                    "attack_context": None,
+                    "effect_intents": [],
+                    "tags": [],
+                    "source_ref": "custom",
+                    "content_version": "1",
+                    "enabled": True,
+                }
+            ]
+
+        monkeypatch.setattr(
+            CombatService, "_build_bound_action_candidates", canonical_only)
+
+        try:
+            await handler.handle(WsEnvelope(type="start_combat", request_id="req_order_start"), dm_ctx, mgr)
+            active_actor_id = combat_encounter.combatants[combat_encounter.active_index].id
+            target_actor_id = next(
+                actor.id for actor in combat_encounter.combatants if actor.id != active_actor_id
+            )
+
+            events = await handler.handle(
+                WsEnvelope(
+                    type="request_action",
+                    request_id="req_order_action",
+                    payload={
+                        "actor_id": active_actor_id,
+                        "action_type": "action",
+                        "action_name": "canonical_order_attack",
+                        "payload": {"target_ids": [target_actor_id]},
+                    },
+                ),
+                dm_ctx,
+                mgr,
+            )
+        finally:
+            monkeypatch.setattr(
+                CombatService, "_build_bound_action_candidates", original_builder)
+
+        event_types = [event.type for event in events]
+        assert "action_authorized" in event_types
+        assert "attack_result" in event_types
+        assert event_types.index(
+            "action_authorized") < event_types.index("attack_result")
+
+    @pytest.mark.anyio
     async def test_dm_can_delegate_to_player_for_request_action(self, handler, dm_ctx, mgr, combat_encounter):
         mgr.register_connection(
             dm_ctx.campaign_id,

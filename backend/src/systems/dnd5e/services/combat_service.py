@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.core.sessions.models import SessionContext, UserRole
+from src.config import settings
 from src.data.lib.monster import Monster
 from src.campaigns.lib.campaign import Campaign
 from src.campaigns.lib.character import Character
@@ -133,6 +134,15 @@ class CombatService:
     DEFAULT_SCENE_ID = "scene.default"
     FIXTURE_ENCOUNTERS_DIR = Path(__file__).resolve(
     ).parents[4] / "data" / "fixtures" / "encounters"
+    CLIENT_ROLL_OVERRIDE_FIELDS = (
+        "roll_override",
+        "roll_overrides",
+        "save_overrides",
+        "damage_roll_override",
+        "dice_override",
+        "advantage",
+        "disadvantage",
+    )
 
     def __init__(
         self,
@@ -1018,17 +1028,6 @@ class CombatService:
         if definition_slug:
             candidates.append(definition_slug)
 
-        name = (actor.name or "").strip().lower()
-        if name:
-            name_slug = re.sub(r"[^a-z0-9]+", "_", name).strip("_")
-            if name_slug:
-                candidates.append(name_slug)
-
-            first_word_slug = re.sub(
-                r"[^a-z0-9]+", "_", name.split()[0]).strip("_")
-            if first_word_slug:
-                candidates.append(first_word_slug)
-
         # Keep deterministic order while removing duplicates.
         deduped: list[str] = []
         seen: set[str] = set()
@@ -1038,6 +1037,26 @@ class CombatService:
             deduped.append(candidate)
             seen.add(candidate)
         return deduped
+
+    @classmethod
+    def _detect_client_roll_override_fields(cls, action_payload: dict[str, Any]) -> list[str]:
+        if not isinstance(action_payload, dict):
+            return []
+
+        blocked_fields: list[str] = []
+        for field in cls.CLIENT_ROLL_OVERRIDE_FIELDS:
+            if field not in action_payload:
+                continue
+
+            value = action_payload.get(field)
+            if value is None:
+                continue
+            if isinstance(value, list) and len(value) == 0:
+                continue
+
+            blocked_fields.append(field)
+
+        return blocked_fields
 
     def _build_candidate_from_action_definition(
         self,
@@ -1731,6 +1750,31 @@ class CombatService:
             return [{"type": "denied", "reason_code": "invalid_action",
                      "message": "Unknown canonical action_id for actor",
                      "actor_id": actor_id, "action_type": action_type}]
+
+        prohibited_roll_fields = self._detect_client_roll_override_fields(
+            action_payload
+        )
+        if prohibited_roll_fields and not settings.ALLOW_CLIENT_ROLL_OVERRIDES:
+            denial_reason = "roll_override_not_allowed"
+            if encounter_session is not None:
+                await self.log_action_attempt(
+                    encounter_session,
+                    request_id=request_id,
+                    actor_id=actor_id,
+                    action_type=action_type,
+                    action_state="denied",
+                    payload=raw_payload,
+                    checks=auth.checks or {},
+                    denial_reason=denial_reason,
+                )
+            return [{
+                "type": "denied",
+                "reason_code": denial_reason,
+                "message": "Client-provided roll controls are disabled for authoritative action execution",
+                "actor_id": actor_id,
+                "action_type": action_type,
+                "disallowed_fields": prohibited_roll_fields,
+            }]
 
         resolved_action_type = action_type
         if canonical_meta.found and canonical_meta.action_type_cost:

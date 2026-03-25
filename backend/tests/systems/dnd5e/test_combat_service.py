@@ -343,7 +343,7 @@ async def test_get_executable_actions_snapshot_projects_canonical_bindings(
 
 
 @pytest.mark.anyio
-async def test_get_executable_actions_snapshot_resolves_template_binding_from_actor_name_when_definition_slug_empty(
+async def test_get_executable_actions_snapshot_does_not_resolve_template_binding_from_actor_name_when_definition_slug_empty(
     db_session: AsyncSession,
     combat_encounter_state: EncounterState,
     seeded_campaign_context,
@@ -398,5 +398,4 @@ async def test_get_executable_actions_snapshot_resolves_template_binding_from_ac
 
     assert snapshot.allowed is True
     assert snapshot.actions is not None
-    assert any(action["action_id"] ==
-               "monster.goblin.scimitar" for action in snapshot.actions)
+    assert snapshot.actions == []
