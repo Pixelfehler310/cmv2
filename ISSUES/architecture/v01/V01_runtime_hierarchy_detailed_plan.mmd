@@ -1,0 +1,218 @@
+%% V01 Detailed Module Diagram
+%% Scope: Runtime Hierarchy and Encounter Lifecycle
+%% Derived from D2.9 and V01 vertical planning phase
+classDiagram
+
+namespace RuntimeHierarchyDomain {
+  class CampaignRuntimeAggregate {
+    +id: str
+    +current_scene_id: str | None
+    +context_version: int
+    +set_current_scene(scene_id)
+    +bump_context_version()
+  }
+
+  class SceneRuntimeAggregate {
+    +id: str
+    +campaign_id: str
+    +scene_type: STANDARD | ENCOUNTER | REST | NARRATIVE
+    +available_encounter_ids: list[str]
+    +active_encounter_id: str | None
+    +activate_encounter(encounter_id)
+    +deactivate_encounter()
+  }
+
+  class EncounterLifecycleAggregate {
+    +id: str
+    +campaign_id: str
+    +scene_id: str
+    +phase: pre_combat | active | post_combat
+    +round_number: int
+    +active_actor_id: str | None
+    +start_combat()
+    +advance_turn()
+    +end_combat()
+  }
+
+  class LifecycleInvariants {
+    +scene_belongs_to_campaign(campaign_id, scene)
+    +encounter_belongs_to_scene(scene_id, encounter)
+    +only_one_active_encounter_per_scene(scene)
+    +encounter_phase_transition_allowed(current_phase, next_phase)
+  }
+}
+
+namespace ApplicationLayer {
+  class RuntimeHierarchyApplicationService {
+    +get_context(campaign_id)
+    +select_scene(campaign_id, scene_id)
+    +activate_encounter(campaign_id, scene_id, encounter_id)
+    +deactivate_encounter(campaign_id, scene_id)
+    +start_combat(campaign_id, scene_id, encounter_id)
+    +end_combat(campaign_id, scene_id, encounter_id)
+  }
+
+  class RuntimeHierarchyResult {
+    +status: ok | denied | error
+    +reason_code: str | None
+    +campaign_id: str
+    +scene_id: str | None
+    +encounter_id: str | None
+    +context_version: int | None
+  }
+}
+
+namespace PolicyLayer {
+  class RuntimeHierarchyAuthorizationPolicy {
+    +can_select_scene(user_role, campaign_membership)
+    +can_activate_encounter(user_role)
+    +can_start_combat(user_role)
+    +can_end_combat(user_role)
+  }
+
+  class RuntimeHierarchyTransitionPolicy {
+    +validate_scene_transition(campaign, target_scene)
+    +validate_encounter_activation(scene, encounter)
+    +validate_encounter_phase_transition(encounter, target_phase)
+  }
+}
+
+namespace RepositoryLayer {
+  class CampaignRepository {
+    +load_campaign(campaign_id)
+    +save_campaign(campaign)
+  }
+
+  class SceneRepository {
+    +load_scene(campaign_id, scene_id)
+    +list_scenes(campaign_id)
+    +save_scene(scene)
+  }
+
+  class EncounterRepository {
+    +load_active_encounter(campaign_id, scene_id)
+    +load_encounter(campaign_id, scene_id, encounter_id)
+    +save_encounter(encounter)
+  }
+
+  class UnitOfWork {
+    +begin()
+    +commit()
+    +rollback()
+  }
+}
+
+namespace TransportLayer {
+  class RuntimeHierarchyWsHandler {
+    +handle_select_scene(command)
+    +handle_activate_encounter(command)
+    +handle_start_combat(command)
+    +handle_end_combat(command)
+  }
+
+  class RuntimeHierarchyRouter {
+    +post_select_scene()
+    +post_activate_encounter()
+    +post_start_combat()
+    +post_end_combat()
+  }
+
+  class RuntimeHierarchyEventMapper {
+    +to_scene_selected_event(result)
+    +to_encounter_activated_event(result)
+    +to_combat_started_event(result)
+    +to_combat_ended_event(result)
+    +to_denied_event(result)
+  }
+}
+
+namespace EventContracts {
+  class SceneSelectedEvent {
+    +event_type: scene_selected
+    +campaign_id: str
+    +scene_id: str
+    +context_version: int
+    +request_id: str
+  }
+
+  class EncounterActivatedEvent {
+    +event_type: encounter_activated
+    +campaign_id: str
+    +scene_id: str
+    +encounter_id: str
+    +context_version: int
+    +request_id: str
+  }
+
+  class CombatLifecycleEvent {
+    +event_type: combat_started | combat_ended
+    +campaign_id: str
+    +scene_id: str
+    +encounter_id: str
+    +phase: pre_combat | active | post_combat
+    +round_number: int
+    +request_id: str
+  }
+
+  class CommandDeniedEvent {
+    +event_type: command_denied
+    +reason_code: str
+    +message: str
+    +request_id: str
+  }
+}
+
+namespace TestingAndGates {
+  class V01ContractTests {
+    +test_select_scene_contract()
+    +test_activate_encounter_contract()
+    +test_start_end_combat_contract()
+  }
+
+  class V01InvariantTests {
+    +test_single_active_encounter_per_scene()
+    +test_scene_campaign_ownership_constraint()
+    +test_phase_transition_rules()
+  }
+
+  class V01IntegrationTests {
+    +test_scene_to_encounter_flow_ws()
+    +test_scene_to_encounter_flow_rest()
+    +test_persistence_consistency_after_lifecycle_commands()
+  }
+
+  class V01CompletionGate {
+    +contracts_stable: bool
+    +ownership_clear: bool
+    +integration_green: bool
+    +drift_check_green: bool
+  }
+}
+
+RuntimeHierarchyApplicationService --> CampaignRepository : loads/saves
+RuntimeHierarchyApplicationService --> SceneRepository : loads/saves
+RuntimeHierarchyApplicationService --> EncounterRepository : loads/saves
+RuntimeHierarchyApplicationService --> UnitOfWork : transaction boundary
+
+RuntimeHierarchyApplicationService --> RuntimeHierarchyAuthorizationPolicy : authorize
+RuntimeHierarchyApplicationService --> RuntimeHierarchyTransitionPolicy : validate
+RuntimeHierarchyTransitionPolicy --> LifecycleInvariants : enforce
+
+RuntimeHierarchyWsHandler --> RuntimeHierarchyApplicationService : invoke
+RuntimeHierarchyRouter --> RuntimeHierarchyApplicationService : invoke
+RuntimeHierarchyEventMapper --> RuntimeHierarchyResult : map result
+RuntimeHierarchyEventMapper --> SceneSelectedEvent : emits
+RuntimeHierarchyEventMapper --> EncounterActivatedEvent : emits
+RuntimeHierarchyEventMapper --> CombatLifecycleEvent : emits
+RuntimeHierarchyEventMapper --> CommandDeniedEvent : emits
+
+CampaignRuntimeAggregate --> SceneRuntimeAggregate : contains [1..*]
+SceneRuntimeAggregate --> EncounterLifecycleAggregate : active [0..1]
+
+V01ContractTests --> RuntimeHierarchyApplicationService : verify contracts
+V01InvariantTests --> LifecycleInvariants : verify rules
+V01IntegrationTests --> RuntimeHierarchyWsHandler : verify ws flow
+V01IntegrationTests --> RuntimeHierarchyRouter : verify rest flow
+V01CompletionGate --> V01ContractTests : requires pass
+V01CompletionGate --> V01InvariantTests : requires pass
+V01CompletionGate --> V01IntegrationTests : requires pass

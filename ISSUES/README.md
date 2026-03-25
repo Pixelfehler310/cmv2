@@ -38,3 +38,7 @@ Vertical architecture track (high-level only):
 Planning policy:
 
 1. Deep child issues are created only for the currently active module.
+
+Execution playbook:
+
+1. `docs/architecture/shared/05_vertical_module_execution_plan.md`

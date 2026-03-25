@@ -8,6 +8,10 @@ Owner: Architecture
 This issue is the single control board for the vertical refactor program.
 It keeps sequencing, dependencies, risk, and completion criteria coherent while only one module is deepened at a time.
 
+Reference playbook:
+
+- docs/architecture/shared/05_vertical_module_execution_plan.md
+
 ## Scope
 
 In scope:
