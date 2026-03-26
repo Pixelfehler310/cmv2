@@ -1,0 +1,261 @@
+%% V02 Detailed Plan: Action Processing and Event Contracts
+%% Scope: Canonical event taxonomy, ordering, delivery semantics, and processing lifecycle
+%% Purpose: Completeness checklist for event coverage before V02 closure
+classDiagram
+
+namespace CommandIntakeLayer {
+  class ActionCommandEnvelope {
+    +request_id: str
+    +campaign_id: str
+    +scene_id: str
+    +actor_id: str
+    +action_id: str
+    +action_type_cost: action | bonus_action | reaction | move | free
+    +target_mode: explicit | area | self | derived
+    +target_payload: dict
+    +client_metadata: dict
+  }
+
+  class RequestValidationPolicy {
+    +validate_required_fields(command)
+    +validate_command_shape(command)
+    +validate_request_id_presence(command)
+    +deny_on_invalid_command(command)
+  }
+}
+
+namespace ProcessingPipeline {
+  class ActionProcessingPipeline {
+    +authorize(command)
+    +resolve_targets(command)
+    +plan_outcomes(command, targets)
+    +apply_immediate_outcomes(plan)
+    +materialize_deferred_outcomes(plan)
+    +finalize_result(command)
+  }
+
+  class TargetResolutionStage {
+    +resolve_explicit_targets(command)
+    +resolve_area_targets(command)
+    +resolve_derived_targets(command)
+    +snapshot_targets(request_id)
+  }
+
+  class TurnBudgetStage {
+    +validate_spend_window(actor, action_type)
+    +consume_budget(actor, action_type)
+    +publish_budget_snapshot(actor)
+  }
+
+  class OutcomeExecutionStage {
+    +emit_attack_or_save_outcomes(plan)
+    +emit_actor_state_outcomes(plan)
+    +emit_effect_lifecycle_outcomes(plan)
+  }
+
+  class EffectAndZoneStage {
+    +apply_effect_instances(plan)
+    +apply_zone_instances(plan)
+    +schedule_ticks(plan)
+    +resolve_expiry(plan)
+  }
+
+  class ConcentrationStage {
+    +start_concentration(actor, effect)
+    +replace_concentration(actor, new_effect)
+    +break_concentration(actor, reason)
+    +clear_expired_concentration(actor)
+  }
+
+  class ActionResultEnvelope {
+    +request_id: str
+    +status: resolved | denied | error
+    +reason_code: str | None
+    +state_revision: int
+    +state_checksum: str | None
+    +emitted_event_types: list[str]
+  }
+}
+
+namespace EventContracts {
+  class CommandEvents {
+    +action_authorized
+    +action_denied
+    +command_denied
+  }
+
+  class TargetingEvents {
+    +targets_resolved
+    +targets_denied
+  }
+
+  class CombatOutcomeEvents {
+    +attack_result
+    +save_result
+    +actor_damaged
+    +actor_healed
+    +actor_died
+    +actor_moved
+  }
+
+  class EffectLifecycleEvents {
+    +effect_applied
+    +effect_refreshed
+    +effect_tick_resolved
+    +effect_removed
+    +effect_denied
+  }
+
+  class ZoneLifecycleEvents {
+    +zone_created
+    +zone_tick_resolved
+    +zone_expired
+    +zone_removed
+  }
+
+  class ConcentrationEvents {
+    +concentration_started
+    +concentration_replaced
+    +concentration_check_required
+    +concentration_broken
+    +concentration_cleared
+  }
+
+  class TurnEvents {
+    +turn_advanced
+    +turn_budget_updated
+  }
+
+  class SyncAndRecoveryEvents {
+    +state_sync
+    +request_sync
+    +projection_resync_required
+  }
+}
+
+namespace DeliveryAndProjection {
+  class EventOrderingContract {
+    +enforce_authorize_before_outcomes(batch)
+    +enforce_target_resolution_before_effects(batch)
+    +enforce_tick_before_expire(batch)
+    +enforce_terminal_result_event(batch)
+  }
+
+  class DeliveryVisibilityPolicy {
+    +resolve_visibility(event_type, role)
+    +redact_payload_for_player(event)
+    +allow_full_payload_for_dm(event)
+  }
+
+  class WsEventPublisher {
+    +publish_event_batch(batch)
+    +attach_request_id(batch)
+    +attach_state_revision(batch)
+  }
+
+  class RestActionMapper {
+    +map_events_to_http_response(batch)
+    +provide_replay_metadata(batch)
+  }
+}
+
+namespace AuditAndRecovery {
+  class ActionAuditLog {
+    +request_id: str
+    +actor_id: str
+    +action_id: str
+    +status: resolved | denied | error
+    +reason_code: str | None
+    +checks: dict
+    +payload: dict
+  }
+
+  class EncounterCheckpoint {
+    +state_revision: int
+    +state_checksum: str
+    +encounter_state_json: dict
+    +save_checkpoint()
+    +restore_checkpoint()
+  }
+
+  class DriftRecoveryPolicy {
+    +detect_revision_gap(client_revision, server_revision)
+    +trigger_projection_resync(client_id)
+    +issue_state_sync(client_id)
+  }
+}
+
+namespace TestingAndGates {
+  class EventCoverageMatrix {
+    +all_required_events_documented: bool
+    +all_required_events_emittable: bool
+    +all_required_events_tested: bool
+    +concentration_events_complete: bool
+  }
+
+  class EventOrderingTests {
+    +test_authorized_before_outcomes()
+    +test_targets_resolved_before_effects()
+    +test_tick_before_expiry_ordering()
+    +test_terminal_result_contains_revision()
+  }
+
+  class EventParityTests {
+    +test_ws_rest_event_semantic_parity()
+    +test_denied_reason_parity()
+    +test_projection_visibility_parity()
+  }
+
+  class ReplayAndResyncTests {
+    +test_identical_input_identical_event_batch()
+    +test_revision_gap_triggers_resync()
+    +test_state_sync_restores_projection()
+  }
+
+  class V02EventContractGate {
+    +coverage_matrix_green: bool
+    +ordering_tests_green: bool
+    +parity_tests_green: bool
+    +replay_tests_green: bool
+  }
+}
+
+ActionCommandEnvelope --> RequestValidationPolicy : validate
+RequestValidationPolicy --> ActionProcessingPipeline : accepted command
+
+ActionProcessingPipeline --> TargetResolutionStage : resolve targets
+ActionProcessingPipeline --> TurnBudgetStage : validate/consume budget
+ActionProcessingPipeline --> OutcomeExecutionStage : execute immediate results
+ActionProcessingPipeline --> EffectAndZoneStage : execute deferred results
+EffectAndZoneStage --> ConcentrationStage : concentration transitions
+ActionProcessingPipeline --> ActionResultEnvelope : finalize status
+
+ActionProcessingPipeline --> CommandEvents : emits
+TargetResolutionStage --> TargetingEvents : emits
+OutcomeExecutionStage --> CombatOutcomeEvents : emits
+EffectAndZoneStage --> EffectLifecycleEvents : emits
+EffectAndZoneStage --> ZoneLifecycleEvents : emits
+ConcentrationStage --> ConcentrationEvents : emits
+TurnBudgetStage --> TurnEvents : emits
+
+EventOrderingContract --> CommandEvents : orders
+EventOrderingContract --> TargetingEvents : orders
+EventOrderingContract --> CombatOutcomeEvents : orders
+EventOrderingContract --> EffectLifecycleEvents : orders
+EventOrderingContract --> ZoneLifecycleEvents : orders
+EventOrderingContract --> ConcentrationEvents : orders
+EventOrderingContract --> TurnEvents : orders
+
+DeliveryVisibilityPolicy --> WsEventPublisher : controls payload visibility
+WsEventPublisher --> SyncAndRecoveryEvents : publishes recovery events
+RestActionMapper --> ActionResultEnvelope : maps response
+
+ActionProcessingPipeline --> ActionAuditLog : writes audit
+ActionProcessingPipeline --> EncounterCheckpoint : writes authoritative state
+DriftRecoveryPolicy --> EncounterCheckpoint : reads checkpoint
+DriftRecoveryPolicy --> SyncAndRecoveryEvents : triggers resync
+
+EventCoverageMatrix --> V02EventContractGate : requires pass
+EventOrderingTests --> V02EventContractGate : requires pass
+EventParityTests --> V02EventContractGate : requires pass
+ReplayAndResyncTests --> V02EventContractGate : requires pass
