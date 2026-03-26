@@ -11,15 +11,27 @@ namespace CommandIntakeLayer {
     +actor_id: str
     +action_id: str
     +action_type_cost: action | bonus_action | reaction | move | free
-    +target_mode: explicit | area | self | derived
-    +target_payload: dict
+    +operation_specs: list[ActionOperationEnvelope]
+    +command_context: dict
     +client_metadata: dict
+  }
+
+  class ActionOperationEnvelope {
+    +operation_id: str
+    +operation_kind: attack | save | damage | heal | condition | move | zone | summon | resource | custom
+    +effect_ref: str | None
+    +targeting_mode: explicit | area | self | derived | none
+    +target_payload: dict
+    +operation_payload: dict
+    +execution_phase: immediate | deferred | tick
+    +depends_on_operation_ids: list[str]
   }
 
   class RequestValidationPolicy {
     +validate_required_fields(command)
     +validate_command_shape(command)
     +validate_request_id_presence(command)
+    +validate_operation_specs(command)
     +deny_on_invalid_command(command)
   }
 }
@@ -27,18 +39,26 @@ namespace CommandIntakeLayer {
 namespace ProcessingPipeline {
   class ActionProcessingPipeline {
     +authorize(command)
-    +resolve_targets(command)
-    +plan_outcomes(command, targets)
+    +resolve_operation_targets(command)
+    +build_operation_graph(command)
+    +plan_outcomes(command, operation_graph)
     +apply_immediate_outcomes(plan)
     +materialize_deferred_outcomes(plan)
+    +schedule_tick_outcomes(plan)
     +finalize_result(command)
   }
 
   class TargetResolutionStage {
-    +resolve_explicit_targets(command)
-    +resolve_area_targets(command)
-    +resolve_derived_targets(command)
-    +snapshot_targets(request_id)
+    +resolve_explicit_targets(operation)
+    +resolve_area_targets(operation)
+    +resolve_derived_targets(operation)
+    +snapshot_targets_for_operation(request_id, operation_id)
+  }
+
+  class OperationGraphStage {
+    +build_operation_graph(command)
+    +validate_operation_dependencies(graph)
+    +linearize_execution_order(graph)
   }
 
   class TurnBudgetStage {
@@ -48,21 +68,22 @@ namespace ProcessingPipeline {
   }
 
   class OutcomeExecutionStage {
-    +emit_attack_or_save_outcomes(plan)
-    +emit_actor_state_outcomes(plan)
-    +emit_effect_lifecycle_outcomes(plan)
+    +execute_operation(operation)
+    +emit_operation_outcomes(operation)
+    +emit_actor_state_outcomes(operation)
+    +emit_effect_lifecycle_outcomes(operation)
   }
 
   class EffectAndZoneStage {
-    +apply_effect_instances(plan)
-    +apply_zone_instances(plan)
-    +schedule_ticks(plan)
-    +resolve_expiry(plan)
+    +apply_effect_instances(operation)
+    +apply_zone_instances(operation)
+    +schedule_ticks(operation)
+    +resolve_expiry(operation)
   }
 
   class ConcentrationStage {
-    +start_concentration(actor, effect)
-    +replace_concentration(actor, new_effect)
+    +start_concentration(actor, operation)
+    +replace_concentration(actor, operation)
     +break_concentration(actor, reason)
     +clear_expired_concentration(actor)
   }
@@ -73,6 +94,8 @@ namespace ProcessingPipeline {
     +reason_code: str | None
     +state_revision: int
     +state_checksum: str | None
+    +resolved_operation_ids: list[str]
+    +denied_operation_ids: list[str]
     +emitted_event_types: list[str]
   }
 }
@@ -84,9 +107,16 @@ namespace EventContracts {
     +command_denied
   }
 
+  class OperationEvents {
+    +operation_graph_built
+    +operation_planned
+    +operation_resolved
+    +operation_denied
+  }
+
   class TargetingEvents {
-    +targets_resolved
-    +targets_denied
+    +operation_targets_resolved
+    +operation_targets_denied
   }
 
   class CombatOutcomeEvents {
@@ -136,7 +166,9 @@ namespace EventContracts {
 namespace DeliveryAndProjection {
   class EventOrderingContract {
     +enforce_authorize_before_outcomes(batch)
+    +enforce_operation_planning_before_execution(batch)
     +enforce_target_resolution_before_effects(batch)
+    +enforce_operation_dependency_order(batch)
     +enforce_tick_before_expire(batch)
     +enforce_terminal_result_event(batch)
   }
@@ -191,11 +223,14 @@ namespace TestingAndGates {
     +all_required_events_emittable: bool
     +all_required_events_tested: bool
     +concentration_events_complete: bool
+    +operation_graph_events_complete: bool
   }
 
   class EventOrderingTests {
     +test_authorized_before_outcomes()
+    +test_operation_graph_planned_before_operation_execution()
     +test_targets_resolved_before_effects()
+    +test_operation_dependency_ordering()
     +test_tick_before_expiry_ordering()
     +test_terminal_result_contains_revision()
   }
@@ -221,9 +256,11 @@ namespace TestingAndGates {
 }
 
 ActionCommandEnvelope --> RequestValidationPolicy : validate
+ActionCommandEnvelope --> ActionOperationEnvelope : contains [1..*]
 RequestValidationPolicy --> ActionProcessingPipeline : accepted command
 
 ActionProcessingPipeline --> TargetResolutionStage : resolve targets
+ActionProcessingPipeline --> OperationGraphStage : build operation graph
 ActionProcessingPipeline --> TurnBudgetStage : validate/consume budget
 ActionProcessingPipeline --> OutcomeExecutionStage : execute immediate results
 ActionProcessingPipeline --> EffectAndZoneStage : execute deferred results
@@ -231,6 +268,7 @@ EffectAndZoneStage --> ConcentrationStage : concentration transitions
 ActionProcessingPipeline --> ActionResultEnvelope : finalize status
 
 ActionProcessingPipeline --> CommandEvents : emits
+OperationGraphStage --> OperationEvents : emits
 TargetResolutionStage --> TargetingEvents : emits
 OutcomeExecutionStage --> CombatOutcomeEvents : emits
 EffectAndZoneStage --> EffectLifecycleEvents : emits
@@ -239,6 +277,7 @@ ConcentrationStage --> ConcentrationEvents : emits
 TurnBudgetStage --> TurnEvents : emits
 
 EventOrderingContract --> CommandEvents : orders
+EventOrderingContract --> OperationEvents : orders
 EventOrderingContract --> TargetingEvents : orders
 EventOrderingContract --> CombatOutcomeEvents : orders
 EventOrderingContract --> EffectLifecycleEvents : orders

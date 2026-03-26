@@ -3,40 +3,48 @@
 Status: Draft for Planning
 Related module issue: ISSUE [VERT][V02]
 Related playbook: docs/architecture/shared/05_vertical_module_execution_plan.md
-Related diagram: V02_combat_actions_detailed_plan.mmd
+Related diagrams:
+
+- V02_combat_actions_detailed_plan.mmd
+- V02_action_processing_and_event_contracts_detailed_plan.mmd
 
 Detailed issue set (proposed for activation window):
 
 - ISSUE [VERT][V02-01] action_contract_and_denied_taxonomy_freeze
 - ISSUE [VERT][V02-02] turn_budget_ownership_and_spend_rules
-- ISSUE [VERT][V02-03] target_resolution_and_snapshot_contract_lock
-- ISSUE [VERT][V02-04] application_orchestration_for_action_execution
+- ISSUE [VERT][V02-03] operation_targeting_and_snapshot_contract_lock
+- ISSUE [VERT][V02-04] operation_graph_orchestration_for_action_execution
 - ISSUE [VERT][V02-05] ws_rest_contract_convergence_for_combat_actions
-- ISSUE [VERT][V02-06] effect_lifecycle_zone_tick_and_concentration_policy_lock
+- ISSUE [VERT][V02-06] effect_zone_and_concentration_lifecycle_policy_lock
 - ISSUE [VERT][V02-07] action_execution_tests_matrix_and_completion_gate
 
 ## What V02 Is Trying to Achieve
 
 V02 stabilizes the combat execution core after V01 lifecycle authority is in place.
-It makes action resolution, turn budget spending, and effect lifecycle semantics deterministic and machine-readable.
+
+The architecture is now explicitly operation-graph based:
+
+1. One action command contains multiple operations.
+2. Each operation can have its own targeting mode.
+3. Any operation can produce one or more effect outcomes.
+4. Execution order is deterministic and dependency-aware.
 
 ## Why V02 Follows V01
 
 1. V02 relies on V01 scene and combat lifecycle invariants to define legal action windows.
 2. Action and effect correctness cannot be made reliable while scene and combat ownership are ambiguous.
-3. A stable deny taxonomy in V02 reduces projection drift in V06 and frontend state handling.
+3. Stable operation-level contracts in V02 reduce projection drift in V06 and frontend state handling.
 
 ## Boundaries of V02
 
 In scope:
 
-1. Action execution request and outcome contracts.
-2. Target resolution contracts for explicit targets, area targets, and derived targets.
+1. Action command contracts with operation_specs list.
+2. Operation-level target resolution contracts for explicit, area, self, derived, and none targeting modes.
 3. Turn economy budget ownership and spend semantics.
-3. Effect apply, tick, concentration, expire, and removal semantics.
-4. Zone effect lifecycle semantics for area-based persistent effects.
-5. Stable deny reason-code taxonomy for combat action and effect transitions.
-6. WS and REST parity for combat action execution paths.
+4. Effect, zone, concentration, tick, expire, and removal semantics.
+5. Stable deny reason-code taxonomy for command, operation, targeting, and effect transitions.
+6. WS and REST parity for operation-graph execution outcomes.
 
 Out of scope:
 
@@ -47,11 +55,11 @@ Out of scope:
 ## Core Ownership Decisions to Lock
 
 1. Single-writer ownership for turn budget mutation.
-2. Single authoritative path for action execution and outcome creation.
-3. Single authoritative path for effect state transitions.
-4. Concentration ownership and interruption semantics.
-5. Event mapping ownership for combat action/effect events.
-6. Deterministic target snapshot ownership for each execute-action request.
+2. Single authoritative path for action command orchestration.
+3. Single authoritative path for operation graph planning and ordering.
+4. Single authoritative path for effect and zone lifecycle transitions.
+5. Concentration ownership and interruption semantics.
+6. Deterministic operation-target snapshot ownership for each request_id and operation_id.
 
 ## Target Runtime and Service Structure
 
@@ -60,45 +68,57 @@ Domain runtime targets:
 1. Combat encounter runtime with active actor and round state.
 2. Actor runtime with concentration and reaction state.
 3. Turn budget runtime per actor-turn.
-4. Effect instance runtime with explicit lifecycle state and reason codes.
-5. Target snapshot runtime state per action request.
-6. Zone effect runtime state for persistent area effects.
+4. Operation target snapshot runtime state per request and operation.
+5. Effect instance and zone runtime state with explicit lifecycle semantics.
 
 Application targets:
 
 1. ActionExecutionApplicationService orchestrates command handling.
-2. Service enforces deterministic read-validate-mutate-map flow.
-3. Service returns stable result envelopes for WS and REST mappers.
-4. Service handles multi-result actions through a result planning stage (immediate plus deferred outcomes).
+2. Service enforces deterministic authorize -> resolve -> plan -> execute -> map flow.
+3. Service builds a validated operation graph before execution.
+4. Service returns stable event/result envelopes for WS and REST mappers.
 
 Policy targets:
 
-1. Authorization policy for action and turn-level commands.
+1. Authorization policy for command and turn-level authority.
 2. Turn economy policy for budget and reaction gating.
-3. Target resolution policy for area and explicit target determination.
-4. Effect lifecycle policy for apply/tick/remove/concentration decisions.
+3. Operation target resolution policy for each operation node.
+4. Operation execution policy for dependencies and phase validity.
+5. Effect lifecycle policy for apply, stack, tick, remove, and concentration decisions.
 
-## Detailed Execute-Action Pipeline (Target Flow and Multi-Result Outcomes)
-
-The execute-action path should be explicit and deterministic. It is the orchestration entrypoint, but not the place where all rule semantics are hardcoded inline.
+## Detailed Execute-Action Pipeline (Operation Graph Model)
 
 ### Step A: Request Intake and Authorization
 
-1. Validate transport contract fields and request correlation id.
-2. Authorize actor command rights.
-3. Validate turn window and spend availability.
+1. Validate command envelope fields.
+2. Validate operation_specs shape and request_id.
+3. Authorize actor command rights.
+4. Validate turn window and spend availability.
 
 Expected denied examples:
 
 - not_active_actor
 - insufficient_budget
 - reaction_window_closed
+- invalid_operation_specs
 
-### Step B: Target Resolution
+### Step B: Operation Graph Build
 
-1. Resolve target mode: explicit, area, self, or derived.
-2. Validate geometry/range/line-of-effect constraints for area requests.
-3. Produce a deterministic target snapshot object bound to request_id.
+1. Build operation dependency graph.
+2. Validate references and reject cycles.
+3. Produce deterministic linearized operation order.
+
+Expected denied examples:
+
+- operation_dependency_cycle
+- operation_dependency_missing
+- operation_kind_invalid
+
+### Step C: Per-Operation Target Resolution
+
+1. Resolve targets independently for each operation.
+2. Apply range, geometry, line-of-effect, and policy checks per operation.
+3. Persist deterministic operation target snapshots.
 
 Expected denied examples:
 
@@ -107,101 +127,98 @@ Expected denied examples:
 - blocked_line_of_effect
 - no_valid_targets
 
-### Step C: Action Result Planning
+### Step D: Result Planning
 
-1. Build an ActionResultPlan that separates immediate outcomes from deferred outcomes.
-2. Immediate outcomes can include direct damage/heal and immediate conditions.
-3. Deferred outcomes include persistent effects and zone-effect instances.
-4. Define deterministic execution ordering in the plan.
+1. Build ActionResultPlan from operation graph.
+2. Separate immediate, deferred, and tick operations.
+3. Freeze deterministic execution order in plan output.
 
-### Step D: Immediate Application
+### Step E: Immediate Operation Execution
 
-1. Spend budget exactly once.
-2. Apply immediate outcomes in planned order.
-3. Persist actor and encounter deltas.
+1. Spend budget exactly once for the command.
+2. Execute immediate operations in graph order.
+3. Emit operation-level outcome events.
+4. Persist actor and encounter deltas.
 
-### Step E: Deferred Materialization
+### Step F: Deferred and Tick Materialization
 
-1. Create effect instances and zone instances.
-2. Attach concentration ownership if required.
-3. Emit lifecycle events for created runtime artifacts.
+1. Materialize deferred operation effects.
+2. Create/refresh zone instances and scheduled ticks.
+3. Emit effect and zone lifecycle events.
 
-### Step F: Tick-Time Runtime Processing
+### Step G: Concentration and Removal Flow
 
-1. Before each tick, recompute zone occupancy.
-2. Apply per-tick and threshold rules in deterministic actor order.
-3. For remain-in-zone policies, track entry turn and full-turn thresholds.
-4. Expire/remove instances using canonical reason codes.
+1. Apply concentration ownership rules per operation output.
+2. Handle concentration replacement deterministically.
+3. Emit concentration lifecycle events and linked effect removals.
 
-### Step G: Result Mapping
+### Step H: Finalization and Mapping
 
-1. Return one stable result envelope.
-2. Emit stable event sequence with request_id correlation.
-3. Keep mapper logic translation-only (no gameplay decisions).
+1. Return stable action result envelope.
+2. Emit deterministic event sequence with request_id and operation_id correlations.
+3. Include state_revision metadata for drift detection and replay.
 
-## Multi-Result Action Example (Smoke Zone)
+## Multi-Result Action Example (Smoke Plus Damage Plus Delayed Sleep)
 
-Example behavior to support in V02:
+Example behavior in operation-graph model:
 
-1. Action creates a smoke zone in an area.
-2. Action applies immediate damage to occupants in initial target snapshot.
-3. Zone persists for N turns as a runtime instance.
-4. Each tick recomputes occupants and applies either:
-   - delayed sleep after full-turn remain threshold, or
-   - periodic tick damage.
-5. Zone expires or is removed (expiry, concentration break, dispel, overwrite).
+1. Operation A: zone_create with area targeting.
+2. Operation B: immediate_damage targeting occupants in initial area snapshot.
+3. Operation C: delayed_sleep targeting occupants who satisfy remain threshold.
+4. Operation D: periodic_damage tick operation (alternative to sleep branch).
 
-This behavior should be represented as one execute-action command with multiple planned outcomes, not multiple ad-hoc command paths.
+All operations belong to one action request and are ordered via dependency graph semantics.
 
 ## Phase Plan for V02 (Using the Playbook)
 
 ### P0 Alignment and Baseline
 
-1. Confirm current action execution paths and where budget/effects mutate today.
-2. Confirm existing denied reasons and event payload variants.
+1. Confirm current action execution paths and mutation ownership.
+2. Confirm existing event payload variants and deny reasons.
 3. Capture baseline deterministic and non-deterministic scenarios.
 
 Exit signal:
 
-- Team agrees on exact V02 scope, risk list, and baseline behavior matrix.
+- Team agrees on operation-graph scope and baseline risk matrix.
 
 ### P1 Contract and Denied Taxonomy Freeze
 
-1. Define execute-action contract inputs and outputs.
-2. Define target-resolution contract payloads and snapshot shape.
-3. Define deny reason-code taxonomy with stable machine-readable values.
-4. Freeze event payload requirements for action, targets, zones, budget, and effect lifecycle events.
+1. Define execute-action command envelope with operation_specs contract.
+2. Define operation-level target snapshot and lifecycle contract.
+3. Define deny reason taxonomy for command, operation, target, and effect families.
+4. Freeze event payload requirements across operation lifecycle phases.
 
 Exit signal:
 
-- Action contracts and denied taxonomy are stable enough for implementation.
+- Operation-graph contracts and denied taxonomy are stable enough for implementation.
 
 ### P2 Ownership and Persistence Boundaries
 
-1. Map all budget fields to one write authority.
-2. Map all effect lifecycle transitions to one write authority.
-3. Remove or flag ambiguous mutation paths.
+1. Map budget fields to one write authority.
+2. Map operation graph planning and ordering fields to one write authority.
+3. Map effect and zone lifecycle transitions to one write authority.
+4. Remove or flag ambiguous mutation paths.
 
 Exit signal:
 
-- No unresolved multi-writer state for budget or effects.
+- No unresolved multi-writer state for budget, operation graph, or effects.
 
 ### P3 Policy Consolidation
 
 1. Implement turn economy policy with explicit spend and reaction rules.
-2. Implement target resolution policy with explicit area/derived semantics.
-3. Implement effect lifecycle policy with concentration, stacking, and zone tick behavior.
-4. Verify invariant coverage for budget/target/effect transitions.
+2. Implement operation target resolution policy for each operation mode.
+3. Implement operation execution policy with dependency and phase rules.
+4. Implement effect lifecycle policy with concentration and zone tick behavior.
 
 Exit signal:
 
-- Policy layer is complete for target V02 scenarios with stable reason codes.
+- Policy layer is complete for operation-graph scenarios with stable reason codes.
 
 ### P4 Application Orchestration
 
-1. Route action execution through one application orchestration path.
-2. Ensure deterministic sequencing: authorize -> validate -> mutate -> map.
-3. Ensure result envelope consistency for both success and denied outcomes.
+1. Route command execution through one operation-graph orchestration path.
+2. Ensure deterministic sequencing: authorize -> graph -> targets -> execute -> map.
+3. Ensure result envelope consistency for resolved and denied outcomes.
 
 Exit signal:
 
@@ -209,8 +226,8 @@ Exit signal:
 
 ### P5 Transport and Interface Convergence
 
-1. Align WS and REST handlers to the same action execution contracts.
-2. Ensure request_id correlation and deterministic event emission.
+1. Align WS and REST handlers to same operation-graph contracts.
+2. Ensure request_id and operation_id correlation and deterministic event emission.
 3. Validate mappers emit only stable contract fields.
 
 Exit signal:
@@ -219,10 +236,10 @@ Exit signal:
 
 ### P6 Test Matrix and Determinism Hardening
 
-1. Contract tests for execute-action, targets-resolved, zone lifecycle, and deny taxonomy.
-2. ActionExecutionTests suite for multi-result action orchestration behavior.
-3. Invariant tests for budget spend, reaction windows, target snapshot stability, concentration, and lifecycle order.
-4. Integration tests for action->target->effect->zone flows across rounds and transport paths.
+1. Contract tests for command, operation lifecycle, and deny taxonomy.
+2. ActionExecutionTests suite for multi-operation orchestration behavior.
+3. Invariant tests for budget, operation snapshot stability, concentration, and lifecycle order.
+4. Integration tests for command -> operation -> effect -> zone flows across rounds and transport paths.
 5. Replay tests for deterministic outcomes under identical inputs.
 
 Exit signal:
@@ -241,87 +258,80 @@ Exit signal:
 
 ## Recommended Initial Child-Issue Cut (When V02 Is Activated)
 
-1. V02-01 Action Contract and Denied Taxonomy Freeze.
+1. V02-01 Action Command and Denied Taxonomy Freeze.
 2. V02-02 Turn Budget Ownership and Spend Rules.
-3. V02-03 Target Resolution and Snapshot Contract Lock.
-4. V02-04 Application Orchestration for Action Execution.
+3. V02-03 Operation Targeting and Snapshot Contract Lock.
+4. V02-04 Operation Graph Orchestration for Action Execution.
 5. V02-05 WS and REST Contract Convergence for Combat Actions.
-6. V02-06 Effect Lifecycle, Zone Tick Semantics, and Concentration Policy Lock.
+6. V02-06 Effect, Zone, and Concentration Lifecycle Policy Lock.
 7. V02-07 ActionExecutionTests Matrix and Completion Gate.
 
 ## Detailed Test Planning: ActionExecutionTests
 
-The ActionExecutionTests suite should be planned as a first-class module gate, not a small add-on. Its purpose is to validate end-to-end orchestration semantics at service level with deterministic replay.
+The ActionExecutionTests suite is a first-class completion gate.
 
-### A. Execute-Action Contract and Shape Tests
+### A. Command and Operation Contract Tests
 
-1. accepted_minimal_action_returns_stable_shape
-2. denied_action_returns_machine_readable_reason
-3. execute_action_response_contains_spent_budget_and_effect_refs
-4. execute_action_response_preserves_request_id_correlation
+1. action_command_requires_non_empty_operation_specs
+2. operation_entry_requires_operation_id_and_kind
+3. operation_event_payload_contains_operation_id
+4. denied_reason_is_machine_readable
 
-### B. Target Flow Tests
+### B. Operation Graph Tests
 
-1. explicit_targets_resolve_in_stable_actor_order
-2. area_targets_resolve_with_expected_geometry_rules
-3. derived_targets_resolve_from_context_without_transport_side_logic
-4. target_snapshot_is_stable_for_same_request_replay
+1. operation_graph_linearization_deterministic
+2. operation_dependency_cycle_rejected
+3. operation_dependency_missing_rejected
+4. operation_phase_validation_enforced
+
+### C. Operation Targeting Tests
+
+1. explicit_target_operation_resolves_deterministically
+2. area_target_operation_resolves_with_geometry_rules
+3. derived_target_operation_resolves_from_context
+4. per_operation_target_snapshot_stable_on_replay
 5. invalid_target_spec_denies_before_mutation
 
-### C. Multi-Result Planning Tests
+### D. Multi-Operation Execution Tests
 
-1. action_with_immediate_damage_and_zone_creation_generates_two_result_phases
-2. result_plan_order_is_deterministic_for_same_input
-3. budget_is_spent_once_even_with_multiple_results
-4. partial_result_application_is_not_allowed_on_denied_paths
+1. single_action_executes_multiple_operation_kinds
+2. immediate_and_deferred_operations_obey_graph_order
+3. budget_spent_once_for_multi_operation_action
+4. operation_denial_does_not_corrupt_unrelated_operations
 
-### D. Zone Lifecycle and Tick Tests
+### E. Effect, Zone, and Concentration Tests
 
-1. zone_created_event_emitted_on_materialization
+1. zone_created_event_emitted_from_zone_operation
 2. zone_occupancy_recomputed_before_tick_effects
-3. remain_in_zone_for_full_turn_triggers_delayed_sleep
-4. tick_damage_applies_only_to_current_occupants
-5. zone_expires_with_canonical_reason_code
-
-### E. Concentration Interaction Tests
-
-1. concentration_break_removes_linked_zone_effects
-2. concentration_switch_replaces_prior_concentration_effect
-3. concentration_drop_reason_propagates_to_lifecycle_event
+3. concentration_replaced_emits_remove_then_start
+4. concentration_broken_removes_linked_effects
+5. zone_and_effect_expiry_order_deterministic
 
 ### F. Determinism and Replay Tests
 
-1. identical_inputs_identical_outputs_and_event_order
-2. actor_iteration_order_stable_during_area_tick
+1. identical_inputs_identical_operation_event_sequence
+2. actor_iteration_order_stable_during_tick_operations
 3. denied_reason_stable_for_same_invalid_input
-4. cross-transport parity_ws_vs_rest_same_semantics
+4. cross_transport_parity_ws_vs_rest_same_semantics
 
-### G. Negative and Edge-Case Tests
-
-1. no_valid_targets_denies_without_budget_spend
-2. target_out_of_range_denies_without_side_effects
-3. blocked_line_of_effect_denies_without_zone_creation
-4. overlapping_zones_apply_policy_defined_resolution_order
-5. zone_and_effect_expire_in_same_tick_follow_defined_order
-
-### H. Completion Criteria for ActionExecutionTests
+### G. Completion Criteria for ActionExecutionTests
 
 1. All critical behavior families above have passing deterministic tests.
-2. At least one canonical smoke-style scenario is covered in ws and rest integrations.
+2. At least one smoke-style multi-operation scenario is covered in ws and rest integrations.
 3. Flakiness rate remains zero across repeated seeded runs.
 4. All denied paths prove no unauthorized mutation side effects.
 
 Planning status:
 
-- Target architecture now includes explicit target flow and zone lifecycle planning.
-- Test strategy now includes dedicated ActionExecutionTests planning as a primary completion gate.
+- Target architecture now models action execution as operation graph with per-operation targeting.
+- Event and processing docs are aligned to operation-level semantics.
 - Next step is activation of V02 in the V00 board, then decomposition into child issues.
 
 ## Verification Commands (Draft)
 
-1. docker compose --profile test run --rm backend-test pytest tests -k "combat and action" -q
-2. docker compose --profile test run --rm backend-test pytest tests -k "action and target" -q
-3. docker compose --profile test run --rm backend-test pytest tests -k "effect and zone" -q
-4. docker compose --profile test run --rm backend-test pytest tests -k "deterministic and replay" -q
-5. docker compose --profile test run --rm -e PYTHONPATH=/app backend-test python scripts/generate_types.py --check
-6. docker compose logs backend --tail=200
+1. docker compose --profile test run --rm backend-test pytest tests -k "request_action and operation" -q
+2. docker compose --profile test run --rm backend-test pytest tests -k "target and operation" -q
+3. docker compose --profile test run --rm backend-test pytest tests -k "effect and concentration" -q
+4. docker compose --profile test run --rm backend-test pytest tests -k "graph and ordering" -q
+5. docker compose --profile test run --rm backend-test pytest tests -k "deterministic and replay" -q
+6. docker compose --profile test run --rm -e PYTHONPATH=/app backend-test python scripts/generate_types.py --check

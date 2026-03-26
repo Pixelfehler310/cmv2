@@ -10,89 +10,110 @@ Related architecture docs:
 
 ## Why This Document Exists
 
-V02 already defines combat action architecture, but event completeness needs a dedicated contract artifact.
+V02 now treats actions as generic operation graphs instead of single-target command shapes.
 
-This document is the canonical checklist for:
+This document is the canonical contract for:
 
-1. Which events must exist for action processing.
-2. What each event must contain.
-3. How events must be ordered.
-4. How concentration and effect lifecycle transitions must be represented.
-5. How to detect and recover projection drift.
+1. Multi-operation action processing semantics.
+2. Per-operation targeting and effect execution.
+3. Event taxonomy and ordering.
+4. Concentration, zone, and tick lifecycle representation.
+5. Drift recovery and projection resync policy.
 
-## Design Decision
+## Core Architecture Shift (Mandatory)
 
-Primary transport model for V02:
+Previous assumption:
 
-1. Event-first command output (granular domain events).
-2. Authoritative backend encounter state persisted each command.
-3. Snapshot sync for connect/resync/recovery, not per-action full-state push.
+1. One action had one dominant targeting mode.
+2. Effects were secondary by-products.
 
-Rationale:
+New mandatory assumption:
 
-1. Event streams are human-readable for logs and debugging.
-2. Event streams support deterministic replay and contract testing.
-3. Full-state-only per action is noisy and hides intent semantics.
+1. One action is a container for one or more operations.
+2. Each operation has its own targeting mode and payload.
+3. Any operation can produce one or more effect outcomes.
+4. Operation execution order is explicit and deterministic.
+
+## Generic Action Graph Model
+
+### Action Command Envelope
+
+A command must carry:
+
+1. request_id, campaign_id, scene_id, actor_id, action_id, action_type_cost.
+2. operation_specs as a non-empty list.
+3. command_context for optional global action metadata.
+
+### Operation Envelope
+
+Each operation must carry:
+
+1. operation_id.
+2. operation_kind.
+3. effect_ref optional.
+4. targeting_mode.
+5. target_payload.
+6. operation_payload.
+7. execution_phase (immediate, deferred, tick).
+8. depends_on_operation_ids.
+
+### Design Consequence
+
+Targeting is no longer an action-level singleton.
+Targeting is operation-local and can vary inside a single action execution.
 
 ## Action Processing Lifecycle (Canonical)
 
-### Stage A: Command Intake
+### Stage A: Intake and Validation
 
-1. Validate command envelope shape.
-2. Require request_id for command-class events.
-3. Reject malformed payloads before any state mutation.
+1. Validate command envelope.
+2. Validate operation list shape.
+3. Validate request_id and contract requirements.
+4. Deny malformed command before any mutation.
 
-### Stage B: Authorization and Budget Gate
+### Stage B: Authorization and Budget
 
-1. Validate actor existence and ownership.
-2. Validate active-turn authority and alive-state.
-3. Validate action economy spend availability.
-4. Emit denial terminal event on failure.
+1. Validate actor authority and active turn.
+2. Validate action economy window.
+3. Reserve budget once for the command.
+4. Emit denial terminal event when blocked.
 
-### Stage C: Target Resolution
+### Stage C: Operation Graph Build
 
-1. Resolve explicit, area, self, or derived targets.
-2. Validate range/line-of-effect/template constraints.
-3. Build deterministic target snapshot bound to request_id.
-4. Emit targets_resolved or targets_denied.
+1. Build dependency graph from operation_specs.
+2. Validate dependency references and cycles.
+3. Produce deterministic linearized execution order.
 
-### Stage D: Outcome Planning
+### Stage D: Per-Operation Target Resolution
 
-1. Split immediate outcomes from deferred outcomes.
-2. Define deterministic execution ordering.
-3. Reserve budget spend exactly once.
+1. Resolve targets independently for each operation.
+2. Snapshot targets per operation and request_id.
+3. Emit operation_targets_resolved or operation_targets_denied.
 
-### Stage E: Immediate Outcome Execution
+### Stage E: Per-Operation Execution
 
-1. Emit attack_result or save_result when applicable.
-2. Emit actor_damaged and actor_healed as needed.
-3. Emit actor_died where state transition crosses death threshold.
-4. Emit actor_moved where movement side effects occur.
+1. Execute immediate operations in graph order.
+2. Emit operation_resolved or operation_denied.
+3. Emit actor-impact and combat outcome events.
 
-### Stage F: Deferred Effect and Zone Execution
+### Stage F: Deferred and Tick Scheduling
 
-1. Apply or refresh effect instances.
-2. Create zone instances for area persistence.
+1. Materialize deferred effects and zones.
+2. Register tick operations and removal triggers.
 3. Emit effect and zone lifecycle events.
 
 ### Stage G: Concentration Lifecycle
 
-1. Emit concentration_started when concentration begins.
-2. Emit concentration_replaced when previous concentration is superseded.
-3. Emit concentration_check_required on damage-triggered checks.
-4. Emit concentration_broken when concentration fails.
-5. Emit concentration_cleared when effect expires or is removed.
+1. Start, replace, break, and clear concentration through operation semantics.
+2. Emit concentration events as first-class lifecycle events.
 
 ### Stage H: Finalization and Projection
 
-1. Emit turn_budget_updated when budget-affecting action completes.
-2. Emit terminal action result envelope semantics (resolved or denied).
-3. Persist state checkpoint and audit log.
-4. Attach state_revision and request correlation metadata.
+1. Emit turn_budget_updated with post-command budget snapshot.
+2. Emit terminal result envelope with revision and operation coverage.
+3. Persist authoritative state and audit log.
 
 ## Canonical Event Taxonomy
-
-The following groups are mandatory for V02 event completeness.
 
 ### Group 1: Command Events
 
@@ -100,12 +121,19 @@ The following groups are mandatory for V02 event completeness.
 2. action_denied
 3. command_denied
 
-### Group 2: Targeting Events
+### Group 2: Operation Graph Events
 
-1. targets_resolved
-2. targets_denied
+1. operation_graph_built
+2. operation_planned
+3. operation_resolved
+4. operation_denied
 
-### Group 3: Combat Outcome Events
+### Group 3: Targeting Events
+
+1. operation_targets_resolved
+2. operation_targets_denied
+
+### Group 4: Combat Outcome Events
 
 1. attack_result
 2. save_result
@@ -114,7 +142,7 @@ The following groups are mandatory for V02 event completeness.
 5. actor_died
 6. actor_moved
 
-### Group 4: Effect Lifecycle Events
+### Group 5: Effect Lifecycle Events
 
 1. effect_applied
 2. effect_refreshed
@@ -122,14 +150,14 @@ The following groups are mandatory for V02 event completeness.
 4. effect_removed
 5. effect_denied
 
-### Group 5: Zone Lifecycle Events
+### Group 6: Zone Lifecycle Events
 
 1. zone_created
 2. zone_tick_resolved
 3. zone_expired
 4. zone_removed
 
-### Group 6: Concentration Events
+### Group 7: Concentration Events
 
 1. concentration_started
 2. concentration_replaced
@@ -137,12 +165,12 @@ The following groups are mandatory for V02 event completeness.
 4. concentration_broken
 5. concentration_cleared
 
-### Group 7: Turn and Budget Events
+### Group 8: Turn and Budget Events
 
 1. turn_advanced
 2. turn_budget_updated
 
-### Group 8: Sync and Recovery Events
+### Group 9: Sync and Recovery Events
 
 1. state_sync
 2. request_sync
@@ -158,76 +186,88 @@ Every command-derived event must include:
 4. state_revision
 5. event_type
 
-Recommended required fields by event family:
+Every operation-derived event must also include:
+
+1. operation_id
+2. operation_kind
+3. execution_phase
+
+Recommended fields:
 
 1. Actor-impact events include actor_id and source_actor_id where applicable.
 2. Effect events include effect_id and effect_instance_id where applicable.
-3. Target events include target_mode and resolved_target_ids.
-4. Denied events include reason_code and machine-readable denial family.
+3. Target events include targeting_mode and resolved_target_ids.
+4. Denied events include reason_code and denial family.
 
 ## Event Ordering Contract
 
-Canonical ordering rules for a single command batch:
+Canonical ordering rules for one command batch:
 
-1. action_authorized must appear before any success outcome events.
-2. targets_resolved must appear before effect_applied or zone_created.
-3. effect_tick_resolved must appear before effect_removed(expired).
-4. concentration_replaced must include removal semantics before new concentration_started.
-5. turn_budget_updated must represent post-mutation budget snapshot.
-6. Terminal denied events must be the only terminal outcome for denied commands.
+1. action_authorized before any operation_resolved.
+2. operation_graph_built before operation_planned.
+3. operation_planned before operation_resolved.
+4. operation_targets_resolved before effect_applied for the same operation_id.
+5. Operation dependency order must be respected.
+6. effect_tick_resolved before effect_removed(expired).
+7. concentration_replaced must emit prior removal semantics before new concentration_started.
+8. turn_budget_updated must represent post-mutation budget state.
+9. Denied commands emit exactly one terminal denial path.
 
 ## Visibility and Projection Rules
 
-1. DM projection receives full event payloads.
-2. Player projection applies redaction policy where needed.
-3. Spectator projection follows player-safe subset.
-4. Visibility filtering must not alter event semantic meaning.
+1. DM receives full payloads.
+2. Player receives redacted payloads where required.
+3. Spectator follows player-safe subset.
+4. Redaction must not change event semantics or ordering.
 
 ## Drift Detection and Resync Policy
 
 1. Every command batch increments state_revision.
 2. Clients detect revision gaps.
 3. Gaps trigger projection_resync_required.
-4. Server responds with state_sync snapshot.
-5. Resync must preserve deterministic continuation from latest revision.
+4. Server returns state_sync snapshot.
+5. Projection continues from latest revision deterministically.
 
 ## Event Coverage Matrix (Planning Checklist)
 
-Use this as the V02 completeness audit matrix.
+V02 completeness requires:
 
-1. Each canonical event has: producer stage, payload contract, ordering assertions, visibility policy, and test coverage.
-2. Each denial reason is mapped to at least one deterministic test.
-3. Concentration event chain is fully covered across start, replace, check, break, and clear.
-4. Zone event chain is covered across create, tick, expire, and remove.
-5. Replay tests confirm identical inputs produce identical event sequence and reason codes.
+1. Every required event is documented, emittable, and tested.
+2. Every operation lifecycle event is covered.
+3. Concentration chain is fully covered across start, replace, check, break, clear.
+4. Zone chain is covered across create, tick, expire, remove.
+5. Replay tests prove identical command input gives identical event sequence.
 
-## Test Planning Addendum (Event Contracts and Action Processing)
+## Test Planning Addendum (Operation-Graph Model)
 
 ### Contract Tests
 
-1. test_event_payload_required_fields
-2. test_event_reason_code_machine_readable
-3. test_event_family_contract_stability
+1. test_action_command_requires_operation_specs
+2. test_operation_event_requires_operation_id
+3. test_event_payload_required_fields
+4. test_event_reason_code_machine_readable
 
-### Ordering Tests
+### Graph and Ordering Tests
 
-1. test_action_authorized_precedes_outcome_events
-2. test_target_resolution_precedes_effect_events
-3. test_tick_precedes_expiry_removal
+1. test_operation_graph_builds_without_cycles
+2. test_operation_dependency_order_respected
+3. test_operation_planned_before_execution
+4. test_target_resolution_before_effect_application
+5. test_tick_before_expiry_removal
 
 ### Concentration Tests
 
-1. test_concentration_started_on_concentration_effect_apply
+1. test_concentration_started_on_operation_apply
 2. test_concentration_replaced_emits_remove_then_start
-3. test_concentration_check_required_emitted_on_damage_trigger
+3. test_concentration_check_required_on_damage_trigger
 4. test_concentration_broken_emits_effect_removal
 5. test_concentration_cleared_on_expiry
 
-### Resync and Replay Tests
+### Replay and Resync Tests
 
-1. test_revision_gap_triggers_projection_resync_required
-2. test_state_sync_restores_projection
-3. test_identical_command_replay_identical_event_batch
+1. test_identical_command_replay_identical_event_batch
+2. test_revision_gap_triggers_projection_resync_required
+3. test_state_sync_restores_projection
 
 ### Visibility Tests
 
@@ -240,15 +280,16 @@ Use this as the V02 completeness audit matrix.
 V02 cannot close until all are true:
 
 1. EventCoverageMatrix: green
-2. EventOrderingTests: green
+2. OperationGraphOrderingTests: green
 3. EventParityTests (WS and REST): green
 4. ReplayAndResyncTests: green
-5. Concentration lifecycle event chain: complete and tested
+5. Concentration lifecycle chain: complete and tested
+6. Operation-level targeting contract: complete and tested
 
 ## Verification Commands (Draft)
 
-1. docker compose --profile test run --rm backend-test pytest tests -k "request_action and event" -q
+1. docker compose --profile test run --rm backend-test pytest tests -k "request_action and operation" -q
 2. docker compose --profile test run --rm backend-test pytest tests -k "effect and concentration" -q
-3. docker compose --profile test run --rm backend-test pytest tests -k "ordering and replay" -q
+3. docker compose --profile test run --rm backend-test pytest tests -k "graph and ordering" -q
 4. docker compose --profile test run --rm backend-test pytest tests -k "state_sync and resync" -q
 5. docker compose --profile test run --rm -e PYTHONPATH=/app backend-test python scripts/generate_types.py --check
