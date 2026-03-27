@@ -1,3 +1,8 @@
-- `[x]` Create `ISSUES/architecture/v05/V05_macro_architecture_overview.mmd`
-- `[x]` Create `ISSUES/architecture/v05/V05_macro_architecture_explanation.md`
-- `[x]` Update `walkthrough.md` with the new diagrams.
+- `[x]` Flesh out V05-01: Baseline Audit
+- `[x]` Flesh out V05-02: Definition Contract Freeze
+- `[x]` Flesh out V05-03: Repository Boundary Lock
+- `[x]` Flesh out V05-04: CRUD Application Orchestration
+- `[x]` Flesh out V05-05: REST/WS Content Streams
+- `[x]` Flesh out V05-06: Indexing and Linked-Entry Resolution
+- `[x]` Flesh out V05-07: Test Matrix and Completion Gate
+- `[x]` Update Walkthrough

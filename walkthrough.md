@@ -1,24 +1,17 @@
-# Business & Content Entities Implemented
+# V05: From Architecture to Action
 
-I've successfully created the V05 **Business and Content Entities Reference Map** and the **Macro-Architecture Overview** based on the approved implementation plans. 
+In addition to finalizing the V05 Architecture diagrams (Business Entities & Macro-Architecture), I've fully transformed the 7 theoretical V05 tickets into **Actionable Developer Specs**.
 
-## 1. The Detail Domain View
+## What was updated?
 
-*   **[V05_business_and_content_entities_class_diagram.mmd](file:///c:/Users/simon/Documents/GitHub/cmv2/cmv2/ISSUES/architecture/v05/V05_business_and_content_entities_class_diagram.mmd)**
-    A comprehensive Mermaid mapping out the five core domains spanning the application's entire architecture:
-    *   **User Identity**: Accounts, Subscriptions, Entitlements
-    *   **Asset Management**: Files, Uploads, Folders
-    *   **Content Catalog (V05)**: Definitions (`Class`, `Item`, `Ability`, `Spell`), Packs, and Linking
-    *   **Campaign Domain**: Scenes, Encounters, Journals, Content Policies
-    *   **Character Domain**: Progression, Inventory, Prepared Spells
-*   **[V05_business_and_content_entities_overview.md](file:///c:/Users/simon/Documents/GitHub/cmv2/cmv2/ISSUES/architecture/v05/V05_business_and_content_entities_overview.md)**
-    A companion overview explaining the architectural decisions represented within the diagram, including why Feats and Features are logically consolidated as `AbilityDefinition` and how `ContentPackRecord` naturally manages Homebrew.
+The 7 tickets in `ISSUES/architecture/v05/` now provide step-by-step code guidance:
 
-## 2. The Macro Architecture View (Big Picture)
+1.  **[V05-01] Baseline and Drift Audit**: Added commands for DB dumping and type comparison.
+2.  **[V05-02] Definition Contract Freeze**: Instructions to create `backend/src/modules/compendium/domain/models.py` using Pydantic, merging `AbilityDefinition`, and throwing base validators.
+3.  **[V05-03] Repository Boundary Lock**: Instructions to use SQLAlchemy `Base` with `JSONB` payloads for polymorphic shapes alongside clear Unit-of-Work boundaries.
+4.  **[V05-04] CRUD Application Orchestration**: The business logic layer. Added conditions to safely block `updates` on `published` entities and to orchestrate the `supersede` chain.
+5.  **[V05-05] REST/WS Content Streams**: Outlined FastAPI endpoints (`POST /api/compendium/definitions`) mapping HTTP limits and throwing `ContentLifecycleEvents` to WebSockets.
+6.  **[V05-06] Indexing and Linked-Entry**: Defined the `LinkedEntryResolutionService` for cyclic graph parsing and the Event-driven asynchronous ReadModel indexer for full-text caching.
+7.  **[V05-07] Test Matrix**: Checklists for testing the end-to-end "Homebrew Publishing Flow" and testing broken API payloads against the Pydantic contracts.
 
-*   **[V05_macro_architecture_overview.mmd](file:///c:/Users/simon/Documents/GitHub/cmv2/cmv2/ISSUES/architecture/v05/V05_macro_architecture_overview.mmd)**
-    A high-level `flowchart` diagram that zooms out from the class diagrams. It shows how the data flows from the **Identity/SaaS Container**, into the **Write Path** (Compendium CRUD), gets persisted and indexed in the **Storage Layer**, is queried by the **Read Path** (Search & Projection), and finally gets handed off to the **V02 Game Runtime**.
-*   **[V05_macro_architecture_explanation.md](file:///c:/Users/simon/Documents/GitHub/cmv2/cmv2/ISSUES/architecture/v05/V05_macro_architecture_explanation.md)**
-    Explains the separation of concerns across the platform—highlighting the CQRS (Command Query Responsibility Segregation) approach for managing massive rulesets efficiently.
-
-Take a look at the files. The Mermaid flowchart perfectly binds your three V05 class diagrams and the V02 execution engine together. Let me know what you'd like to dive into next!
+With these files rewritten, developers can move seamlessly from the V05 diagrams directly into writing code module by module.

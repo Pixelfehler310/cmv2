@@ -4,54 +4,44 @@ Status: Planned
 Owner: Data + Content Systems
 Parent: ISSUE [VERT][V05]
 Depends on:
-
 - ISSUE [VERT][V05-03]
 
 ## Why This Exists
 
-After contract and ownership freeze, orchestration must be centralized.
-This issue routes all V05 CRUD and lifecycle operations through one deterministic application path.
+Repositories (SQL) and Models (Pydantic) exist, but they have no brain. 
+This issue creates the authoritative Service Layer (Application Services). Es dirigiert *wie* Business-Regeln angewendet werden, wer was editieren darf, und wie State-Transitions (Bsp: Draft -> Published) orchestriert werden.
+
+## Implementation Steps (Actionable)
+
+1.  **Create Services (`backend/src/modules/compendium/application/services.py`):**
+    *   Erstelle den `CompendiumApplicationService`. Er bekommt das Repository injiziert (Dependency Injection).
+2.  **Implement Create & Update Commands:**
+    *   Schreibe `create_definition(...)`: Es prüft über das Repo, ob die ID oder der Slug bereits existiert. Wenn nein: `repository.upsert()`.
+    *   Schreibe `update_definition(...)`: **Wichtig:** Eine Definition darf nur geupdated werden, wenn ihr `lifecycle_state == 'draft'` ist. Wirf eine Exception, falls versucht wird, eine bereits publizierte Definition via Update zu verändern.
+3.  **Implement Lifecycle Commands:**
+    *   Schreibe `publish_definition(...)`: Setzt den state auf `published` und sperrt den Datensatz für zukünftige harte Updates.
+    *   Schreibe `supersede_definition(old_id, new_id)`: Ein Replacement-Flow für Patches (z.B. wenn eine Ability generfed wird, wird die alte `superseded` und verweist auf die neue).
+4.  **Implement Event Emitting (Prep for V05-06):**
+    *   Sobald `publish_definition` erfolgreich die Transaktion committet, sollte der Service intern ein (in-memory) Event werfen, z.B. `ContentMutationEvent`. (Dies wird im Search-Indexer gebraucht).
 
 ## Scope
-
 In scope:
-
-- Implement canonical service orchestration for definition CRUD.
-- Implement lifecycle-aware operations:
-  - publish
-  - archive
-  - supersede with replacement link
-  - restore where allowed
-- Enforce validation and denial semantics in service flow.
-- Emit deterministic operation results for transport mappers.
+- Application Service Orchestration of Create, Read, Update, Delete for Definitions and Packs.
+- Business Logic enforcement (Draft mutability, Publishing immutability).
+- Supersede/Replacement Flow orchestration.
 
 Out of scope:
-
-- Transport-level parity and streaming updates.
-- Search-index ranking heuristics.
+- API Routes (happens in V05-05).
+- Frontend.
 
 ## Deliverables
-
-1. Orchestration flow spec: validate -> authorize -> resolve links -> persist -> emit result.
-2. Service behavior matrix by entity family and operation type.
-3. Deterministic result envelope contract for resolved/denied/error outcomes.
-4. Migration/removal notes for obsolete orchestration paths.
+1. Python Application Service(s) for Compendium Operations.
+2. Business rule implementation covering mutable vs immutable states.
 
 ## Acceptance Criteria
-
-1. One canonical application path handles V05 operations.
-2. Lifecycle transitions enforce V05-02 invariants.
-3. Result envelopes are stable and machine-readable.
-4. Existing fallback or duplicate orchestration paths are removed or explicitly blocked.
+1. Service kapselt die Business Logik komplett (keine Datenbank-Logik in den Controllern später!).
+2. Tests covern den Fall: Update auf eine `published` Entität wird mit einem klaren Fehlercode blockiert.
+3. Supersedence Chain kann erfolgreich gesetzt werden (Ein Eintrag weiß, wer sein Nachfolger ist).
 
 ## Verification Commands
-
-1. docker compose --profile test run --rm backend-test pytest tests/data -k crud -q
-2. docker compose --profile test run --rm backend-test pytest tests/systems/dnd5e -k compendium -q
-3. docker compose --profile test run --rm -e PYTHONPATH=/app backend-test python scripts/generate_types.py --check
-4. docker compose logs backend --tail=200
-
-## Risks and Notes
-
-- Partial migration leaves non-deterministic behavior across entity families.
-- Service/mapper mismatch can break content-manager detail views and linked-entry navigation.
+1. `docker compose --profile test run --rm backend-test pytest tests/data/test_compendium_service.py -q`
