@@ -1,0 +1,3 @@
+- `[x]` Create `ISSUES/architecture/v05/V05_macro_architecture_overview.mmd`
+- `[x]` Create `ISSUES/architecture/v05/V05_macro_architecture_explanation.md`
+- `[x]` Update `walkthrough.md` with the new diagrams.

@@ -1,0 +1,86 @@
+﻿commit 635f6afa6adfdb84e77989b97a2669b2dbf3a16b
+Author: Rand0mGl1tch <simon@5suckies.de>
+Date:   Fri Mar 27 20:35:54 2026 +0100
+
+    DIAGRAM and COntent Management Planning
+
+M	ISSUES/architecture/ISSUE_[VERT]_[V00]_vertical_modularization_program_board.md
+M	ISSUES/architecture/ISSUE_[VERT]_[V05]_compendium_crud_and_definition_catalog.md
+A	ISSUES/architecture/v05/ISSUE_[VERT]_[V05-01]_baseline_and_drift_audit.md
+A	ISSUES/architecture/v05/ISSUE_[VERT]_[V05-02]_definition_contract_and_validation_freeze.md
+A	ISSUES/architecture/v05/ISSUE_[VERT]_[V05-03]_ownership_and_repository_boundary_lock.md
+A	ISSUES/architecture/v05/ISSUE_[VERT]_[V05-04]_crud_application_orchestration.md
+A	ISSUES/architecture/v05/ISSUE_[VERT]_[V05-05]_rest_ws_contract_convergence_for_content_streams.md
+A	ISSUES/architecture/v05/ISSUE_[VERT]_[V05-06]_indexing_search_and_linked_entry_resolution_policy.md
+A	ISSUES/architecture/v05/ISSUE_[VERT]_[V05-07]_test_matrix_and_completion_gate.md
+A	ISSUES/architecture/v05/V05_compendium_crud_and_definition_catalog_detailed_plan.mmd
+A	ISSUES/architecture/v05/V05_compendium_crud_and_definition_catalog_detailed_plan_explanation.md
+A	ISSUES/architecture/v05/V05_compendium_crud_and_definition_catalog_planning_overview.md
+A	ISSUES/architecture/v05/V05_content_management_query_and_projection_detailed_plan.mmd
+A	ISSUES/architecture/v05/V05_content_management_query_and_projection_detailed_plan_explanation.md
+A	ISSUES/architecture/v05/test/README.md
+A	ISSUES/architecture/v05/test/V05_test_seq_01_create_publish_spell_with_links.mmd
+A	ISSUES/architecture/v05/test/V05_test_seq_02_update_with_replacement_chain_and_visibility_shift.mmd
+A	ISSUES/architecture/v05/test/V05_test_seq_03_linked_entry_resolution_chain_and_cycle_denial.mmd
+A	ISSUES/architecture/v05/test/V05_test_seq_04_search_filter_pagination_and_detail_projection.mmd
+A	ISSUES/architecture/v05/test/V05_test_seq_05_character_sheet_viewer_linked_lookup_consistency.mmd
+A	docs/architecture/shared/06_dnd_entities_architecture_explanation.md
+A	docs/architecture/shared/06_dnd_entities_class_diagram.mmd
+
+commit ddb1f1fa5b1eaa71c3e48fac3c83f3c24453f384
+Author: Rand0mGl1tch <simon@5suckies.de>
+Date:   Fri Mar 27 16:37:57 2026 +0100
+
+    More Diagrams
+
+M	ISSUES/architecture/v02/V02_turn_process_generic_activity_diagram.mmd
+M	ISSUES/architecture/v02/V02_turn_process_interrupt_example_sequence_diagram.mmd
+M	ISSUES/architecture/v02/test/README.md
+M	ISSUES/architecture/v02/test/V02_test_seq_01_deterministic_single_attack_baseline.mmd
+M	ISSUES/architecture/v02/test/V02_test_seq_02_reaction_interrupt_window_on_hit.mmd
+M	ISSUES/architecture/v02/test/V02_test_seq_03_pending_choice_pause_resume_smite.mmd
+M	ISSUES/architecture/v02/test/V02_test_seq_04_unlock_mutation_and_followup_action.mmd
+M	ISSUES/architecture/v02/test/V02_test_seq_05_deferred_zone_tick_and_cleanup_lifecycle.mmd
+
+commit 89964907386bae8658205d07033f37cdda0bae66
+Author: Rand0mGl1tch <simon@5suckies.de>
+Date:   Fri Mar 27 14:26:47 2026 +0100
+
+    Detailed Action Diagrams V1
+
+M	ISSUES/architecture/v02/V02_action_processing_and_event_contracts_detailed_plan.mmd
+M	ISSUES/architecture/v02/V02_action_processing_and_event_contracts_overview.md
+M	ISSUES/architecture/v02/V02_combat_actions_detailed_plan.mmd
+M	ISSUES/architecture/v02/V02_combat_actions_planning_overview.md
+A	ISSUES/architecture/v02/V02_concept_dual_system_resolution_complex_abilities.md
+A	ISSUES/architecture/v02/V02_deterministic_combat_action_effects_complex_example_detailed_plan.mmd
+A	ISSUES/architecture/v02/V02_deterministic_combat_action_effects_complex_example_overview.md
+A	ISSUES/architecture/v02/V02_turn_process_generic_activity_diagram.mmd
+A	ISSUES/architecture/v02/V02_turn_process_interrupt_example_sequence_diagram.mmd
+A	ISSUES/architecture/v02/test/README.md
+A	ISSUES/architecture/v02/test/V02_test_seq_01_deterministic_single_attack_baseline.mmd
+A	ISSUES/architecture/v02/test/V02_test_seq_02_reaction_interrupt_window_on_hit.mmd
+A	ISSUES/architecture/v02/test/V02_test_seq_03_pending_choice_pause_resume_smite.mmd
+A	ISSUES/architecture/v02/test/V02_test_seq_04_unlock_mutation_and_followup_action.mmd
+A	ISSUES/architecture/v02/test/V02_test_seq_05_deferred_zone_tick_and_cleanup_lifecycle.mmd
+M	cmv2.code-workspace
+
+commit 8982f94cf90e9942ff8f61428b1b0fd0132639c0
+Author: Rand0mGl1tch <simon@5suckies.de>
+Date:   Thu Mar 26 23:43:31 2026 +0100
+
+    Updated Action Handling Plan
+
+M	ISSUES/architecture/v02/V02_action_processing_and_event_contracts_detailed_plan.mmd
+M	ISSUES/architecture/v02/V02_action_processing_and_event_contracts_overview.md
+M	ISSUES/architecture/v02/V02_combat_actions_detailed_plan.mmd
+M	ISSUES/architecture/v02/V02_combat_actions_planning_overview.md
+
+commit 642a6e1ccea3b63c4282e4cd1483b5f7ba785ac6
+Author: Rand0mGl1tch <simon@5suckies.de>
+Date:   Thu Mar 26 23:29:25 2026 +0100
+
+    action processign plan v1
+
+A	ISSUES/architecture/v02/V02_action_processing_and_event_contracts_detailed_plan.mmd
+A	ISSUES/architecture/v02/V02_action_processing_and_event_contracts_overview.md

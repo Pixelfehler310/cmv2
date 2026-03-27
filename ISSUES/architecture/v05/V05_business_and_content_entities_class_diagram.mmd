@@ -1,0 +1,272 @@
+%% V05 Business & Content Entities Reference Map
+%% Scope: SaaS Architecture, Content Ownership, Campaign State, and Character Persistence
+%% Purpose: High-level view showing how static content definitions (V05) become play-state
+classDiagram
+
+namespace UserIdentityDomain {
+  class UserAccount {
+    +id: str
+    +auth_provider_id: str
+    +email: str
+    +username: str
+    +created_at: datetime
+  }
+
+  class UserSubscription {
+    +user_id: str
+    +tier_level: free | standard | premium
+    +storage_limit_bytes: int
+    +storage_used_bytes: int
+    +active_until: datetime | None
+  }
+
+  class ContentEntitlement {
+    +entitlement_id: str
+    +user_id: str
+    +pack_id: str
+    +granted_via: purchase | subscription | campaign_share
+    +granted_at: datetime
+  }
+}
+
+namespace AssetManagementDomain {
+  class AssetRecord {
+    +id: str
+    +owner_user_id: str
+    +folder_id: str | None
+    +asset_type: token | map_background | audio | handout
+    +mime_type: str
+    +byte_size: int
+    +storage_url: str
+  }
+
+  class AssetFolder {
+    +id: str
+    +owner_user_id: str
+    +parent_folder_id: str | None
+    +name: str
+  }
+}
+
+namespace ContentCatalogDomain {
+  class ContentPackRecord {
+    +id: str
+    +author_user_id: str | None
+    +title: str
+    +lifecycle_state: draft | published | archived
+    +is_homebrew: bool
+  }
+
+  class DefinitionRecord {
+    <<abstract>>
+    +id: str
+    +family: str
+    +pack_id: str
+    +name: str
+    +content_version: int
+  }
+
+  class ClassDefinition {
+    +hit_die: str
+    +saving_throw_proficiencies: list[str]
+  }
+
+  class SpeciesDefinition {
+    +speed: int
+    +size: str
+  }
+
+  class BackgroundDefinition {
+    +skill_proficiencies: list[str]
+  }
+
+  class AbilityDefinition {
+    +ability_type: feature | feat
+    +action_operation_specs: list[dict]
+    +passive_effects: list[dict]
+  }
+
+  class SpellDefinition {
+    +level: int
+    +school: str
+    +casting_time: str
+    +action_operation_specs: list[dict]
+  }
+
+  class ItemDefinition {
+    +item_type: weapon | armor | gear | consumable
+    +weight: float
+    +cost: int
+    +action_operation_specs: list[dict]
+  }
+
+  class MonsterDefinition {
+    +challenge_rating: float
+    +armor_class: int
+    +hit_points_formula: str
+    +action_operation_specs: list[dict]
+  }
+
+  class LinkedEntryReference {
+    +source_definition_id: str
+    +target_definition_id: str
+    +relation_kind: grants | prerequisite
+  }
+}
+
+namespace CampaignDomain {
+  class Campaign {
+    +id: str
+    +name: str
+    +owner_user_id: str
+    +active_scene_id: str | None
+  }
+
+  class CampaignMember {
+    +campaign_id: str
+    +user_id: str
+    +role: dm | player | spectator
+    +active_character_id: str | None
+  }
+
+  class CampaignContentPolicy {
+    +campaign_id: str
+    +allowed_pack_ids: list[str]
+    +homebrew_allowed: bool
+  }
+
+  class Scene {
+    +id: str
+    +campaign_id: str
+    +name: str
+    +map_asset_id: str | None
+    +grid_settings: dict
+    +fog_of_war_state: dict
+  }
+
+  class PlannedEncounter {
+    +id: str
+    +campaign_id: str
+    +name: str
+    +monster_groupings: list[dict]
+  }
+
+  class JournalEntry {
+    +id: str
+    +campaign_id: str
+    +title: str
+    +rich_text_content: str
+    +visibility_tier: gm_only | all_players
+  }
+}
+
+namespace CharacterDomain {
+  class PlayerCharacterSheet {
+    +id: str
+    +owner_user_id: str
+    +campaign_id: str | None
+    +name: str
+    +ability_scores: dict
+    +current_hp: int
+    +max_hp_override: int | None
+  }
+
+  class CharacterProgression {
+    +character_id: str
+    +total_level: int
+    +experience_points: int
+    +class_levels: dict
+    +species_def_id: str
+    +background_def_id: str
+    +chosen_ability_def_ids: list[str]
+  }
+
+  class CharacterInventory {
+    +character_id: str
+    +item_instances: list[ItemInstance]
+    +currency: dict
+  }
+
+  class ItemInstance {
+    +instance_id: str
+    +item_def_id: str
+    +quantity: int
+    +is_equipped: bool
+    +custom_name: str | None
+  }
+
+  class PreparedSpells {
+    +character_id: str
+    +spell_def_ids: list[str]
+  }
+}
+
+namespace IntegrationBoundariesV02 {
+  class CombatEncounterRuntime {
+    <<V02 Game State>>
+    +scene_id: str
+  }
+
+  class CombatActorRuntime {
+    <<V02 Game State>>
+    +actor_id: str
+    +source_type: player_character | monster
+  }
+}
+
+%% Relationships: User Identity
+UserAccount "1" -- "0..1" UserSubscription : has
+UserAccount "1" -- "*" ContentEntitlement : owns
+ContentEntitlement "*" -- "1" ContentPackRecord : grants access to
+
+%% Relationships: Assets
+UserAccount "1" -- "*" AssetFolder : owns
+AssetFolder "1" -- "*" AssetRecord : organizes
+UserAccount "1" -- "*" AssetRecord : owns root assets
+
+%% Relationships: Content Catalog
+ContentPackRecord "1" *-- "*" DefinitionRecord : contains
+DefinitionRecord <|-- ClassDefinition
+DefinitionRecord <|-- SpeciesDefinition
+DefinitionRecord <|-- BackgroundDefinition
+DefinitionRecord <|-- AbilityDefinition
+DefinitionRecord <|-- SpellDefinition
+DefinitionRecord <|-- ItemDefinition
+DefinitionRecord <|-- MonsterDefinition
+DefinitionRecord "1" -- "*" LinkedEntryReference : owns links
+
+%% Relationships: Campaign
+UserAccount "1" -- "*" Campaign : creates
+Campaign "1" *-- "*" CampaignMember : has
+UserAccount "1" -- "*" CampaignMember : joins as
+Campaign "1" -- "1" CampaignContentPolicy : strictly enforces
+CampaignContentPolicy "*" -- "*" ContentPackRecord : allows
+
+Campaign "1" *-- "*" Scene : hosts
+Scene "*" -- "0..1" AssetRecord : uses map (Image)
+Campaign "1" *-- "*" PlannedEncounter : stages
+PlannedEncounter "*" -- "*" MonsterDefinition : references
+Campaign "1" *-- "*" JournalEntry : records
+
+%% Relationships: Character
+UserAccount "1" -- "*" PlayerCharacterSheet : owns
+Campaign "1" -- "*" PlayerCharacterSheet : hosts (assigned)
+CampaignMember "1" -- "0..1" PlayerCharacterSheet : active character for user
+
+PlayerCharacterSheet "1" *-- "1" CharacterProgression : tracks
+PlayerCharacterSheet "1" *-- "1" CharacterInventory : holds
+PlayerCharacterSheet "1" *-- "1" PreparedSpells : prepares
+
+%% Connections between Character and Catalog (The Bridge)
+CharacterProgression "*" -- "1" SpeciesDefinition : references
+CharacterProgression "*" -- "1" BackgroundDefinition : references
+CharacterProgression "*" -- "*" ClassDefinition : references
+CharacterProgression "*" -- "*" AbilityDefinition : references (Feats/Features)
+ItemInstance "*" -- "1" ItemDefinition : instantiated from
+PreparedSpells "*" -- "*" SpellDefinition : references
+
+%% Downstream V02 Integrations
+Scene "1" ..> "0..1" CombatEncounterRuntime : spawns when combat starts
+PlayerCharacterSheet "1" ..> "0..1" CombatActorRuntime : materialized during combat as
+MonsterDefinition "*" ..> "*" CombatActorRuntime : materialized during combat as
+PlannedEncounter "1" ..> "*" CombatActorRuntime : populates

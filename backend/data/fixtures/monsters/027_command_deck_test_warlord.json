@@ -1,0 +1,360 @@
+{
+  "name": "Command Deck Test Warlord",
+  "description": "Fixture monster for command deck UX testing across action economy, targeting, cooldowns, and payload metadata.",
+  "size": "Large",
+  "type": "humanoid",
+  "alignment": "lawful evil",
+  "armor_class": 18,
+  "hit_points": 152,
+  "hit_dice": "16d10+64",
+  "speed": {
+    "walk": 35
+  },
+  "strength": 20,
+  "dexterity": 14,
+  "constitution": 18,
+  "intelligence": 12,
+  "wisdom": 14,
+  "charisma": 16,
+  "proficiencies": [
+    {
+      "name": "Perception",
+      "value": 8
+    },
+    {
+      "name": "Intimidation",
+      "value": 7
+    }
+  ],
+  "senses": {
+    "passive_perception": 18
+  },
+  "languages": "Common, Orc",
+  "challenge_rating": 10,
+  "xp": 5900,
+  "special_abilities": [
+    {
+      "name": "Command Presence",
+      "description": "Allied creatures within 10 feet gain advantage on fear saves while the warlord is conscious."
+    }
+  ],
+  "actions": [
+    {
+      "id": "a1_warblade",
+      "name": "Warblade Strike",
+      "action_type": "melee_weapon",
+      "deck_category": "action",
+      "cost": {
+        "action": 1
+      },
+      "targeting": {
+        "mode": "single",
+        "range_ft": 5
+      },
+      "roll_preview": {
+        "to_hit": "+9",
+        "damage": "2d8+5",
+        "damage_type": "slashing"
+      },
+      "description": "Melee Weapon Attack: +9 to hit, reach 5 ft., one target. Hit: 14 (2d8 + 5) slashing damage."
+    },
+    {
+      "id": "a2_hooked_glaive",
+      "name": "Hooked Glaive",
+      "action_type": "melee_weapon",
+      "deck_category": "action",
+      "tags": ["control"],
+      "cost": {
+        "action": 1
+      },
+      "targeting": {
+        "mode": "single",
+        "range_ft": 10
+      },
+      "roll_preview": {
+        "to_hit": "+8",
+        "damage": "1d10+5",
+        "damage_type": "slashing"
+      },
+      "on_hit_effects": ["target_speed_reduced_10_ft_until_start_of_warlord_next_turn"],
+      "description": "Melee Weapon Attack: +8 to hit, reach 10 ft., one target. Hit: 10 (1d10 + 5) slashing damage; target speed reduced by 10 ft."
+    },
+    {
+      "id": "a3_tactical_crossbow",
+      "name": "Tactical Crossbow",
+      "action_type": "ranged_weapon",
+      "deck_category": "action",
+      "cost": {
+        "action": 1
+      },
+      "targeting": {
+        "mode": "single",
+        "range_ft": 80,
+        "long_range_ft": 320
+      },
+      "roll_preview": {
+        "to_hit": "+8",
+        "damage": "1d10+4",
+        "damage_type": "piercing"
+      },
+      "description": "Ranged Weapon Attack: +8 to hit, range 80/320 ft., one target. Hit: 9 (1d10 + 4) piercing damage."
+    },
+    {
+      "id": "a4_smoke_bomb",
+      "name": "Smoke Bomb",
+      "action_type": "utility",
+      "deck_category": "bonus_action",
+      "cost": {
+        "bonus_action": 1
+      },
+      "targeting": {
+        "mode": "area",
+        "range_ft": 20,
+        "aoe_shape": "sphere",
+        "aoe_size_ft": 10
+      },
+      "limited_use": {
+        "uses_max": 2,
+        "reset_on": "short_rest"
+      },
+      "description": "Creates a 10-foot-radius heavily obscured smoke cloud centered on a point within 20 feet."
+    },
+    {
+      "id": "a5_parry",
+      "name": "Parry",
+      "action_type": "utility",
+      "deck_category": "reaction",
+      "cost": {
+        "reaction": 1
+      },
+      "trigger": "hit_by_melee_attack",
+      "roll_preview": {
+        "damage_reduction": "1d8+4"
+      },
+      "description": "Reaction: The warlord adds 4 to AC against one melee attack that would hit it."
+    },
+    {
+      "id": "a6_reposition",
+      "name": "Reposition",
+      "action_type": "utility",
+      "deck_category": "free",
+      "cost": {
+        "movement_ft": 15
+      },
+      "targeting": {
+        "mode": "self"
+      },
+      "description": "Move up to 15 feet without provoking opportunity attacks from one marked target."
+    },
+    {
+      "id": "a7_commanding_shout",
+      "name": "Commanding Shout",
+      "action_type": "utility",
+      "deck_category": "bonus_action",
+      "cost": {
+        "bonus_action": 1
+      },
+      "targeting": {
+        "mode": "multi",
+        "range_ft": 30
+      },
+      "limited_use": {
+        "uses_max": 3,
+        "reset_on": "long_rest"
+      },
+      "description": "Up to two allied creatures within 30 feet can move 10 feet immediately."
+    },
+    {
+      "id": "a8_breaker_burst",
+      "name": "Breaker Burst",
+      "action_type": "save_effect",
+      "deck_category": "action",
+      "cost": {
+        "action": 1
+      },
+      "targeting": {
+        "mode": "area",
+        "range_ft": 60,
+        "aoe_shape": "sphere",
+        "aoe_size_ft": 15
+      },
+      "save": {
+        "ability": "dexterity",
+        "dc": 16
+      },
+      "roll_preview": {
+        "damage": "4d8",
+        "damage_type": "thunder"
+      },
+      "recharge": {
+        "label": "Recharge 5-6"
+      },
+      "description": "Each creature in a 15-foot-radius sphere must make a DC 16 Dexterity save, taking 4d8 thunder damage on a failed save, or half on success."
+    },
+    {
+      "id": "a9_dread_banner",
+      "name": "Dread Banner",
+      "action_type": "utility",
+      "deck_category": "action",
+      "cost": {
+        "action": 1
+      },
+      "targeting": {
+        "mode": "area",
+        "range_ft": 0,
+        "aoe_shape": "sphere",
+        "aoe_size_ft": 20
+      },
+      "concentration": {
+        "required": true,
+        "duration_rounds": 10
+      },
+      "description": "Enemies within 20 feet have disadvantage on Wisdom checks while the banner effect persists (concentration)."
+    },
+    {
+      "id": "a10_mark_prey",
+      "name": "Mark Prey",
+      "action_type": "utility",
+      "deck_category": "bonus_action",
+      "cost": {
+        "bonus_action": 1
+      },
+      "targeting": {
+        "mode": "single",
+        "range_ft": 60
+      },
+      "effect_preview": {
+        "effects": ["next_warlord_attack_vs_target_has_advantage"]
+      },
+      "description": "Mark one creature within 60 feet; the warlord has advantage on its next weapon attack against that creature before end of turn."
+    },
+    {
+      "id": "a11_guarded_step",
+      "name": "Guarded Step",
+      "action_type": "utility",
+      "deck_category": "reaction",
+      "cost": {
+        "reaction": 1,
+        "movement_ft": 10
+      },
+      "trigger": "enemy_enters_reach",
+      "description": "Reaction: move up to 10 feet and gain +2 AC against one triggering attack."
+    },
+    {
+      "id": "a12_rally",
+      "name": "Rally",
+      "action_type": "healing",
+      "deck_category": "bonus_action",
+      "cost": {
+        "bonus_action": 1
+      },
+      "targeting": {
+        "mode": "single",
+        "range_ft": 30
+      },
+      "roll_preview": {
+        "healing": "1d10+4"
+      },
+      "limited_use": {
+        "uses_max": 3,
+        "reset_on": "short_rest"
+      },
+      "description": "One ally within 30 feet regains 1d10 + 4 hit points."
+    },
+    {
+      "id": "a13_pinning_shot",
+      "name": "Pinning Shot",
+      "action_type": "ranged_weapon",
+      "deck_category": "action",
+      "cost": {
+        "action": 1
+      },
+      "targeting": {
+        "mode": "single",
+        "range_ft": 120,
+        "long_range_ft": 480
+      },
+      "roll_preview": {
+        "to_hit": "+8",
+        "damage": "2d6+4",
+        "damage_type": "piercing"
+      },
+      "save": {
+        "ability": "strength",
+        "dc": 15
+      },
+      "description": "Ranged Weapon Attack: +8 to hit. Hit: 2d6 + 4 piercing and target must succeed on DC 15 Strength save or be restrained until end of its next turn."
+    },
+    {
+      "id": "a14_whirl_cut",
+      "name": "Whirl Cut",
+      "action_type": "melee_weapon",
+      "deck_category": "action",
+      "cost": {
+        "action": 1,
+        "movement_ft": 10
+      },
+      "targeting": {
+        "mode": "area",
+        "aoe_shape": "sphere",
+        "aoe_size_ft": 5
+      },
+      "roll_preview": {
+        "damage": "2d8+5",
+        "damage_type": "slashing"
+      },
+      "description": "Move up to 10 feet, then each enemy within 5 feet takes 2d8 + 5 slashing damage (Dex save 15 for half)."
+    },
+    {
+      "id": "a15_battlefield_scan",
+      "name": "Battlefield Scan",
+      "action_type": "utility",
+      "deck_category": "free",
+      "cost": {
+        "action": 0
+      },
+      "targeting": {
+        "mode": "self"
+      },
+      "description": "Reveal hidden enemies within 20 feet until the end of the current turn."
+    },
+    {
+      "id": "a16_exploit_opening",
+      "name": "Exploit Opening",
+      "action_type": "melee_weapon",
+      "deck_category": "reaction",
+      "cost": {
+        "reaction": 1
+      },
+      "trigger": "enemy_miss_within_reach",
+      "roll_preview": {
+        "to_hit": "+9",
+        "damage": "1d8+5",
+        "damage_type": "slashing"
+      },
+      "description": "Reaction: make one Warblade Strike against a creature that misses the warlord with a melee attack."
+    }
+  ],
+  "legendary_actions": [
+    {
+      "id": "l1_quick_slash",
+      "name": "Quick Slash",
+      "cost": 1,
+      "description": "The warlord makes one Warblade Strike."
+    },
+    {
+      "id": "l2_ordered_advance",
+      "name": "Ordered Advance",
+      "cost": 1,
+      "description": "One allied creature that can hear the warlord moves up to half its speed."
+    },
+    {
+      "id": "l3_iron_decree",
+      "name": "Iron Decree",
+      "cost": 2,
+      "description": "Each enemy of the warlord within 15 feet must succeed on a DC 16 Wisdom save or be frightened until end of its next turn."
+    }
+  ],
+  "inventory": [],
+  "effects": []
+}

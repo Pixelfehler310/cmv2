@@ -1,0 +1,113 @@
+%% V05 Macro-Architecture Overview
+%% Purpose: High-level namespace interaction and data flow across the SaaS platform
+flowchart TB
+
+    %% -----------------------------------------
+    %% 1. User Identity & Campaign Context (The Shell)
+    %% -----------------------------------------
+    subgraph IdentityCampaignDomain [1. Identity & Campaign Domain]
+        direction TB
+        UserAccount[User Account & Entitlements]
+        CampaignCore[Campaign & Membership Management]
+        CharacterSheet[Persistent Character Progression]
+        AssetMgmt[Asset Storage: Tokens, Maps]
+        
+        UserAccount -.->|owns| CampaignCore
+        UserAccount -.->|owns| CharacterSheet
+        UserAccount -.->|uploads| AssetMgmt
+        CampaignCore -.->|hosts| CharacterSheet
+    end
+
+    %% -----------------------------------------
+    %% 2. The Write Path (Compendium CRUD)
+    %% -----------------------------------------
+    subgraph WritePathDomain [2. Content Mutation & Lifecycle Domain]
+        direction TB
+        DefinitionCRUD[Definition CRUD Service<br/>Validates Contracts]
+        LinkIntegrity[Linked Entry Integrity<br/>Cycle Denial]
+        PackLifecycle[Content Pack Lifecycle<br/>Draft -> Published]
+        
+        DefinitionCRUD -->|updates| LinkIntegrity
+        PackLifecycle -->|controls visibility| DefinitionCRUD
+    end
+
+    %% -----------------------------------------
+    %% 3. The Read Path (Query & Projection)
+    %% -----------------------------------------
+    subgraph ReadPathDomain [3. Content Query & Projection Domain]
+        direction TB
+        SearchService[Catalog Search & Filter API]
+        DetailHydration[Detail Hydration & Link Resolution]
+        ReadModels[Client ReadModels & Caches]
+        
+        SearchService -->|finds IDs| DetailHydration
+        DetailHydration -->|pushes state| ReadModels
+    end
+
+    %% -----------------------------------------
+    %% 4. Data Persistence & Indexing
+    %% -----------------------------------------
+    subgraph PersistenceLayer [4. Storage & Indexing]
+        direction LR
+        RelationalDB[(Relational DB<br/>Absolute Source of Truth)]
+        SearchIndex[(Search Index<br/>Fast Query Engine)]
+        
+        RelationalDB -.->|CDC / Event Bus| SearchIndex
+    end
+
+    %% -----------------------------------------
+    %% 5. Downstream Consumer (V02 Combat Engine)
+    %% -----------------------------------------
+    subgraph CombatExecutionDomain [5. V02 Combat Execution Runtime]
+        direction TB
+        CombatEncounter[Combat Encounter Runtime]
+        CombatActor[Combat Actor Runtime]
+        CombatEncounter --- CombatActor
+    end
+
+    %% =========================================
+    %% MACRO INTERACTIONS / DATA FLOW
+    %% =========================================
+
+    %% Identity interacts with Content
+    UserAccount -->|authors Homebrew| DefinitionCRUD
+    CampaignCore -->|enforces Content Policy| SearchService
+    CharacterSheet -->|queries prepared spells/items| SearchService
+
+    %% Write Path persists
+    DefinitionCRUD -->|Writes| RelationalDB
+    LinkIntegrity -->|Writes| RelationalDB
+    PackLifecycle -->|Writes| RelationalDB
+
+    %% Read Path consumes
+    SearchIndex -->|Reads| SearchService
+    RelationalDB -->|Hydrates| DetailHydration
+
+    %% Read Models inform the Campaign
+    ReadModels -->|Displays UI| CampaignCore
+    ReadModels -->|Populates Choices| CharacterSheet
+
+    %% Hand-off to V02 (Game Engine)
+    CampaignCore ==>|Spawns Scene| CombatEncounter
+    CharacterSheet ==>|Instantiates| CombatActor
+    SearchService -.->|Monster Definition| CombatActor
+
+    %% Stylings
+    classDef domain fill:#f4f4f4,stroke:#333,stroke-width:2px,color:#333,stroke-dasharray: 5 5;
+    classDef primary fill:#2563eb,stroke:#1e40af,stroke-width:2px,color:#fff;
+    classDef write fill:#059669,stroke:#047857,stroke-width:2px,color:#fff;
+    classDef read fill:#d97706,stroke:#b45309,stroke-width:2px,color:#fff;
+    classDef storage fill:#4b5563,stroke:#374151,stroke-width:2px,color:#fff;
+    classDef v02 fill:#7c3aed,stroke:#5b21b6,stroke-width:2px,color:#fff;
+
+    class IdentityCampaignDomain domain;
+    class WritePathDomain domain;
+    class ReadPathDomain domain;
+    class PersistenceLayer domain;
+    class CombatExecutionDomain domain;
+
+    class UserAccount,CampaignCore,CharacterSheet,AssetMgmt primary;
+    class DefinitionCRUD,LinkIntegrity,PackLifecycle write;
+    class SearchService,DetailHydration,ReadModels read;
+    class RelationalDB,SearchIndex storage;
+    class CombatEncounter,CombatActor v02;
