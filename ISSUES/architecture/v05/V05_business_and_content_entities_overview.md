@@ -19,22 +19,30 @@ Virtual Tabletop features require extensive handling of rich media.
 The "Platonic Ideals" of the game's rules. This expands upon the original V05 compendium index by defining the distinct inheritance structure of the `DefinitionRecord`.
 
 *   **`DefinitionRecord` (Abstract)**: The universal base class containing canonical UUIDs, versions, and naming conventions.
+*   **Specific Definition Families**: 
+    *   **`ClassDefinition`, `SpeciesDefinition`, `BackgroundDefinition`**: Grant overarching traits and abilities to characters.
+    *   **`SpellDefinition`, `ItemDefinition`**: Usable and equipable entities that carry precise `ActionOperationSpec` components for the V02 engine.
+    *   **`MonsterDefinition`**: A blueprint containing core stats needed to directly instantiate a `CombatActorRuntime`.
 *   **Consolidation of Abilities (`AbilityDefinition`)**: In this architecture, both *Feats* and *Class Features* share an identical schema. Both grant secondary stats, introduce passive effects, or unlock `ActionOperationSpec` elements for the V02 execution engine. Therefore, they are merged under one definition type to reduce schema fragmentation.
+*   **`LinkedEntryReference`**: Ensures referential integrity across the catalog (e.g., a `ClassDefinition` formally grants an `AbilityDefinition` via this link object).
 *   **`ContentPackRecord`**: The boundary container. Note that **Homebrew** is treated simply as a `ContentPackRecord` where `author_user_id` is populated and `lifecycle_state: draft` represents work-in-progress custom rules.
 
 ## 4. Campaign Domain
 Where players congregate and narrative content is shaped.
 
+*   **`Campaign`**: The persistent root object for a specific playthrough, owned by a singular `UserAccount` (usually the DM).
 *   **`CampaignMember`**: Resolves the "Contextual Identity" pattern. A user might be a typical `UserAccount` globally, but within a `Campaign`, they are assigned a `role` (DM or Player) and an `active_character_id`.
 *   **`CampaignContentPolicy`**: A critical security/validation boundary. It dictatates which `ContentPackRecord`s the V05 API allows into the game session. If a DM disables "Tasha's Cauldron", the system prevents players from selecting those `DefinitionRecord`s.
 *   **`Scene` & `PlannedEncounter`**: The narrative framing. The DM sets up maps (`AssetRecord`), writes notes (`JournalEntry`), and queues up monsters (`PlannedEncounter`), before eventually pushing the state into V02's `CombatEncounterRuntime`.
+*   **`JournalEntry`**: Persistent, rich-text narrative content bridging lore, session notes, or player hand-outs, scoped strictly to a campaign.
 
 ## 5. Character Domain (Persistent State)
 The aggregation of thousands of rule-nodes into a single identity over time.
 
 *   **`PlayerCharacterSheet`**: The static, out-of-combat anchor for a character. It doesn't track momentary buffs or turn budgets (that belongs to V02), but instead tracks permanent metrics (Base HP, Stats).
 *   **The Content Bridge**: Classes like `CharacterProgression` act as massive relational nodes, directly pointing to `SpeciesDefinition`, `BackgroundDefinition`, `ClassDefinition`, and lists of `AbilityDefinition`s.
-*   **`ItemInstance`**: When a character pulls a "Longsword" from the compendium (`ItemDefinition`), it becomes an `ItemInstance`. It gains unique metadata (`is_equipped`, `custom_name`) but still delegates base mechanics back to the definition.
+*   **`CharacterInventory` & `PreparedSpells`**: Explicit tracking arrays. They separate the *potential* rules (what exists in the catalog) from the *active* rules (what this character actually brought to the fight).
+*   **`ItemInstance`**: When a character pulls a "Longsword" from the compendium (`ItemDefinition`), it enters the `CharacterInventory` as an `ItemInstance`. It gains unique metadata (`is_equipped`, `custom_name`) but still delegates base mechanics back to the definition.
 
 ## 6. Integration Boundaries with V02 (Action Engine)
 The diagram highlights exactly where V05's persistence ends and V02's ephemeral execution begins:
