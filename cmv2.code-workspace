@@ -1,12 +1,14 @@
 {
-    "folders": [
-        {
-            "path": "."
-        },
-        {
-            "path": "C:\\Users\\simon\\Documents\\GitHub\\civic\\packages\\design-system",
-            "name": "civic-design-system"
-        }
-    ],
-    "settings": {}
+  "folders": [
+    {
+      "path": ".",
+    },
+    {
+      "path": "C:\\Users\\simon\\Documents\\GitHub\\civic\\packages\\design-system",
+      "name": "civic-design-system",
+    },
+  ],
+  "settings": {
+    "liveServer.settings.multiRootWorkspaceName": "cmv2",
+  },
 }

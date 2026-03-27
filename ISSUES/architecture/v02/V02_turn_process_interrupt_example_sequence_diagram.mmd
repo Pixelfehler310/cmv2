@@ -1,0 +1,95 @@
+%% V02 Sequence Example: Attack with reaction interrupt, pending choice, and unlock
+%% Scenario: active player attack hits, optional reaction window, Divine Smite choice, GWM-style unlock
+sequenceDiagram
+  autonumber
+
+  actor ActivePlayer as Active Player UI
+  participant ClientStore as Frontend Combat Store
+  participant WsHandler as WS or REST Handler
+  participant ActionService as ActionExecutionApplicationService
+  participant TurnPolicy as TurnEconomyPolicy
+  participant GraphStage as OperationGraphStage
+  participant TargetStage as TargetResolutionStage
+  participant ChoicePolicy as Choice Automation Policy
+  participant RollPolicy as Manual Roll Policy
+  participant InterruptBroker as Interrupt and Reaction Broker
+  actor TargetPlayer as Target Player UI
+  participant EffectStage as Effect and Damage Stage
+  participant Budget as TurnBudgetRuntime
+  participant EventPub as Event Publisher
+
+  ActivePlayer->>ClientStore: Select attack action with smite-capable operation
+  ClientStore->>WsHandler: execute_action with request_id req-1001 and operation_specs
+  WsHandler->>ActionService: execute_action(command)
+
+  ActionService->>TurnPolicy: validate_action_window and budget availability
+  TurnPolicy-->>ActionService: allowed
+
+  ActionService->>GraphStage: build and linearize operation graph
+  GraphStage-->>ActionService: deterministic operation order
+
+  ActionService->>TargetStage: resolve per-operation targets and snapshots
+  TargetStage-->>ActionService: target snapshots persisted
+
+  ActionService->>InterruptBroker: open pre-damage reaction window
+  InterruptBroker-->>TargetPlayer: reaction_prompt for window on_hit
+
+  alt Target uses reaction
+    TargetPlayer->>WsHandler: continue_interrupt(reaction_choice)
+    WsHandler->>ActionService: resolve reaction operation
+    ActionService-->>ActionService: update attack branch deterministically
+  else Target declines reaction
+    InterruptBroker-->>ActionService: no reaction taken
+  end
+
+  ActionService->>ChoicePolicy: evaluate choice_ref divine_smite under predicate on_hit
+  alt Automation policy exists
+    ChoicePolicy-->>ActionService: choice_result slot_level 2
+  else Manual user choice required
+    ChoicePolicy-->>ActionService: requires_player_choice
+    ActionService-->>WsHandler: ActionExecutionOutcome with status pending_choice and choice_context
+    WsHandler-->>ActivePlayer: pending_choice prompt
+    ActivePlayer->>WsHandler: continue_action with request_id req-1001 and choice_result
+    WsHandler->>ActionService: resume execution from target operation
+  end
+
+  ActionService->>RollPolicy: evaluate roll_mode for damage and rider nodes
+  alt Manual player roll entry enabled
+    RollPolicy-->>ActionService: requires_pending_roll
+    ActionService-->>WsHandler: ActionExecutionOutcome with status pending_roll and roll_context
+    WsHandler-->>ActivePlayer: pending_roll prompt with formulas
+    ActivePlayer->>WsHandler: continue_action with request_id req-1001 and submitted_roll_result
+    WsHandler->>ActionService: resume execution from target operation with roll result
+    ActionService->>ActionService: validate submitted roll bounds and apply value
+  else Server roll mode
+    RollPolicy-->>ActionService: server_roll_allowed
+    ActionService->>ActionService: generate deterministic server roll stream
+  end
+
+  ActionService->>EffectStage: apply damage and rider effects
+  EffectStage-->>ActionService: combat outcomes (including crit or kill if triggered)
+
+  ActionService->>InterruptBroker: evaluate unlock triggers from combat outcomes
+  alt Unlock condition matched
+    InterruptBroker->>Budget: add feat.gwm.cleave_attack to unlocked_action_refs
+    Budget-->>ActionService: updated budget snapshot
+    ActionService->>EventPub: emit turn_budget_updated with unlocked action refs
+    EventPub-->>ActivePlayer: show newly available contextual action
+  else No unlock condition
+    ActionService-->>ActionService: continue without unlock mutation
+  end
+
+  ActionService->>EventPub: emit operation and command lifecycle events with state_revision
+  EventPub-->>ActivePlayer: action result payload delivered
+
+  opt Player spends unlocked action
+    ActivePlayer->>ClientStore: Select unlocked contextual action
+    ClientStore->>WsHandler: execute_action with request_id req-1002 and action_ref feat.gwm.cleave_attack
+    WsHandler->>ActionService: execute_action(command)
+    ActionService->>EventPub: emit resolved outcome for req-1002
+    EventPub-->>ActivePlayer: resolved
+  end
+
+  ActivePlayer->>WsHandler: end_turn
+  WsHandler->>ActionService: advance turn and process end-turn ticks
+  ActionService->>EventPub: emit turn handoff events

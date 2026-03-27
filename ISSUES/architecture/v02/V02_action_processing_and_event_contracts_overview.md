@@ -7,6 +7,12 @@ Related architecture docs:
 - V02_combat_actions_detailed_plan.mmd
 - V02_combat_actions_planning_overview.md
 - V02_action_processing_and_event_contracts_detailed_plan.mmd
+- test/README.md
+- test/V02_test_seq_01_deterministic_single_attack_baseline.mmd
+- test/V02_test_seq_02_reaction_interrupt_window_on_hit.mmd
+- test/V02_test_seq_03_pending_choice_pause_resume_smite.mmd
+- test/V02_test_seq_04_unlock_mutation_and_followup_action.mmd
+- test/V02_test_seq_05_deferred_zone_tick_and_cleanup_lifecycle.mmd
 
 ## Why This Document Exists
 

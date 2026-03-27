@@ -255,6 +255,22 @@ namespace TestingAndGates {
   }
 }
 
+namespace CrossDiagramReferences {
+  class ActionExecutionRequestRef {
+    +diagram: V02_combat_actions_detailed_plan.mmd
+    +namespace: CombatExecutionDomain
+    +object: ActionExecutionRequest
+    +purpose: canonical execute-action command shape
+  }
+
+  class CombatEventsMapperRef {
+    +diagram: V02_combat_actions_detailed_plan.mmd
+    +namespace: TransportLayer
+    +object: CombatEventsMapper
+    +purpose: transport mapping entrypoint for event payloads
+  }
+}
+
 ActionCommandEnvelope --> RequestValidationPolicy : validate
 ActionCommandEnvelope --> ActionOperationEnvelope : contains [1..*]
 RequestValidationPolicy --> ActionProcessingPipeline : accepted command
@@ -298,3 +314,6 @@ EventCoverageMatrix --> V02EventContractGate : requires pass
 EventOrderingTests --> V02EventContractGate : requires pass
 EventParityTests --> V02EventContractGate : requires pass
 ReplayAndResyncTests --> V02EventContractGate : requires pass
+
+ActionCommandEnvelope ..> ActionExecutionRequestRef : request model aligned with
+WsEventPublisher ..> CombatEventsMapperRef : mapped payload semantics aligned with

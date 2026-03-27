@@ -1,0 +1,59 @@
+%% V02 Test Seq 01
+%% Concrete DnD baseline: FighterSeren heavy crossbow attack, no interrupts.
+sequenceDiagram
+  autonumber
+
+  actor Player as FighterSeren UI
+  participant Store as Frontend Combat Store
+  participant Transport as WS/REST Handler
+  participant Service as ActionExecutionApplicationService
+  participant Auth as CombatAuthorizationPolicy
+  participant Economy as TurnEconomyPolicy
+  participant Graph as OperationGraphStage
+  participant Targets as TargetResolutionStage
+  participant RollPolicy as Manual Roll Policy
+  participant Exec as OutcomeExecutionStage
+  participant Repo as UnitOfWork and Repositories
+  participant Events as Event Publisher
+
+  Note over Player,Service: Encounter setup\nFighterSeren HP 41, Heavy Crossbow attack modifier 9, damage 1d10 plus 5\nTarget HobgoblinCaptain HP 26, AC 18
+
+  Player->>Store: select action.weapon_attack.heavy_crossbow target HobgoblinCaptain
+  Store->>Transport: execute_action(req-2001, op-2001-attack)
+  Transport->>Service: execute_action(command)
+
+  Service->>Auth: can_execute_action(actor, role)
+  Auth-->>Service: allowed
+  Service->>Economy: validate_action_window and budget
+  Economy-->>Service: allowed
+
+  Service->>Graph: build_operation_graph(operation_specs)
+  Graph-->>Service: linearized order [op-2001-attack]
+  Service->>Targets: resolve_targets(op-2001-attack explicit)
+  Targets-->>Service: snapshot saved with request_id and operation_id
+
+  Service->>Exec: roll attack d20 14, total 23 vs AC 18 hit
+  Service->>RollPolicy: evaluate manual damage roll mode for op-2001-attack
+  RollPolicy-->>Service: requires_pending_roll
+  Service-->>Transport: ActionExecutionOutcome status pending_roll with roll_context formula 1d10 plus 5
+  Transport-->>Player: pending_roll prompt for damage entry
+  Player->>Transport: continue_action req-2001 submitted_roll total 12 die_face 7 modifier 5
+  Transport->>Service: resume_from_roll req-2001
+  Service->>Exec: validate submitted roll bounds and apply damage total 12 piercing
+  Exec-->>Service: operation_resolved
+
+  Service->>Repo: persist deltas and commit
+  Repo-->>Service: committed
+
+  Note over Service,Repo: State delta\nHobgoblinCaptain HP from 26 to 14\nTurn budget action spent\nstate_revision from R120 to R121
+
+  Service->>Events: action_authorized
+  Service->>Events: operation_graph_built
+  Service->>Events: operation_targets_resolved
+  Service->>Events: operation_resolved
+  Service->>Events: turn_budget_updated
+  Service->>Events: terminal action result resolved with revision increment
+
+  Events-->>Player: deterministic event batch (attack_result, actor_damaged, turn_budget_updated)
+
+  Note over Service,Events: Assertions\n1. Damage math is exact: attack total 23 beats AC 18 and submitted damage total is 12\n2. Exactly one pending_roll state is emitted before damage apply\n3. Exactly one terminal result for req-2001\n4. Stable event ordering and revision increment on replay

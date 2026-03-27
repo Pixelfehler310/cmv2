@@ -387,6 +387,22 @@ namespace TestingAndGates {
   }
 }
 
+namespace CrossDiagramReferences {
+  class ActionProcessingPipelineRef {
+    +diagram: V02_action_processing_and_event_contracts_detailed_plan.mmd
+    +namespace: ProcessingPipeline
+    +object: ActionProcessingPipeline
+    +purpose: canonical stage ordering
+  }
+
+  class EventOrderingContractRef {
+    +diagram: V02_action_processing_and_event_contracts_detailed_plan.mmd
+    +namespace: DeliveryAndProjection
+    +object: EventOrderingContract
+    +purpose: canonical event ordering rules
+  }
+}
+
 ActionExecutionApplicationService --> CombatEncounterRepository : loads/saves
 ActionExecutionApplicationService --> CombatActorRepository : loads/saves
 ActionExecutionApplicationService --> EffectInstanceRepository : loads/saves
@@ -433,3 +449,6 @@ V02CompletionGate --> V02ContractTests : requires pass
 V02CompletionGate --> V02ActionExecutionTests : requires pass
 V02CompletionGate --> V02InvariantTests : requires pass
 V02CompletionGate --> V02IntegrationTests : requires pass
+
+ActionExecutionApplicationService ..> ActionProcessingPipelineRef : stage model defined in
+CombatEventsMapper ..> EventOrderingContractRef : ordering rules defined in

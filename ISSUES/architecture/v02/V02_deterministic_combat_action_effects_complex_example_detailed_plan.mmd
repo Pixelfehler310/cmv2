@@ -1,0 +1,320 @@
+%% V02 Deterministic Stress Scenario (Complex Example)
+%% Purpose: One canonical high-complexity encounter script that exercises deterministic action, combat, and effect behavior.
+classDiagram
+
+namespace ScenarioActors {
+  class FighterSeren {
+    +class: Fighter (Level 11)
+    +features: Extra Attack(2), Action Surge
+    +feat: Crossbow Expert
+    +weapon: Heavy Crossbow
+  }
+
+  class WizardIria {
+    +class: Wizard (Level 13)
+    +spells: Burning Hands, Fireball, Wall of Fire, Dawn
+  }
+
+  class DruidThorn {
+    +class: Druid (Level 10)
+    +spells: Wall of Thorns
+    +feature: Wild Shape
+  }
+
+  class NecromancerVoss {
+    +class: Wizard (Necromancy)
+    +spell: Animate Dead
+  }
+
+  class SummonedZombieZ1 {
+    +source: Animate Dead
+    +initiative_policy: deterministic_insert_after_summoner
+  }
+}
+
+namespace DeterministicRuntimeContracts {
+  class DeterministicCommandEnvelope {
+    +request_id: str
+    +campaign_id: str
+    +scene_id: str
+    +actor_id: str
+    +action_ref: str
+    +action_type_cost: action | bonus_action | reaction | move | free
+    +operation_specs: list[OperationNode]
+    +seed_snapshot: str
+    +state_revision_in: int
+  }
+
+  class OperationNode {
+    +operation_id: str
+    +operation_kind: attack | save | damage | heal | condition | move | zone | summon | transform
+    +targeting_mode: explicit | area | self | derived | none
+    +execution_phase: immediate | deferred | tick
+    +depends_on_operation_ids: list[str]
+    +payload: dict
+  }
+
+  class OperationTargetSnapshot {
+    +request_id: str
+    +operation_id: str
+    +selection_type: actor_list | area_shape | derived | none
+    +selected_actor_ids: list[str]
+    +geometry_hash: str
+    +capture_revision: int
+  }
+
+  class ZoneInstance {
+    +zone_id: str
+    +zone_type: wall_of_thorns | wall_of_fire_ring | dawn_cylinder
+    +shape: line | ring | cylinder
+    +origin_ref: actor | point
+    +size_params: dict
+    +duration_rounds: int
+    +tick_trigger: start_turn | end_turn | on_enter
+    +occupants: list[str]
+  }
+
+  class DeterministicOrderingPolicy {
+    +order_operations_by_graph_then_operation_id()
+    +order_targets_by_stable_actor_id()
+    +order_ticks_by_initiative_then_actor_id()
+    +order_simultaneous_expiry_by_effect_id()
+    +single_terminal_event_per_request()
+  }
+
+  class DeterministicRngPolicy {
+    +seed_formula: hash(encounter_id, round, request_id, operation_id)
+    +roll_stream_is_append_only()
+    +critical_hit_and_save_uses_same_seed_rules()
+    +replay_must_reproduce_identical_rolls()
+  }
+
+  class StateRevisionPolicy {
+    +state_revision_in: int
+    +state_revision_out: int
+    +state_checksum_out: str
+    +revision_gap_requires_resync()
+  }
+}
+
+namespace ComplexScenarioActionSet {
+  class ActionA_FighterMultiActionTurn {
+    +requirement_1: multiple actions per turn
+    +rules_note: Crossbow Expert permits repeated crossbow attacks
+    +action_1: Attack action (Heavy Crossbow x3 via Extra Attack)
+    +action_2: Action Surge -> Attack action (Heavy Crossbow x3)
+    +budget_result: action + action_surge consumed
+  }
+
+  class ActionB_CrowdControlVinesCasterTurn {
+    +requirement_2a: vine crowd control + damage on caster turn
+    +spell: Wall of Thorns
+    +operations: create_zone, immediate_save_damage, apply_restrained_pathing_pressure
+    +deterministic_note: immediate damage resolves in caster request pipeline
+  }
+
+  class ActionC_FireCircleTargetTurn {
+    +requirement_2b: fire circle damage on target turn
+    +spell: Wall of Fire (ring mode)
+    +operations: create_ring_zone, mark_hot_side, register_end_turn_tick
+    +deterministic_note: end_turn tick evaluated by target initiative order
+  }
+
+  class ActionD_ConeAttackFromCaster {
+    +requirement_3: cone origin at caster
+    +spell: Burning Hands
+    +shape: cone(15ft)
+    +origin: caster_position
+  }
+
+  class ActionE_CircleAoeWithRangeAndSize {
+    +requirement_4: circle AoE with explicit range and radius
+    +spell: Fireball
+    +range: 150ft
+    +radius: 20ft sphere
+    +origin: selected_point_within_range
+  }
+
+  class ActionF_SingleTargetRangedAttack {
+    +requirement_5: single target weapon attack
+    +action: Heavy Crossbow shot
+    +targeting_mode: explicit
+  }
+
+  class ActionG_SummonEntity {
+    +requirement_6: summon new entity
+    +spell: Animate Dead
+    +result: SummonedZombieZ1 inserted into initiative
+  }
+
+  class ActionH_TransformEntity {
+    +requirement_7: turn into different entity
+    +feature: Wild Shape (Druid)
+    +transform_to: Dire Wolf
+    +state_swap: stat_block_replace_with_reversion_snapshot
+  }
+
+  class ActionI_MultiEffectSingleSpell {
+    +requirement_8: beam + circular area + ongoing tick from one spell
+    +spell: Dawn
+    +phase_1: beam-column impact damage on cast
+    +phase_2: circular cylinder footprint persisted
+    +phase_3: end_turn tick damage while in area
+  }
+}
+
+namespace DeterministicEventContracts {
+  class ActionLifecycleEvent {
+    +event_type: action_authorized | action_resolved | action_denied
+    +request_id: str
+    +state_revision: int
+  }
+
+  class OperationLifecycleEvent {
+    +event_type: operation_planned | operation_targets_resolved | operation_resolved | operation_denied
+    +request_id: str
+    +operation_id: str
+    +operation_kind: str
+    +targeting_mode: str
+    +state_revision: int
+  }
+
+  class EffectLifecycleEvent {
+    +event_type: effect_applied | effect_tick_resolved | effect_removed | effect_denied
+    +request_id: str
+    +operation_id: str | None
+    +effect_id: str
+    +state_revision: int
+  }
+
+  class ZoneLifecycleEvent {
+    +event_type: zone_created | zone_tick_resolved | zone_expired | zone_removed
+    +request_id: str
+    +operation_id: str | None
+    +zone_id: str
+    +state_revision: int
+  }
+
+  class SummonLifecycleEvent {
+    +event_type: entity_summoned | summon_expired | summon_removed
+    +request_id: str
+    +entity_id: str
+    +initiative_slot: int
+    +state_revision: int
+  }
+
+  class TransformLifecycleEvent {
+    +event_type: transform_started | transform_reverted
+    +request_id: str
+    +source_entity_id: str
+    +target_form_ref: str
+    +state_revision: int
+  }
+}
+
+namespace RoundScript {
+  class Round01 {
+    +R1.1 FighterSeren executes ActionA_FighterMultiActionTurn
+    +R1.2 WizardIria executes ActionD_ConeAttackFromCaster
+    +R1.3 NecromancerVoss executes ActionG_SummonEntity
+  }
+
+  class Round02 {
+    +R2.1 DruidThorn executes ActionB_CrowdControlVinesCasterTurn
+    +R2.2 WizardIria executes ActionC_FireCircleTargetTurn
+    +R2.3 FighterSeren executes ActionE_CircleAoeWithRangeAndSize
+  }
+
+  class Round03 {
+    +R3.1 DruidThorn executes ActionH_TransformEntity
+    +R3.2 WizardIria executes ActionI_MultiEffectSingleSpell
+    +R3.3 FighterSeren executes ActionF_SingleTargetRangedAttack
+  }
+}
+
+namespace ExtendedComplexityBacklog {
+  class ReactionWindows {
+    +Shield
+    +Counterspell
+    +OpportunityAttack
+    +Sentinel_style_stop_movement
+  }
+
+  class ForcedMovementAndHazards {
+    +push_pull_into_zone
+    +forced_movement_does_not_spend_movement_budget
+    +enter_zone_trigger_consistency
+  }
+
+  class ConcentrationConflicts {
+    +new_concentration_replaces_old
+    +damage_check_breaks_concentration
+    +linked_effect_cleanup_order
+  }
+
+  class InitiativeAndTieBreaks {
+    +stable_tie_break_by_actor_id
+    +summon_initiative_insertion_deterministic
+    +dead_actor_skip_order_deterministic
+  }
+
+  class HiddenInfoAndVisibility {
+    +dm_full_payload
+    +player_redacted_payload
+    +spectator_safe_projection
+  }
+
+  class ReplayAndRecovery {
+    +identical_input_identical_output
+    +state_revision_gap_triggers_resync
+    +checkpoint_restore_replays_same_sequence
+  }
+}
+
+namespace CrossDiagramReferences {
+  class CombatActionsDetailedRef {
+    +diagram: V02_combat_actions_detailed_plan.mmd
+    +namespace: ApplicationLayer
+    +object: ActionExecutionApplicationService
+  }
+
+  class EventContractsDetailedRef {
+    +diagram: V02_action_processing_and_event_contracts_detailed_plan.mmd
+    +namespace: DeliveryAndProjection
+    +object: EventOrderingContract
+  }
+}
+
+DeterministicCommandEnvelope --> OperationNode : contains [1..*]
+OperationNode --> OperationTargetSnapshot : resolves [0..1]
+OperationNode --> ZoneInstance : may_create [0..*]
+
+ActionA_FighterMultiActionTurn --> DeterministicCommandEnvelope : encoded_as_request
+ActionB_CrowdControlVinesCasterTurn --> ZoneInstance : creates wall_of_thorns zone
+ActionC_FireCircleTargetTurn --> ZoneInstance : creates wall_of_fire_ring zone
+ActionI_MultiEffectSingleSpell --> ZoneInstance : creates dawn_cylinder zone
+
+DeterministicOrderingPolicy --> OperationNode : deterministic graph order
+DeterministicRngPolicy --> OperationLifecycleEvent : deterministic roll stream
+StateRevisionPolicy --> ActionLifecycleEvent : revision tracking
+
+Round01 --> ActionA_FighterMultiActionTurn : includes
+Round01 --> ActionD_ConeAttackFromCaster : includes
+Round01 --> ActionG_SummonEntity : includes
+Round02 --> ActionB_CrowdControlVinesCasterTurn : includes
+Round02 --> ActionC_FireCircleTargetTurn : includes
+Round02 --> ActionE_CircleAoeWithRangeAndSize : includes
+Round03 --> ActionH_TransformEntity : includes
+Round03 --> ActionI_MultiEffectSingleSpell : includes
+Round03 --> ActionF_SingleTargetRangedAttack : includes
+
+ActionG_SummonEntity --> SummonLifecycleEvent : emits
+ActionH_TransformEntity --> TransformLifecycleEvent : emits
+ActionI_MultiEffectSingleSpell --> EffectLifecycleEvent : emits
+ActionI_MultiEffectSingleSpell --> ZoneLifecycleEvent : emits
+
+ActionA_FighterMultiActionTurn ..> CombatActionsDetailedRef : runtime ownership in
+ActionI_MultiEffectSingleSpell ..> EventContractsDetailedRef : ordering contract in
+
+ExtendedComplexityBacklog --> DeterministicOrderingPolicy : must stay deterministic
+ExtendedComplexityBacklog --> StateRevisionPolicy : must be replay-safe

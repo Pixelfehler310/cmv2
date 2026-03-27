@@ -1,0 +1,58 @@
+%% V02 Test Seq 04
+%% Concrete DnD unlock: Great Weapon Master bonus attack on kill.
+sequenceDiagram
+  autonumber
+
+  actor FighterUI as FighterSeren UI
+  participant Transport as WS/REST Handler
+  participant Service as ActionExecutionApplicationService
+  participant RollPolicy as Manual Roll Policy
+  participant Exec as OutcomeExecutionStage
+  participant Unlock as Outcome Listener / Unlock Policy
+  participant Budget as TurnBudgetRuntime
+  participant Events as Event Publisher
+
+  Note over FighterUI,Service: Encounter setup\nFighterSeren Greatsword attack modifier 8, damage 2d6 plus 4\nFeat Great Weapon Master bonus attack on crit or kill\nGoblinA AC 15 HP 7, GoblinB AC 15 HP 14
+
+  FighterUI->>Transport: execute_action req-2301 action.weapon_attack.greatsword target GoblinA
+  Transport->>Service: execute_action(command)
+  Service->>Exec: roll attack d20 20 critical hit
+  Service->>RollPolicy: evaluate manual damage roll mode for critical greatsword damage
+  RollPolicy-->>Service: requires_pending_roll
+  Service-->>Transport: ActionExecutionOutcome status pending_roll with roll_context formula 4d6 plus 4
+  Transport-->>FighterUI: pending_roll prompt for critical damage entry
+  FighterUI->>Transport: continue_action req-2301 submitted_roll total 22 dice 6 4 5 3 modifier 4
+  Transport->>Service: resume_from_roll req-2301
+  Service->>Exec: validate submitted roll bounds and apply critical damage total 22 slashing
+  Exec-->>Service: GoblinA HP from 7 to 0, actor_died true
+
+  Service->>Unlock: evaluate unlock triggers from outcomes
+  alt Unlock condition matched (GWM kill/crit)
+    Unlock->>Budget: add feat.gwm.cleave_attack to unlocked_action_refs
+    Budget-->>Service: updated turn budget snapshot
+    Service->>Events: turn_budget_updated(unlocked_action_refs included)
+    Events-->>FighterUI: contextual unlocked action becomes available
+  else No unlock condition
+    Unlock-->>Service: no mutation
+  end
+
+  Service->>Events: terminal result for req-2301
+  Events-->>FighterUI: resolved
+
+  opt Player spends unlocked action on GoblinB
+    FighterUI->>Transport: execute_action req-2302 action_ref feat.gwm.cleave_attack target GoblinB
+    Transport->>Service: execute_action(command)
+    Service->>Exec: roll attack d20 13, total 21 vs AC 15 hit
+    Service->>RollPolicy: evaluate manual damage roll mode for follow-up attack
+    RollPolicy-->>Service: requires_pending_roll
+    Service-->>Transport: ActionExecutionOutcome status pending_roll with roll_context formula 2d6 plus 4
+    Transport-->>FighterUI: pending_roll prompt for follow-up damage entry
+    FighterUI->>Transport: continue_action req-2302 submitted_roll total 14 dice 4 6 modifier 4
+    Transport->>Service: resume_from_roll req-2302
+    Service->>Exec: validate submitted roll bounds and apply follow-up damage total 14 slashing
+    Exec-->>Service: GoblinB HP from 14 to 0
+    Service->>Events: operation and terminal events for req-2302
+    Events-->>FighterUI: resolved
+  end
+
+  Note over Unlock,Budget: Assertions\n1. Unlock mutation is event-driven from kill or crit outcome\n2. Unlock updates budget availability, not auto-execution\n3. Follow-up action is separate atomic request req-2302\n4. Pending_roll is emitted for both damage nodes and validated before apply

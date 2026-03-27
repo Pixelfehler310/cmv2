@@ -1,0 +1,57 @@
+%% V02 Test Seq 02
+%% Concrete DnD reaction: WizardIria uses Shield on hit window.
+sequenceDiagram
+  autonumber
+
+  actor Attacker as OrcMarauder UI
+  actor Defender as WizardIria UI
+  participant Transport as WS/REST Handler
+  participant Service as ActionExecutionApplicationService
+  participant Graph as OperationGraphStage
+  participant Targets as TargetResolutionStage
+  participant RollPolicy as Manual Roll Policy
+  participant Exec as OutcomeExecutionStage
+  participant Interrupt as Interrupt/Reaction Broker
+  participant Events as Event Publisher
+
+  Note over Attacker,Service: Encounter setup\nOrcMarauder Greataxe attack modifier 5, damage 1d12 plus 3\nWizardIria AC 15, HP 24, reaction available, Shield prepared
+
+  Attacker->>Transport: execute_action(req-2101, action.weapon_attack.greataxe)
+  Transport->>Service: execute_action(command)
+
+  Service->>Graph: build and linearize operation graph
+  Graph-->>Service: [op-2101-attack]
+  Service->>Targets: resolve explicit target snapshot
+  Targets-->>Service: snapshot persisted
+  Service->>Exec: roll attack d20 14, total 19 vs AC 15 provisional hit
+  Exec-->>Service: provisional hit outcome before reaction window
+
+  Service->>Interrupt: open reaction window (on_hit)
+  Interrupt-->>Defender: reaction_prompt for window on_hit
+
+  alt Defender uses Shield
+    Defender->>Transport: continue_interrupt(req-2101, reaction spell.shield)
+    Transport->>Service: apply reaction operation
+    Service->>Exec: Shield sets AC from 15 to 20 for this window
+    Service->>Exec: recompute hit: 19 vs AC 20 (miss)
+    Exec-->>Service: reaction_resolved, attack damage canceled
+    Service->>Events: operation_denied with reason_code attack_missed_after_reaction
+  else Defender declines or window expires
+    Interrupt-->>Service: no reaction branch
+    Service->>RollPolicy: evaluate manual damage roll mode for greataxe damage
+    RollPolicy-->>Service: requires_pending_roll
+    Service-->>Transport: ActionExecutionOutcome status pending_roll with roll_context formula 1d12 plus 3
+    Transport-->>Attacker: pending_roll prompt for damage entry
+    Attacker->>Transport: continue_action req-2101 submitted_roll total 11 die_face 8 modifier 3
+    Transport->>Service: resume_from_roll req-2101
+    Service->>Exec: validate submitted roll bounds and apply damage total 11 slashing
+  end
+
+  Service->>Exec: finalize post-reaction damage branch
+  Exec-->>Service: final operation outcomes
+  Service->>Events: operation_resolved and actor-impact events
+  Service->>Events: terminal action result for req-2101
+  Events-->>Attacker: result batch
+  Events-->>Defender: visibility-filtered result batch
+
+  Note over Service,Interrupt: Assertions\n1. Shield branch damage is zero because hit is converted to miss\n2. Decline branch emits pending_roll then applies submitted damage 11\n3. Both branches converge to one terminal outcome for req-2101\n4. No duplicate damage application across branches

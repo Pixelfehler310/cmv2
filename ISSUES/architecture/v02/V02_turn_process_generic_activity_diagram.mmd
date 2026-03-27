@@ -1,0 +1,128 @@
+%% V02 Generic Turn Process Activity Diagram
+%% Scope: one active user turn with all major choice and interrupt branches
+flowchart TD
+  A[Turn starts for active actor] --> B[Load deterministic encounter and actor snapshot]
+  B --> C[Emit turn_advanced and initial turn_budget_updated]
+  C --> D{Start-turn mandatory effects or ticks?}
+  D -- Yes --> E[Resolve start-turn effects in deterministic order]
+  D -- No --> F
+  E --> F{Actor still alive and eligible to act?}
+  F -- No --> Z4[Auto-end turn and advance initiative]
+  F -- Yes --> H{Player intent for this turn window}
+
+  H -- Move --> M1[Client sends move command]
+  M1 --> M2[Authorize move and validate movement budget]
+  M2 -- Denied --> R1[Emit command_denied with reason_code]
+  R1 --> H
+  M2 -- Allowed --> M3[Apply movement and spend movement budget]
+  M3 --> M4[Emit actor_moved and turn_budget_updated]
+  M4 --> I1[Interrupt broker checks movement triggers]
+  I1 --> I2{Interrupt window opened?}
+  I2 -- No --> H
+  I2 -- Yes --> I3[Pause normal flow and process interrupt stack]
+  I3 --> I4{Interrupt needs interactive choice?}
+  I4 -- No --> I7[Resolve interrupt deterministically]
+  I4 -- Yes --> I5[Return pending_choice to owning user]
+  I5 --> I6{Continuation request received?}
+  I6 -- Yes --> I7
+  I6 -- No --> I8[Apply timeout or default policy branch]
+  I8 --> I7
+  I7 --> I10{Interrupt operation requires roll resolution?}
+  I10 -- No --> I9
+  I10 -- Yes --> I11{Manual roll entry enabled?}
+  I11 -- No --> I12[Generate deterministic interrupt roll]
+  I12 --> I9
+  I11 -- Yes --> I13[Return pending_roll with roll_context]
+  I13 --> I14{Roll submission received?}
+  I14 -- Yes --> I15[Validate and apply submitted roll]
+  I15 --> I9
+  I14 -- No --> I16[Apply timeout policy server_roll_or_cancel]
+  I16 --> I9
+  I9[Emit interrupt outcomes and resume prior flow]
+  I9 --> H
+
+  H -- Execute action --> A1[Client sends execute_action with operation_specs]
+  H -- Bonus action --> A1
+  H -- Reaction on own turn --> A1
+  H -- Use unlocked action --> A1
+
+  A1 --> A2[Authorize actor, turn window, and budget]
+  A2 -- Denied --> R1
+  A2 -- Allowed --> A3[Build and validate operation dependency graph]
+  A3 --> A4[Linearize operation order deterministically]
+  A4 --> A5[Resolve per-operation targets and persist snapshots]
+  A5 --> A6{Next operation exists?}
+  A6 -- No --> A20[Materialize deferred and tick registrations]
+  A6 -- Yes --> A7[Load next operation node]
+  A7 --> A8[Evaluate predicate when defined]
+  A8 --> A9{choice_ref required and predicate true?}
+
+  A9 -- No --> A13[Execute operation]
+  A9 -- Yes --> A10[Evaluate automation policy]
+  A10 --> A11{Policy provides choice_result?}
+  A11 -- Yes --> A12[Inject choice_result and continue without prompt]
+  A12 --> A13
+  A11 -- No --> P1[Emit pending_choice with choice_context and target_operation_id]
+  P1 --> P2{Continuation request received?}
+  P2 -- Yes --> P4[Consume chosen resources and resume operation]
+  P4 --> A13
+  P2 -- No --> P3[Apply cancel or skip branch per rules]
+  P3 --> A14[Emit deterministic branch outcome]
+  A14 --> A6
+
+  A13 --> G1{Operation requires roll resolution?}
+  G1 -- No --> A15
+  G1 -- Yes --> G2{Manual roll entry enabled?}
+  G2 -- No --> G3[Generate deterministic system roll]
+  G3 --> A15
+  G2 -- Yes --> G4[Emit pending_roll with roll_context and target_operation_id]
+  G4 --> G5{Roll submission received?}
+  G5 -- Yes --> G6[Validate submitted roll against formula bounds]
+  G6 -- Valid --> G7[Apply submitted roll and continue]
+  G7 --> A15
+  G6 -- Invalid --> G8[Emit operation_denied invalid_roll_submission]
+  G8 --> A6
+  G5 -- No --> G9[Apply timeout policy server_roll_or_cancel]
+  G9 --> A15
+
+  A15[Emit operation_resolved and combat outcome events]
+  A15 --> A16[Interrupt broker evaluates reaction triggers]
+  A16 --> A17{Reaction interrupt window opened?}
+  A17 -- Yes --> R2[Pause operation flow and process reaction stack]
+  R2 --> R3{Reaction needs interactive choice?}
+  R3 -- No --> R6[Resolve reaction core branch]
+  R3 -- Yes --> R4[Return pending_choice for reaction owner]
+  R4 --> R5{Continuation request received?}
+  R5 -- Yes --> R6
+  R5 -- No --> R7[Apply timeout or default policy branch]
+  R7 --> R6
+  R6 --> R10{Reaction requires roll resolution?}
+  R10 -- No --> R8
+  R10 -- Yes --> R11{Manual roll entry enabled?}
+  R11 -- No --> R12[Generate deterministic reaction roll]
+  R12 --> R8
+  R11 -- Yes --> R13[Return pending_roll for reaction owner]
+  R13 --> R14{Roll submission received?}
+  R14 -- Yes --> R15[Validate and apply submitted reaction roll]
+  R15 --> R8
+  R14 -- No --> R16[Apply timeout policy server_roll_or_cancel]
+  R16 --> R8
+  R8[Emit reaction outcomes and return to post-processing]
+  R8 --> A18[Evaluate unlock triggers from outcomes]
+  A17 -- No --> A18
+  A18 --> A19{Unlock condition matched?}
+  A19 -- Yes --> U1[Mutate TurnBudgetRuntime.unlocked_action_refs]
+  U1 --> U2[Emit turn_budget_updated with unlocked actions]
+  U2 --> A6
+  A19 -- No --> A6
+
+  A20 --> A21[Apply concentration transitions and linked removals]
+  A21 --> A22[Emit terminal action result with state_revision]
+  A22 --> H
+
+  H -- End turn --> Z1[Client sends end_turn]
+  Z1 --> Z2[Validate active actor and end-turn permissions]
+  Z2 -- Denied --> R1
+  Z2 -- Allowed --> Z3[Resolve end-turn ticks expiries and cleanup]
+  Z3 --> Z4
+  Z4 --> Z5[Emit turn handoff events for next actor]

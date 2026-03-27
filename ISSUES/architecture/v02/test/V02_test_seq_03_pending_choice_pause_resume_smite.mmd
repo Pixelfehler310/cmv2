@@ -1,0 +1,56 @@
+%% V02 Test Seq 03
+%% Concrete DnD pending-choice: Paladin Divine Smite on confirmed hit.
+sequenceDiagram
+  autonumber
+
+  actor PaladinUI as Active Player UI
+  participant Transport as WS/REST Handler
+  participant Service as ActionExecutionApplicationService
+  participant Graph as OperationGraphStage
+  participant Choice as Choice Automation Policy
+  participant RollPolicy as Manual Roll Policy
+  participant Exec as OutcomeExecutionStage
+  participant Events as Event Publisher
+
+  Note over PaladinUI,Service: Encounter setup\nPaladinAlden Longsword attack modifier 7, damage 1d8 plus 4\nGhoul AC 12, HP 22\nChoice node divine_smite when predicate on_hit
+
+  PaladinUI->>Transport: execute_action(req-2201, action.weapon_attack.longsword)
+  Transport->>Service: execute_action(command)
+
+  Service->>Graph: build and linearize graph
+  Graph-->>Service: [op-2201-swing, op-2201-choice-divine-smite]
+  Service->>Exec: roll attack d20 11, total 18 vs AC 12 hit
+  Service->>Exec: base damage node prepared for manual entry mode
+  Exec-->>Service: predicate on_hit is true
+
+  Service->>Choice: evaluate choice_ref divine_smite with valid slots 1 and 2
+
+  alt Automation policy matches
+    Choice-->>Service: choice_result slot_level 2
+    Service->>Exec: inject smite rider and continue
+    Service->>Exec: roll smite damage 3d8 values 5 7 2 total 14 radiant
+    Exec-->>Service: total damage 24
+  else Manual choice required
+    Choice-->>Service: requires_player_choice
+    Service-->>Transport: ActionExecutionOutcome with status pending_choice, choice_context, and target_operation_id
+    Transport-->>PaladinUI: pending_choice prompt
+    PaladinUI->>Transport: continue_action(req-2201, choice_result slot_level 2)
+    Transport->>Service: resume_from_choice(req-2201)
+    Service->>Exec: consume slot and apply rider
+    Service->>Exec: smite rider node prepared for manual entry mode
+  end
+
+  Service->>RollPolicy: evaluate manual roll mode for weapon and smite damage nodes
+  RollPolicy-->>Service: requires_pending_roll
+  Service-->>Transport: ActionExecutionOutcome status pending_roll with roll_context weapon 1d8 plus 4 and smite 3d8
+  Transport-->>PaladinUI: pending_roll prompt for combined damage entry
+  PaladinUI->>Transport: continue_action req-2201 submitted_roll weapon_total 10 smite_total 14
+  Transport->>Service: resume_from_roll req-2201
+  Service->>Exec: validate submitted roll bounds and apply total damage 24
+  Exec-->>Service: resumed total damage 24
+
+  Service->>Events: operation lifecycle and combat outcome events
+  Service->>Events: terminal resolved outcome with same request_id req-2201
+  Events-->>PaladinUI: final deterministic batch
+
+  Note over Service,Choice: Assertions\n1. Base damage is 10 and smite rider damage is 14 from submitted manual roll\n2. Final Ghoul HP delta is 24 damage and HP moves from 22 to 0\n3. Manual path emits one pending_choice and one pending_roll state\n4. Continuation resumes at target_operation_id without graph corruption\n5. Automation and manual choice paths converge to same deterministic outcome after roll validation

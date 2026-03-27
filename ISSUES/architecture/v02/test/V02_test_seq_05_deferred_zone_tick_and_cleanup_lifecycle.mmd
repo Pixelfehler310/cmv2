@@ -1,0 +1,65 @@
+%% V02 Test Seq 05
+%% Concrete DnD deferred lifecycle: Wall of Fire ring with end-turn tick and concentration break.
+sequenceDiagram
+  autonumber
+
+  actor CasterUI as WizardIria UI
+  actor AffectedUI as BanditCaptain UI
+  participant Transport as WS/REST Handler
+  participant Service as ActionExecutionApplicationService
+  participant Graph as OperationGraphStage
+  participant Targets as TargetResolutionStage
+  participant RollPolicy as Manual Roll Policy
+  participant Effects as Effect and Zone Stage
+  participant Conc as Concentration Stage
+  participant Events as Event Publisher
+
+  Note over CasterUI,Service: Encounter setup\nWizardIria spell DC 17, concentration active after cast\nWall of Fire tick damage 5d8 fire\nBanditCaptain HP 65 Dex modifier 2, ArcherBandit attacks caster later
+
+  CasterUI->>Transport: execute_action(req-2401, spell.wall_of_fire_ring)
+  Transport->>Service: execute_action(command)
+
+  Service->>Graph: build graph from zone create to tick registration
+  Graph-->>Service: deterministic order
+  Service->>Targets: resolve initial area snapshot
+  Targets-->>Service: snapshot persisted
+  Service->>Effects: create deferred zone instance
+  Effects-->>Service: zone_created
+  Service->>Conc: start concentration ownership
+  Conc-->>Service: concentration_started
+
+  Service->>Events: emit cast-phase lifecycle batch
+  Events-->>CasterUI: resolved req-2401
+  Events-->>AffectedUI: visibility-filtered updates
+
+  AffectedUI->>Transport: end_turn(req-2402)
+  Transport->>Service: process end-turn trigger
+  Service->>Effects: evaluate zone occupants and apply tick effects
+  Service->>Effects: BanditCaptain Dex save d20 12, total 14 vs DC 17 fail
+  Service->>RollPolicy: evaluate manual roll mode for Wall of Fire tick damage
+  RollPolicy-->>Service: requires_pending_roll
+  Service-->>Transport: ActionExecutionOutcome status pending_roll with roll_context formula 5d8 fire
+  Transport-->>CasterUI: pending_roll prompt for tick damage entry
+  CasterUI->>Transport: continue_action req-2402 submitted_roll total 21 dice 2 8 6 4 1
+  Transport->>Service: resume_from_roll req-2402
+  Service->>Effects: validate submitted roll bounds and apply tick damage total 21 fire
+  Effects-->>Service: zone_tick_resolved and effect_tick_resolved, HP from 65 to 44
+
+  Note over CasterUI,Service: Later in round ArcherBandit hits WizardIria for 13 piercing\nConcentration check DC is 10
+
+  alt Concentration check fails due to damage
+    Service->>Conc: roll Con save d20 5, total 7 vs DC 10 fail
+    Service->>Conc: break_concentration with reason failed_check
+    Conc-->>Service: concentration_broken and concentration_cleared
+    Service->>Effects: remove linked zone/effects
+    Effects-->>Service: zone_removed and effect_removed
+  else Concentration maintained
+    Service->>Conc: roll Con save at least 10
+    Conc-->>Service: concentration persists, zone remains active
+  end
+
+  Service->>Events: emit end-turn tick and cleanup events in canonical order
+  Events-->>CasterUI: tick/cleanup batch
+  Events-->>AffectedUI: tick/cleanup batch
+
+  Note over Service,Events: Assertions\n1. Tick damage is applied only after pending_roll submission and validation\n2. Failed save plus validated roll yields 21 fire and HP moves from 65 to 44\n3. Tick resolves before expiry and removal semantics\n4. Concentration failure path removes linked zone deterministically
