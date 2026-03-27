@@ -19,6 +19,7 @@ sequenceDiagram
 
   Service->>Graph: build and linearize graph
   Graph-->>Service: [op-2201-swing, op-2201-choice-divine-smite]
+  Note over Service: Internal trace only: graph and per-operation stage lifecycle
   Service->>Exec: roll attack d20 11, total 18 vs AC 12 hit
   Service->>Exec: base damage node prepared for manual entry mode
   Exec-->>Service: predicate on_hit is true
@@ -49,8 +50,10 @@ sequenceDiagram
   Service->>Exec: validate submitted roll bounds and apply total damage 24
   Exec-->>Service: resumed total damage 24
 
-  Service->>Events: operation lifecycle and combat outcome events
-  Service->>Events: terminal resolved outcome with same request_id req-2201
+  Service->>Events: attack_result hit on Ghoul
+  Service->>Events: actor_damaged Ghoul amount 24 split slashing and radiant
+  Service->>Events: turn_budget_updated
+  Service->>Events: terminal_action_result resolved with request_id req-2201
   Events-->>PaladinUI: final deterministic batch
 
-  Note over Service,Choice: Assertions\n1. Base damage is 10 and smite rider damage is 14 from submitted manual roll\n2. Final Ghoul HP delta is 24 damage and HP moves from 22 to 0\n3. Manual path emits one pending_choice and one pending_roll state\n4. Continuation resumes at target_operation_id without graph corruption\n5. Automation and manual choice paths converge to same deterministic outcome after roll validation
+  Note over Service,Choice: Assertions\n1. Base damage is 10 and smite rider damage is 14 from submitted manual roll\n2. Final Ghoul HP delta is 24 damage and HP moves from 22 to 0\n3. Manual path emits one pending_choice and one pending_roll state\n4. Public stream focuses on gameplay outcomes, not stage lifecycle internals\n5. Automation and manual choice paths converge to same deterministic outcome after roll validation

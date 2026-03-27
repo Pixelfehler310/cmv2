@@ -30,6 +30,7 @@ sequenceDiagram
 
   ActionService->>TargetStage: resolve per-operation targets and snapshots
   TargetStage-->>ActionService: target snapshots persisted
+  Note over ActionService: Internal trace only: operation graph and target lifecycle stages
 
   ActionService->>InterruptBroker: open pre-damage reaction window
   InterruptBroker-->>TargetPlayer: reaction_prompt for window on_hit
@@ -79,7 +80,8 @@ sequenceDiagram
     ActionService-->>ActionService: continue without unlock mutation
   end
 
-  ActionService->>EventPub: emit operation and command lifecycle events with state_revision
+  ActionService->>EventPub: emit public gameplay events attack_result actor_damaged turn_budget_updated
+  ActionService->>EventPub: emit terminal_action_result with state_revision
   EventPub-->>ActivePlayer: action result payload delivered
 
   opt Player spends unlocked action

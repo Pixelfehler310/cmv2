@@ -5,6 +5,11 @@ Status: Draft test-design artifacts for backend implementation planning.
 This folder contains five concrete DnD encounter sequence diagrams intended to drive deterministic and interrupt-aware test authoring for V02.
 Each diagram includes explicit AC/DC checks, manual roll entry via pending_roll, and calculable damage and effect deltas.
 
+Eventing policy in this test pack:
+
+1. Public gameplay lane: pending_choice, pending_roll, attack and save outcomes, actor impact, turn budget updates, terminal action result.
+2. Internal trace lane: graph build and target resolution stage lifecycle details are internal diagnostics, not default client events.
+
 ## Diagram Index
 
 1. `V02_test_seq_01_deterministic_single_attack_baseline.mmd`

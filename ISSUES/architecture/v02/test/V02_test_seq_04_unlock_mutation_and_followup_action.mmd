@@ -16,6 +16,7 @@ sequenceDiagram
 
   FighterUI->>Transport: execute_action req-2301 action.weapon_attack.greatsword target GoblinA
   Transport->>Service: execute_action(command)
+  Note over Service: Internal trace only: stage lifecycle and per-operation planning
   Service->>Exec: roll attack d20 20 critical hit
   Service->>RollPolicy: evaluate manual damage roll mode for critical greatsword damage
   RollPolicy-->>Service: requires_pending_roll
@@ -30,13 +31,15 @@ sequenceDiagram
   alt Unlock condition matched (GWM kill/crit)
     Unlock->>Budget: add feat.gwm.cleave_attack to unlocked_action_refs
     Budget-->>Service: updated turn budget snapshot
-    Service->>Events: turn_budget_updated(unlocked_action_refs included)
+    Service->>Events: turn_budget_updated with unlocked_action_refs included
     Events-->>FighterUI: contextual unlocked action becomes available
   else No unlock condition
     Unlock-->>Service: no mutation
   end
 
-  Service->>Events: terminal result for req-2301
+  Service->>Events: attack_result critical hit on GoblinA
+  Service->>Events: actor_damaged GoblinA amount 22 slashing
+  Service->>Events: terminal_action_result for req-2301
   Events-->>FighterUI: resolved
 
   opt Player spends unlocked action on GoblinB
@@ -51,7 +54,9 @@ sequenceDiagram
     Transport->>Service: resume_from_roll req-2302
     Service->>Exec: validate submitted roll bounds and apply follow-up damage total 14 slashing
     Exec-->>Service: GoblinB HP from 14 to 0
-    Service->>Events: operation and terminal events for req-2302
+    Service->>Events: attack_result hit on GoblinB
+    Service->>Events: actor_damaged GoblinB amount 14 slashing
+    Service->>Events: terminal_action_result for req-2302
     Events-->>FighterUI: resolved
   end
 

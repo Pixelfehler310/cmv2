@@ -23,6 +23,7 @@ sequenceDiagram
   Graph-->>Service: [op-2101-attack]
   Service->>Targets: resolve explicit target snapshot
   Targets-->>Service: snapshot persisted
+  Note over Service: Internal trace only: graph and targeting stage lifecycle
   Service->>Exec: roll attack d20 14, total 19 vs AC 15 provisional hit
   Exec-->>Service: provisional hit outcome before reaction window
 
@@ -35,7 +36,7 @@ sequenceDiagram
     Service->>Exec: Shield sets AC from 15 to 20 for this window
     Service->>Exec: recompute hit: 19 vs AC 20 (miss)
     Exec-->>Service: reaction_resolved, attack damage canceled
-    Service->>Events: operation_denied with reason_code attack_missed_after_reaction
+    Service->>Events: attack_result miss after reaction shield
   else Defender declines or window expires
     Interrupt-->>Service: no reaction branch
     Service->>RollPolicy: evaluate manual damage roll mode for greataxe damage
@@ -49,9 +50,10 @@ sequenceDiagram
 
   Service->>Exec: finalize post-reaction damage branch
   Exec-->>Service: final operation outcomes
-  Service->>Events: operation_resolved and actor-impact events
-  Service->>Events: terminal action result for req-2101
+  Service->>Events: attack_result hit on WizardIria when no reaction
+  Service->>Events: actor_damaged WizardIria amount 11 slashing
+  Service->>Events: terminal_action_result for req-2101
   Events-->>Attacker: result batch
   Events-->>Defender: visibility-filtered result batch
 
-  Note over Service,Interrupt: Assertions\n1. Shield branch damage is zero because hit is converted to miss\n2. Decline branch emits pending_roll then applies submitted damage 11\n3. Both branches converge to one terminal outcome for req-2101\n4. No duplicate damage application across branches
+  Note over Service,Interrupt: Assertions\n1. Shield branch converts hit to miss and does not roll or apply damage\n2. Decline branch emits pending_roll then applies submitted damage 11\n3. Both branches converge to one terminal outcome for req-2101\n4. No duplicate damage application across branches

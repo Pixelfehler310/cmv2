@@ -50,7 +50,7 @@ flowchart TD
   A2 -- Denied --> R1
   A2 -- Allowed --> A3[Build and validate operation dependency graph]
   A3 --> A4[Linearize operation order deterministically]
-  A4 --> A5[Resolve per-operation targets and persist snapshots]
+  A4 --> A5[Resolve per-operation targets and persist snapshots as internal trace]
   A5 --> A6{Next operation exists?}
   A6 -- No --> A20[Materialize deferred and tick registrations]
   A6 -- Yes --> A7[Load next operation node]
@@ -85,7 +85,7 @@ flowchart TD
   G5 -- No --> G9[Apply timeout policy server_roll_or_cancel]
   G9 --> A15
 
-  A15[Emit operation_resolved and combat outcome events]
+  A15[Record operation outcome in internal trace and derive combat outcomes]
   A15 --> A16[Interrupt broker evaluates reaction triggers]
   A16 --> A17{Reaction interrupt window opened?}
   A17 -- Yes --> R2[Pause operation flow and process reaction stack]
@@ -117,7 +117,7 @@ flowchart TD
   A19 -- No --> A6
 
   A20 --> A21[Apply concentration transitions and linked removals]
-  A21 --> A22[Emit terminal action result with state_revision]
+  A21 --> A22[Emit public gameplay events and terminal action result with state_revision]
   A22 --> H
 
   H -- End turn --> Z1[Client sends end_turn]
