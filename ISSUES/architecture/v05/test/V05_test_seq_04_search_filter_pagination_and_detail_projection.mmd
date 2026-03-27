@@ -1,0 +1,49 @@
+sequenceDiagram
+  autonumber
+  participant GMUI as ContentManagerUI
+  participant API as CompendiumRouter
+  participant QUERY as ContentQueryApplicationService
+  participant QPOL as QueryDeterminismPolicy
+  participant IDX as SearchIndexRepository
+  participant DEF as DefinitionRepository
+  participant LREP as LinkedEntryRepository
+
+  Note over GMUI,LREP: Precondition: catalog_revision=600, 320 spells indexed, stable tie-breaker on definition_id
+
+  GMUI->>API: GET /api/spells?query=fire&level=3&state=published&sort=name.asc&page_size=50 req-5301
+  API->>QUERY: search_definitions(req-5301)
+  QUERY->>QPOL: normalize_query(req-5301)
+  QPOL-->>QUERY: normalized filters + deterministic sort tuple (name,definition_id)
+  QUERY->>IDX: search(filters, sort, cursor=None, revision=600)
+  IDX-->>QUERY: rows[0..49], next_cursor=cur_600_50
+  QUERY->>DEF: hydrate detail-lite fields for rows[0..49]
+  DEF-->>QUERY: hydrated rows
+  QUERY-->>API: result payload + applied_filters + next_cursor
+  API-->>GMUI: 200 OK (50 rows, cursor=cur_600_50, revision=600)
+
+  GMUI->>API: GET /api/spells?query=fire&level=3&state=published&sort=name.asc&page_size=50&cursor=cur_600_50 req-5302
+  API->>QUERY: search_definitions(req-5302)
+  QUERY->>QPOL: validate_cursor(cur_600_50, revision=600)
+  QPOL-->>QUERY: ok
+  QUERY->>IDX: search(filters, sort, cursor=cur_600_50, revision=600)
+  IDX-->>QUERY: rows[50..99], next_cursor=cur_600_100
+  QUERY-->>API: deterministic page 2 payload
+  API-->>GMUI: 200 OK (50 rows, no overlap with page 1)
+
+  GMUI->>API: GET /api/spells/spell.fireball?include_reverse_links=true req-5303
+  API->>QUERY: get_definition_detail(req-5303)
+  QUERY->>DEF: get_by_id(spell.fireball)
+  DEF-->>QUERY: full spell payload
+  QUERY->>LREP: list_reverse(spell.fireball)
+  LREP-->>QUERY: [class.wizard, class.sorcerer, item.scroll_of_fireball]
+  QUERY-->>API: detail projection + reverse references + revision=600
+  API-->>GMUI: 200 OK
+
+  GMUI->>API: GET /api/spells?query=fire&level=3&state=published&sort=name.asc&page_size=50 req-5304
+  API->>QUERY: search_definitions(req-5304)
+  QUERY->>IDX: search(filters, sort, cursor=None, revision=600)
+  IDX-->>QUERY: rows[0..49], next_cursor=cur_600_50
+  QUERY-->>API: same deterministic ordering as req-5301
+  API-->>GMUI: 200 OK (stable order verified)
+
+  Note over GMUI,LREP: Postcondition: list pagination and detail projection are deterministic under same revision snapshot

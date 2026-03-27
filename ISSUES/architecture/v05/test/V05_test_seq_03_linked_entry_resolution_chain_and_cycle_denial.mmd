@@ -1,0 +1,47 @@
+sequenceDiagram
+  autonumber
+  participant GMUI as ContentManagerUI
+  participant API as CompendiumRouter
+  participant QUERY as ContentQueryApplicationService
+  participant LRES as LinkedEntryResolutionService
+  participant DEF as DefinitionRepository
+  participant LREP as LinkedEntryRepository
+  participant POLICY as LinkedEntryIntegrityPolicy
+  participant APP as CompendiumApplicationService
+  participant EVT as ContentEventsMapper
+
+  Note over GMUI,EVT: Precondition: spell.sunburst references feature.radiant_mastery references condition.blinded
+
+  GMUI->>API: GET /api/spells/spell.sunburst?include_forward_links=true req-5201
+  API->>QUERY: get_definition_detail(req-5201)
+  QUERY->>DEF: get_by_id(spell.sunburst)
+  DEF-->>QUERY: spell.sunburst payload
+  QUERY->>LRES: resolve_forward_links(spell.sunburst)
+  LRES->>LREP: list_forward(spell.sunburst)
+  LREP-->>LRES: [feature.radiant_mastery]
+  LRES->>LREP: list_forward(feature.radiant_mastery)
+  LREP-->>LRES: [condition.blinded]
+  LRES->>POLICY: validate_cycle_safety(chain sunburst->radiant_mastery->blinded)
+  POLICY-->>LRES: ok
+  LRES-->>QUERY: resolved_link_chain (depth=2)
+  QUERY-->>API: resolved detail payload + linked entries
+  API-->>GMUI: 200 OK rev=522
+
+  GMUI->>API: PUT /api/features/feature.radiant_mastery req-5202 payload(add link -> spell.sunburst)
+  API->>APP: update_definition(req-5202)
+  APP->>LRES: validate_references(feature.radiant_mastery)
+  LRES->>POLICY: validate_cycle_safety(new edge radiant_mastery->sunburst)
+  POLICY-->>LRES: denied linked_entry_cycle_detected
+  LRES-->>APP: deny
+  APP->>EVT: to_command_denied_event(req-5202, linked_entry_cycle_detected)
+  EVT-->>API: denied envelope
+  API-->>GMUI: 409 Conflict reason=linked_entry_cycle_detected
+
+  GMUI->>API: GET /api/spells/spell.sunburst?include_forward_links=true req-5203
+  API->>QUERY: get_definition_detail(req-5203)
+  QUERY->>LRES: resolve_forward_links(spell.sunburst)
+  LRES-->>QUERY: unchanged chain (no cycle introduced)
+  QUERY-->>API: resolved detail
+  API-->>GMUI: 200 OK
+
+  Note over GMUI,EVT: Postcondition: cycle attempt denied; previously valid chain remains intact

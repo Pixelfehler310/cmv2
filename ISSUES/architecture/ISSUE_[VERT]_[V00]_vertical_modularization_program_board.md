@@ -1,6 +1,6 @@
 # ISSUE [VERT][V00]: Vertical Modularization Program Board
 
-Status: Planned
+Status: Active Planning
 Owner: Architecture
 
 ## Why This Exists
@@ -37,20 +37,27 @@ Out of scope:
 
 Primary active module:
 
-- V01 Runtime Hierarchy and Scene Combat Lifecycle
+- V05 Compendium CRUD and Definition Catalog
 
 Optional prep module:
 
-- None (hold prep while V01 decomposition executes)
+- V06 Event Contracts and Frontend Projection
 
 Active child issue set:
 
-1. V01-01 Baseline and Drift Audit.
-2. V01-02 Lifecycle Contract Freeze.
-3. V01-03 Ownership and Repository Boundary Lock.
-4. V01-04 Application Transition Orchestration.
-5. V01-05 WS and REST Interface Convergence.
-6. V01-06 Test Matrix and Completion Gate.
+1. V05-01 Baseline and Drift Audit.
+2. V05-02 Definition Contract and Validation Freeze.
+3. V05-03 Ownership and Repository Boundary Lock.
+4. V05-04 CRUD Application Orchestration.
+5. V05-05 REST/WS Contract Convergence for Content Streams.
+6. V05-06 Indexing, Search, and Linked-Entry Resolution Policy.
+7. V05-07 Test Matrix and Completion Gate.
+
+Activation rationale:
+
+1. Temporary production goal prioritizes content lookup and character-sheet support over map/combat automation.
+2. V05 creates the highest near-term utility for hybrid tabletop sessions.
+3. V06 prep is enabled to avoid projection drift while V05 contracts are frozen.
 
 ## Program Rules
 

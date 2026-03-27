@@ -1,0 +1,443 @@
+%% V05 Detailed Module Diagram
+%% Scope: Compendium CRUD, lifecycle metadata, linked-entry integrity, and catalog indexing
+%% Derived from D2.9 and V05 vertical planning phase
+classDiagram
+
+namespace ContentDomain {
+  class DefinitionRecord {
+    +id: str
+    +family: spell | item | monster | species | class | feat | background | feature
+    +slug: str
+    +name: str
+    +lifecycle_state: draft | published | archived | superseded
+    +content_version: int
+    +schema_version: int
+    +pack_id: str
+    +provenance_source: str
+    +provenance_author: str | None
+    +provenance_updated_at: datetime
+    +payload: dict
+    +validate_contract()
+    +validate_family_rules()
+  }
+
+  class ContentPackRecord {
+    +id: str
+    +pack_key: str
+    +title: str
+    +compatibility_target: str
+    +lifecycle_state: draft | published | archived
+    +published_version: int | None
+    +created_at: datetime
+    +updated_at: datetime
+    +publish()
+    +archive()
+    +restore()
+  }
+
+  class LinkedEntryReference {
+    +id: str
+    +source_definition_id: str
+    +source_path: str
+    +target_definition_id: str
+    +target_family: str
+    +relation_kind: inline_ref | prerequisite | replacement | parent_child | related
+    +required: bool
+    +resolve_mode: strict | best_effort
+  }
+
+  class ReplacementChain {
+    +head_definition_id: str
+    +next_definition_id: str | None
+    +chain_depth: int
+    +terminal_definition_id: str | None
+    +validate_chain()
+    +resolve_current_visible()
+  }
+
+  class CatalogRevision {
+    +revision_id: int
+    +reason: mutation | publish | archive | restore | bulk_import
+    +request_id: str
+    +changed_definition_ids: list[str]
+    +changed_pack_ids: list[str]
+    +created_at: datetime
+  }
+
+  class IndexDocument {
+    +document_id: str
+    +definition_id: str
+    +family: str
+    +name_normalized: str
+    +tags: list[str]
+    +search_tokens: list[str]
+    +sortable_fields: dict
+    +visibility_state: str
+    +catalog_revision: int
+  }
+
+  class ContentQueryRequest {
+    +request_id: str
+    +query_text: str | None
+    +family_filters: list[str]
+    +state_filters: list[str]
+    +level_filters: list[int]
+    +sort_field: str
+    +sort_direction: asc | desc
+    +page_size: int
+    +cursor: str | None
+  }
+
+  class ContentQueryResult {
+    +request_id: str
+    +catalog_revision: int
+    +items: list[IndexDocument]
+    +next_cursor: str | None
+    +total_estimate: int
+    +applied_filters: dict
+  }
+
+  class V05Invariants {
+    +single_write_authority_per_definition()
+    +single_write_authority_per_pack()
+    +linked_reference_targets_exist_or_denied()
+    +replacement_chain_acyclic()
+    +lifecycle_transition_valid()
+    +deterministic_query_ordering()
+    +catalog_revision_monotonic()
+  }
+}
+
+namespace ApplicationLayer {
+  class CompendiumApplicationService {
+    +create_definition(request)
+    +update_definition(request)
+    +delete_definition(request)
+    +supersede_definition(request)
+    +bulk_import_definitions(request)
+  }
+
+  class ContentLifecycleApplicationService {
+    +publish_definition(request)
+    +archive_definition(request)
+    +restore_definition(request)
+    +publish_pack(request)
+    +archive_pack(request)
+    +restore_pack(request)
+  }
+
+  class LinkedEntryResolutionService {
+    +validate_references(definition)
+    +resolve_forward_links(definition_id)
+    +resolve_reverse_links(definition_id)
+    +resolve_replacement_chain(definition_id)
+    +deny_on_cycle(definition_id)
+  }
+
+  class ContentQueryApplicationService {
+    +list_definitions(query)
+    +get_definition_detail(definition_id)
+    +search_definitions(query)
+    +list_linked_entries(definition_id)
+    +list_reverse_references(definition_id)
+  }
+
+  class ContentMutationResult {
+    +status: resolved | denied | error
+    +reason_code: str | None
+    +definition_id: str | None
+    +pack_id: str | None
+    +catalog_revision: int | None
+    +changed_reference_ids: list[str]
+    +warnings: list[str]
+  }
+}
+
+namespace PolicyLayer {
+  class DefinitionContractPolicy {
+    +validate_required_fields(family, payload)
+    +validate_field_types(family, payload)
+    +validate_schema_version(family, payload)
+    +validate_version_guard(expected, current)
+  }
+
+  class LifecycleTransitionPolicy {
+    +can_publish(current_state)
+    +can_archive(current_state)
+    +can_restore(current_state)
+    +can_supersede(current_state)
+    +deny_on_invalid_transition(current_state, target_state)
+  }
+
+  class LinkedEntryIntegrityPolicy {
+    +validate_target_family(source_family, target_family, relation_kind)
+    +validate_target_exists(target_definition_id)
+    +validate_cycle_safety(source_definition_id, target_definition_id)
+    +validate_replacement_chain(source_definition_id)
+  }
+
+  class VisibilityPolicy {
+    +can_read_definition(role, lifecycle_state)
+    +can_mutate_definition(role, lifecycle_state)
+    +can_read_pack(role, lifecycle_state)
+  }
+
+  class QueryDeterminismPolicy {
+    +normalize_query(query)
+    +validate_sort_key(sort_field)
+    +stable_tie_breaker(definition_id)
+    +validate_cursor(cursor, revision)
+  }
+}
+
+namespace RepositoryLayer {
+  class DefinitionRepository {
+    +create(definition)
+    +update(definition)
+    +delete(definition_id)
+    +get_by_id(definition_id)
+    +get_by_slug(family, slug)
+    +list_by_family(filters)
+  }
+
+  class ContentPackRepository {
+    +create(pack)
+    +update(pack)
+    +get_by_id(pack_id)
+    +list(filters)
+  }
+
+  class LinkedEntryRepository {
+    +upsert_links(source_definition_id, links)
+    +list_forward(source_definition_id)
+    +list_reverse(target_definition_id)
+    +delete_by_source(source_definition_id)
+  }
+
+  class SearchIndexRepository {
+    +upsert_document(index_document)
+    +delete_document(definition_id)
+    +search(query)
+    +rebuild_for_revision(revision_id)
+  }
+
+  class CatalogRevisionRepository {
+    +create_revision(change_set)
+    +get_latest_revision()
+    +get_revision(revision_id)
+  }
+
+  class UnitOfWork {
+    +begin()
+    +commit()
+    +rollback()
+  }
+}
+
+namespace TransportLayer {
+  class CompendiumRouter {
+    +get_definitions()
+    +get_definition_by_id()
+    +post_definition()
+    +put_definition()
+    +delete_definition()
+    +post_publish_definition()
+    +post_archive_definition()
+    +post_restore_definition()
+    +get_linked_entries()
+  }
+
+  class ContentStreamWsHandler {
+    +handle_subscribe_content_stream(command)
+    +handle_unsubscribe_content_stream(command)
+    +handle_request_content_sync(command)
+  }
+
+  class ContentEventsMapper {
+    +to_definition_created_event(result)
+    +to_definition_updated_event(result)
+    +to_definition_deleted_event(result)
+    +to_definition_published_event(result)
+    +to_definition_archived_event(result)
+    +to_linked_entries_updated_event(result)
+    +to_index_updated_event(result)
+    +to_command_denied_event(result)
+  }
+}
+
+namespace EventContracts {
+  class ContentMutationEvent {
+    +event_type: definition_created | definition_updated | definition_deleted
+    +request_id: str
+    +definition_id: str
+    +family: str
+    +lifecycle_state: str
+    +content_version: int
+    +catalog_revision: int
+  }
+
+  class ContentLifecycleEvent {
+    +event_type: definition_published | definition_archived | definition_restored | definition_superseded
+    +request_id: str
+    +definition_id: str
+    +pack_id: str
+    +replacement_target_id: str | None
+    +catalog_revision: int
+  }
+
+  class LinkedEntryEvent {
+    +event_type: linked_entries_updated | linked_entries_denied
+    +request_id: str
+    +definition_id: str
+    +changed_links: list[str]
+    +reason_code: str | None
+    +catalog_revision: int
+  }
+
+  class ContentIndexEvent {
+    +event_type: index_document_updated | index_rebuild_completed
+    +request_id: str
+    +definition_ids: list[str]
+    +catalog_revision: int
+  }
+
+  class ContentCommandDeniedEvent {
+    +event_type: command_denied
+    +request_id: str
+    +reason_code: str
+    +message: str
+    +catalog_revision: int | None
+  }
+}
+
+namespace FrontendProjectionBoundary {
+  class ContentManagerReadModel {
+    +catalog_revision: int
+    +list_rows: list[dict]
+    +detail_cache: dict
+    +linked_entry_graph: dict
+    +apply_mutation_event(event)
+    +apply_lifecycle_event(event)
+    +apply_link_event(event)
+    +invalidate_on_revision_gap()
+  }
+
+  class CharacterSheetReferenceReadModel {
+    +actor_id: str
+    +known_spell_refs: list[str]
+    +prepared_spell_refs: list[str]
+    +action_refs: list[str]
+    +resolve_reference(ref)
+    +follow_replacement_chain(ref)
+  }
+
+  class ProjectionInvalidationContract {
+    +must_refetch_on_revision_gap: bool
+    +must_refetch_on_missing_link_target: bool
+    +must_refetch_on_schema_mismatch: bool
+  }
+}
+
+namespace TestingAndGate {
+  class ContractTests {
+    +test_all_family_contracts()
+    +test_denied_reason_taxonomy()
+    +test_lifecycle_field_behavior()
+  }
+
+  class OwnershipTests {
+    +test_single_writer_definition()
+    +test_single_writer_pack()
+    +test_transaction_scope_integrity()
+  }
+
+  class LinkedEntryTests {
+    +test_forward_reverse_link_resolution()
+    +test_cycle_denial()
+    +test_replacement_chain_resolution()
+  }
+
+  class QueryDeterminismTests {
+    +test_stable_sort_pagination()
+    +test_cursor_revision_validation()
+    +test_filter_parity_between_calls()
+  }
+
+  class TransportParityTests {
+    +test_rest_ws_contract_parity()
+    +test_event_reason_code_parity()
+    +test_projection_revision_handling()
+  }
+
+  class V05CompletionGate {
+    +contract_tests_green: bool
+    +ownership_tests_green: bool
+    +linked_entry_tests_green: bool
+    +query_tests_green: bool
+    +parity_tests_green: bool
+  }
+}
+
+CompendiumApplicationService --> DefinitionContractPolicy : validates contract
+CompendiumApplicationService --> LinkedEntryIntegrityPolicy : validates links
+CompendiumApplicationService --> LifecycleTransitionPolicy : validates transitions
+CompendiumApplicationService --> VisibilityPolicy : validates permissions
+CompendiumApplicationService --> DefinitionRepository : writes definitions
+CompendiumApplicationService --> LinkedEntryRepository : writes links
+CompendiumApplicationService --> CatalogRevisionRepository : creates revision
+CompendiumApplicationService --> SearchIndexRepository : updates index
+CompendiumApplicationService --> UnitOfWork : transactional mutation
+CompendiumApplicationService --> ContentMutationResult : returns
+
+ContentLifecycleApplicationService --> LifecycleTransitionPolicy : validates transition
+ContentLifecycleApplicationService --> DefinitionRepository : updates lifecycle
+ContentLifecycleApplicationService --> ContentPackRepository : updates pack
+ContentLifecycleApplicationService --> CatalogRevisionRepository : creates revision
+ContentLifecycleApplicationService --> SearchIndexRepository : updates index
+
+LinkedEntryResolutionService --> LinkedEntryIntegrityPolicy : validates graph
+LinkedEntryResolutionService --> LinkedEntryRepository : reads links
+LinkedEntryResolutionService --> DefinitionRepository : resolves targets
+
+ContentQueryApplicationService --> QueryDeterminismPolicy : normalizes query
+ContentQueryApplicationService --> SearchIndexRepository : reads index
+ContentQueryApplicationService --> DefinitionRepository : reads details
+ContentQueryApplicationService --> LinkedEntryRepository : resolves references
+ContentQueryApplicationService --> ContentQueryResult : returns
+
+CompendiumRouter --> CompendiumApplicationService : mutation commands
+CompendiumRouter --> ContentLifecycleApplicationService : lifecycle commands
+CompendiumRouter --> ContentQueryApplicationService : list/detail/search
+ContentStreamWsHandler --> ContentQueryApplicationService : sync requests
+ContentEventsMapper --> ContentMutationEvent : emits
+ContentEventsMapper --> ContentLifecycleEvent : emits
+ContentEventsMapper --> LinkedEntryEvent : emits
+ContentEventsMapper --> ContentIndexEvent : emits
+ContentEventsMapper --> ContentCommandDeniedEvent : emits
+
+ContentMutationEvent --> ContentManagerReadModel : updates list/detail
+ContentLifecycleEvent --> ContentManagerReadModel : updates visibility
+LinkedEntryEvent --> ContentManagerReadModel : updates graph
+ContentIndexEvent --> ContentManagerReadModel : updates revision
+ContentManagerReadModel --> ProjectionInvalidationContract : enforces
+
+CharacterSheetReferenceReadModel --> ContentQueryApplicationService : resolves refs
+CharacterSheetReferenceReadModel --> ReplacementChain : follows current visible definition
+
+ContractTests --> V05CompletionGate : requires pass
+OwnershipTests --> V05CompletionGate : requires pass
+LinkedEntryTests --> V05CompletionGate : requires pass
+QueryDeterminismTests --> V05CompletionGate : requires pass
+TransportParityTests --> V05CompletionGate : requires pass
+
+DefinitionRecord --> ContentPackRecord : belongs to
+DefinitionRecord --> LinkedEntryReference : owns [0..*]
+LinkedEntryReference --> DefinitionRecord : targets
+DefinitionRecord --> ReplacementChain : may be part of
+DefinitionRecord --> IndexDocument : projected as
+CatalogRevision --> DefinitionRecord : tracks changes to
+CatalogRevision --> ContentPackRecord : tracks changes to
+V05Invariants ..> DefinitionRecord : validates
+V05Invariants ..> LinkedEntryReference : validates
+V05Invariants ..> CatalogRevision : validates
+V05Invariants ..> ContentQueryResult : validates

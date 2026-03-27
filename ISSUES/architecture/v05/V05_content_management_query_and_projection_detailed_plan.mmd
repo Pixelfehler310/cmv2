@@ -1,0 +1,260 @@
+%% V05 Detailed Plan: Query, Linked-Entry Resolution, and Projection Contracts
+%% Scope: Deterministic list/detail/search flows for content manager and character-sheet-linked lookup
+%% Purpose: Completeness checklist for projection-safe content management behavior
+classDiagram
+
+namespace RequestContracts {
+  class ContentListQueryEnvelope {
+    +request_id: str
+    +query_text: str | None
+    +families: list[str]
+    +lifecycle_states: list[str]
+    +pack_ids: list[str]
+    +sort_field: str
+    +sort_direction: asc | desc
+    +page_size: int
+    +cursor: str | None
+    +include_reverse_links: bool
+  }
+
+  class ContentDetailQueryEnvelope {
+    +request_id: str
+    +definition_id: str
+    +include_forward_links: bool
+    +include_reverse_links: bool
+    +include_replacement_chain: bool
+  }
+
+  class CharacterSheetLookupEnvelope {
+    +request_id: str
+    +actor_id: str
+    +definition_refs: list[str]
+    +follow_replacements: bool
+    +strict_resolution: bool
+  }
+
+  class MutationCommandEnvelope {
+    +request_id: str
+    +operation: create | update | delete | publish | archive | restore | supersede
+    +family: str
+    +definition_id: str | None
+    +payload: dict
+    +expected_content_version: int | None
+  }
+
+  class RequestValidationPolicy {
+    +validate_envelope_shape(envelope)
+    +validate_filter_contract(envelope)
+    +validate_cursor_contract(envelope)
+    +validate_version_guard(envelope)
+    +deny_on_invalid_request(envelope)
+  }
+}
+
+namespace QueryAndMutationPipeline {
+  class ContentPipeline {
+    +validate_request(envelope)
+    +authorize_request(envelope)
+    +execute_mutation_or_query(envelope)
+    +resolve_links_if_requested(result)
+    +apply_projection_rules(result)
+    +finalize_response_or_events(result)
+  }
+
+  class QueryStage {
+    +normalize_query(envelope)
+    +resolve_revision_snapshot(envelope)
+    +execute_index_query(envelope)
+    +hydrate_detail_rows(result)
+  }
+
+  class LinkResolutionStage {
+    +resolve_forward_links(definition_id)
+    +resolve_reverse_links(definition_id)
+    +resolve_replacement_chain(definition_id)
+    +detect_and_deny_cycles(definition_id)
+  }
+
+  class MutationStage {
+    +validate_contract(envelope)
+    +validate_lifecycle_transition(envelope)
+    +persist_definition_delta(envelope)
+    +persist_link_delta(envelope)
+    +create_catalog_revision(envelope)
+    +update_index(envelope)
+  }
+
+  class ProjectionStage {
+    +build_content_list_projection(result)
+    +build_content_detail_projection(result)
+    +build_character_sheet_lookup_projection(result)
+    +attach_revision_metadata(result)
+  }
+
+  class FinalResultEnvelope {
+    +request_id: str
+    +status: resolved | denied | error
+    +reason_code: str | None
+    +catalog_revision: int | None
+    +payload: dict | None
+    +emitted_event_types: list[str]
+  }
+}
+
+namespace EventContracts {
+  class ContentProjectionEvent {
+    +event_type: content_projection_updated
+    +request_id: str
+    +catalog_revision: int
+    +affected_definition_ids: list[str]
+    +affected_families: list[str]
+  }
+
+  class ContentInvalidationEvent {
+    +event_type: content_invalidation_required
+    +request_id: str
+    +reason: revision_gap | missing_reference_target | schema_mismatch
+    +target_scopes: list[str]
+    +catalog_revision: int
+  }
+
+  class CharacterSheetReferenceEvent {
+    +event_type: character_sheet_references_resolved | character_sheet_references_denied
+    +request_id: str
+    +actor_id: str
+    +resolved_definition_ids: list[str]
+    +denied_refs: list[str]
+    +catalog_revision: int
+  }
+
+  class QueryDeniedEvent {
+    +event_type: command_denied
+    +request_id: str
+    +reason_code: str
+    +message: str
+  }
+}
+
+namespace ProjectionConsumers {
+  class ContentManagerStore {
+    +catalog_revision: int
+    +list_query_cache: dict
+    +detail_cache: dict
+    +link_cache: dict
+    +apply_projection_event(event)
+    +apply_invalidation_event(event)
+    +refresh_scope(scope)
+  }
+
+  class CharacterSheetStore {
+    +actor_id: str
+    +reference_resolution_cache: dict
+    +apply_reference_event(event)
+    +refresh_references(actor_id)
+  }
+
+  class ProjectionConsistencyPolicy {
+    +validate_revision_monotonicity(current, incoming)
+    +detect_revision_gap(current, incoming)
+    +require_full_sync_on_gap(scope)
+    +require_targeted_refetch(scope)
+  }
+}
+
+namespace RecoveryAndObservability {
+  class ContentCheckpoint {
+    +catalog_revision: int
+    +checksum: str
+    +snapshot_payload: dict
+    +save()
+    +restore()
+  }
+
+  class AuditLog {
+    +request_id: str
+    +operation_type: query | mutation | link_resolution
+    +status: resolved | denied | error
+    +reason_code: str | None
+    +catalog_revision: int | None
+  }
+
+  class DriftRecoveryPolicy {
+    +detect_contract_drift(client_schema, server_schema)
+    +trigger_invalidation(scope)
+    +issue_resync(scope)
+  }
+}
+
+namespace TestingAndGate {
+  class QueryContractTests {
+    +test_filter_contract_validation()
+    +test_cursor_contract_validation()
+    +test_query_reason_codes()
+  }
+
+  class MutationContractTests {
+    +test_mutation_contract_validation()
+    +test_version_guard_denials()
+    +test_lifecycle_transition_denials()
+  }
+
+  class LinkResolutionTests {
+    +test_forward_reverse_resolution()
+    +test_replacement_chain_resolution()
+    +test_cycle_detection_denial()
+    +test_missing_target_denial()
+  }
+
+  class ProjectionConsistencyTests {
+    +test_revision_monotonicity()
+    +test_revision_gap_invalidation()
+    +test_content_manager_refresh_path()
+    +test_character_sheet_reference_refresh_path()
+  }
+
+  class V05ProjectionGate {
+    +query_contract_green: bool
+    +mutation_contract_green: bool
+    +link_resolution_green: bool
+    +projection_consistency_green: bool
+  }
+}
+
+ContentListQueryEnvelope --> RequestValidationPolicy : validate
+ContentDetailQueryEnvelope --> RequestValidationPolicy : validate
+CharacterSheetLookupEnvelope --> RequestValidationPolicy : validate
+MutationCommandEnvelope --> RequestValidationPolicy : validate
+
+RequestValidationPolicy --> ContentPipeline : accepted envelope
+ContentPipeline --> QueryStage : handles list/detail/search
+ContentPipeline --> LinkResolutionStage : resolves links
+ContentPipeline --> MutationStage : handles mutations
+ContentPipeline --> ProjectionStage : builds read models
+ContentPipeline --> FinalResultEnvelope : finalize
+
+QueryStage --> ProjectionStage : provides query rows
+LinkResolutionStage --> ProjectionStage : provides resolved links
+MutationStage --> ProjectionStage : provides changed entities
+
+ProjectionStage --> ContentProjectionEvent : emits
+ProjectionStage --> CharacterSheetReferenceEvent : emits
+ProjectionStage --> ContentInvalidationEvent : emits on mismatch
+RequestValidationPolicy --> QueryDeniedEvent : emits on invalid input
+
+ContentProjectionEvent --> ContentManagerStore : apply
+ContentInvalidationEvent --> ContentManagerStore : invalidate
+CharacterSheetReferenceEvent --> CharacterSheetStore : apply
+
+ContentManagerStore --> ProjectionConsistencyPolicy : enforce
+CharacterSheetStore --> ProjectionConsistencyPolicy : enforce
+ProjectionConsistencyPolicy --> ContentInvalidationEvent : trigger on gap
+
+ContentPipeline --> AuditLog : write
+MutationStage --> ContentCheckpoint : save
+DriftRecoveryPolicy --> ContentCheckpoint : restore
+DriftRecoveryPolicy --> ContentInvalidationEvent : trigger resync
+
+QueryContractTests --> V05ProjectionGate : requires pass
+MutationContractTests --> V05ProjectionGate : requires pass
+LinkResolutionTests --> V05ProjectionGate : requires pass
+ProjectionConsistencyTests --> V05ProjectionGate : requires pass

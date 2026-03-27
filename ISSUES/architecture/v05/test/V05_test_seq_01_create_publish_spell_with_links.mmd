@@ -1,0 +1,54 @@
+sequenceDiagram
+  autonumber
+  participant GMUI as ContentManagerUI
+  participant API as CompendiumRouter
+  participant APP as CompendiumApplicationService
+  participant VAL as DefinitionContractPolicy
+  participant LRES as LinkedEntryResolutionService
+  participant DEF as DefinitionRepository
+  participant LREP as LinkedEntryRepository
+  participant REV as CatalogRevisionRepository
+  participant IDX as SearchIndexRepository
+  participant EVT as ContentEventsMapper
+  participant WS as ContentStream
+
+  Note over GMUI,WS: Precondition: pack core_srd5e in draft state, catalog_revision=301
+
+  GMUI->>API: POST /api/spells req-5001 (draft spell.arcane_aegis + linked refs)
+  API->>APP: create_definition(req-5001)
+  APP->>VAL: validate_required_fields(spell payload)
+  VAL-->>APP: ok
+  APP->>LRES: validate_references(spell.arcane_aegis refs)
+  LRES-->>APP: ok (targets exist, no cycle)
+
+  APP->>DEF: create(spell.arcane_aegis@v1 draft)
+  DEF-->>APP: persisted definition_id=spell.arcane_aegis
+  APP->>LREP: upsert_links(spell.arcane_aegis -> feat.warcaster, condition.shielded)
+  LREP-->>APP: links persisted
+  APP->>REV: create_revision(reason=mutation, req-5001)
+  REV-->>APP: catalog_revision=302
+  APP->>IDX: upsert_document(spell.arcane_aegis@rev302)
+  IDX-->>APP: indexed
+  APP->>EVT: to_definition_created_event(req-5001, rev302)
+  EVT-->>WS: definition_created(event)
+  APP-->>API: resolved status + definition_id + rev302
+  API-->>GMUI: 201 Created (state=draft, content_version=1, catalog_revision=302)
+
+  GMUI->>API: POST /api/spells/spell.arcane_aegis/publish req-5002
+  API->>APP: publish_definition(req-5002)
+  APP->>VAL: validate_publish_contract(spell.arcane_aegis)
+  VAL-->>APP: ok
+  APP->>LRES: resolve_forward_links(spell.arcane_aegis)
+  LRES-->>APP: all required targets resolvable
+  APP->>DEF: update lifecycle_state draft->published
+  DEF-->>APP: lifecycle persisted
+  APP->>REV: create_revision(reason=publish, req-5002)
+  REV-->>APP: catalog_revision=303
+  APP->>IDX: upsert_document(spell.arcane_aegis visible=published rev303)
+  IDX-->>APP: index updated
+  APP->>EVT: to_definition_published_event(req-5002, rev303)
+  EVT-->>WS: definition_published(event)
+  APP-->>API: resolved status + rev303
+  API-->>GMUI: 200 OK (state=published, catalog_revision=303)
+
+  Note over GMUI,WS: Postcondition: spell.arcane_aegis is published and query-visible at revision 303

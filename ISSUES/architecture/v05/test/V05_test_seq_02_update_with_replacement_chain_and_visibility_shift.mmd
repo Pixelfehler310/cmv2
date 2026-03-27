@@ -1,0 +1,73 @@
+sequenceDiagram
+  autonumber
+  participant GMUI as ContentManagerUI
+  participant API as CompendiumRouter
+  participant APP as CompendiumApplicationService
+  participant LIFE as ContentLifecycleApplicationService
+  participant LRES as LinkedEntryResolutionService
+  participant DEF as DefinitionRepository
+  participant REV as CatalogRevisionRepository
+  participant IDX as SearchIndexRepository
+  participant EVT as ContentEventsMapper
+  participant SHEET as CharacterSheetStore
+  participant WS as ContentStream
+
+  Note over GMUI,WS: Precondition: spell.fire_shield_v1 published, catalog_revision=410
+
+  GMUI->>API: POST /api/spells req-5101 (spell.fire_shield_v2 draft)
+  API->>APP: create_definition(req-5101)
+  APP->>DEF: create(spell.fire_shield_v2@v1 draft)
+  DEF-->>APP: persisted
+  APP->>REV: create_revision(reason=mutation, req-5101)
+  REV-->>APP: catalog_revision=411
+  APP->>IDX: upsert_document(v2 draft hidden from player scope)
+  IDX-->>APP: indexed
+  APP-->>API: resolved rev411
+  API-->>GMUI: 201 Created
+
+  GMUI->>API: POST /api/spells/spell.fire_shield_v2/supersede req-5102 payload(replaces=spell.fire_shield_v1)
+  API->>LIFE: supersede_definition(req-5102)
+  LIFE->>LRES: validate_replacement_chain(v1 -> v2)
+  LRES-->>LIFE: ok (acyclic)
+  LIFE->>DEF: set replaced_by_ref on v1 and replacement_of_ref on v2
+  DEF-->>LIFE: replacement links persisted
+  LIFE->>REV: create_revision(reason=supersede, req-5102)
+  REV-->>LIFE: catalog_revision=412
+  LIFE->>IDX: upsert_documents(v1,v2 with replacement metadata)
+  IDX-->>LIFE: index updated
+  LIFE->>EVT: to_linked_entries_updated_event(req-5102, rev412)
+  EVT-->>WS: linked_entries_updated(event)
+  LIFE-->>API: resolved rev412
+  API-->>GMUI: 200 OK
+
+  GMUI->>API: POST /api/spells/spell.fire_shield_v2/publish req-5103
+  API->>LIFE: publish_definition(req-5103)
+  LIFE->>DEF: set v2 published
+  DEF-->>LIFE: persisted
+  LIFE->>REV: create_revision(reason=publish, req-5103)
+  REV-->>LIFE: catalog_revision=413
+  LIFE->>IDX: set v2 visible in published scope
+  IDX-->>LIFE: index updated
+  LIFE->>EVT: to_definition_published_event(req-5103, rev413)
+  EVT-->>WS: definition_published(event)
+  LIFE-->>API: resolved rev413
+  API-->>GMUI: 200 OK
+
+  GMUI->>API: POST /api/spells/spell.fire_shield_v1/archive req-5104
+  API->>LIFE: archive_definition(req-5104)
+  LIFE->>DEF: set v1 archived
+  DEF-->>LIFE: persisted
+  LIFE->>REV: create_revision(reason=archive, req-5104)
+  REV-->>LIFE: catalog_revision=414
+  LIFE->>IDX: mark v1 archived and replacement target=v2
+  IDX-->>LIFE: index updated
+  LIFE->>EVT: to_definition_archived_event(req-5104, rev414)
+  EVT-->>WS: definition_archived(event)
+  LIFE-->>API: resolved rev414
+  API-->>GMUI: 200 OK
+
+  WS-->>SHEET: definition_archived(v1,replacement=v2,rev414)
+  SHEET->>SHEET: follow_replacement_chain(v1->v2)
+  SHEET->>SHEET: refresh cached reference for active actor
+
+  Note over GMUI,SHEET: Postcondition: viewer resolves fire_shield to v2 under revision 414

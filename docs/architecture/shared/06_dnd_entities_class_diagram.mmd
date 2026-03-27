@@ -1,0 +1,117 @@
+%% D&D Entities Overview: From Compendium to Combat Encounters
+classDiagram
+
+namespace CompendiumStaticDomain {
+  class DefinitionRecord {
+    +id: str
+    +family: spell | item | monster | class | feat | feature | etc
+    +payload: dict
+    +lifecycle_state: str
+  }
+
+  class ContentPackRecord {
+    +pack_id: str
+    +title: str
+    +lifecycle_state: str
+  }
+
+  class LinkedEntryReference {
+    +source_definition_id: str
+    +target_definition_id: str
+    +relation_kind: prerequisite | grants | parent_child
+  }
+
+  class ReplacementChain {
+    +head_definition_id: str
+    +terminal_definition_id: str
+  }
+}
+
+namespace CampaignRuntimeDomain {
+  class CampaignRuntimeAggregate {
+    +campaign_id: str
+    +current_scene_id: str
+  }
+
+  class SceneRuntimeAggregate {
+    +scene_id: str
+    +campaign_id: str
+    +combat_active: bool
+  }
+}
+
+namespace CombatExecutionDomain {
+  class CombatEncounterRuntime {
+    +scene_id: str
+    +round_number: int
+    +active_actor_id: str
+  }
+
+  class CombatActorRuntime {
+    +actor_id: str
+    +source_definition_id: str
+    +hp_current: int
+    +concentration_effect_id: str
+  }
+
+  class TurnBudgetRuntime {
+    +actor_id: str
+    +action_available: bool
+    +bonus_action_available: bool
+    +reaction_available: bool
+    +movement_remaining: int
+  }
+
+  class EffectInstanceRuntime {
+    +effect_id: str
+    +source_actor_id: str
+    +target_actor_id: str
+    +source_definition_id: str
+    +duration_remaining: int
+  }
+
+  class ZoneEffectRuntime {
+    +zone_id: str
+    +source_actor_id: str
+    +source_definition_id: str
+    +shape_type: sphere | cube | line
+    +occupant_actor_ids: list[str]
+  }
+}
+
+namespace ActionProcessingDomain {
+  class ActionExecutionRequest {
+    +request_id: str
+    +actor_id: str
+    +action_type: action | bonus_action | reaction
+    +source_definition_id: str
+  }
+
+  class ActionOperationSpec {
+    +operation_kind: damage | heal | condition | zone | summon
+    +targeting_mode: explicit | area | self
+    +effect_ref: str
+  }
+}
+
+%% Relationships
+DefinitionRecord "*" -- "1" ContentPackRecord : belongs to
+DefinitionRecord "1" -- "*" LinkedEntryReference : relates to
+DefinitionRecord "1" -- "0..1" ReplacementChain : superseded by
+
+CampaignRuntimeAggregate "1" *-- "*" SceneRuntimeAggregate : contains
+SceneRuntimeAggregate "1" *-- "0..1" CombatEncounterRuntime : hosts
+
+CombatEncounterRuntime "1" *-- "*" CombatActorRuntime : involves
+CombatActorRuntime "1" *-- "1" TurnBudgetRuntime : has budget
+CombatEncounterRuntime "1" *-- "*" EffectInstanceRuntime : tracks
+CombatEncounterRuntime "1" *-- "*" ZoneEffectRuntime : tracks
+
+CombatActorRuntime "*" -- "1" DefinitionRecord : instantiated from (Monster / Character)
+EffectInstanceRuntime "*" -- "1" DefinitionRecord : instantiated from (Spell / Feature)
+ZoneEffectRuntime "*" -- "1" DefinitionRecord : instantiated from (Spell / Feature)
+
+ActionExecutionRequest "*" -- "1" DefinitionRecord : triggered by (Spell / Action)
+ActionExecutionRequest "1" *-- "*" ActionOperationSpec : composed of
+ActionOperationSpec ..> EffectInstanceRuntime : creates
+ActionOperationSpec ..> ZoneEffectRuntime : creates

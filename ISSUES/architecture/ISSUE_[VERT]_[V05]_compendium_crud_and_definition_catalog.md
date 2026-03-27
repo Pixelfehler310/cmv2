@@ -1,6 +1,6 @@
 # ISSUE [VERT][V05]: Compendium CRUD and Definition Catalog
 
-Status: Planned
+Status: Active Planning
 Owner: Data + Content Systems
 Depends on: ISSUE [VERT][V00]
 
@@ -36,3 +36,21 @@ Out of scope:
 ## Decomposition Policy
 
 Create child issues only when V05 becomes active.
+
+## Child Issue Plan (Sequenced)
+
+1. ISSUE [VERT][V05-01]: Baseline and Drift Audit.
+2. ISSUE [VERT][V05-02]: Definition Contract and Validation Freeze.
+3. ISSUE [VERT][V05-03]: Ownership and Repository Boundary Lock.
+4. ISSUE [VERT][V05-04]: CRUD Application Orchestration.
+5. ISSUE [VERT][V05-05]: REST/WS Contract Convergence for Content Streams.
+6. ISSUE [VERT][V05-06]: Indexing, Search, and Linked-Entry Resolution Policy.
+7. ISSUE [VERT][V05-07]: Test Matrix and Completion Gate.
+
+Execution rule:
+
+- Complete each issue in sequence unless a dependency exception is explicitly documented.
+
+Module completion rule:
+
+- V05 can only close when V05-07 gate passes and V00 module DoD is satisfied.

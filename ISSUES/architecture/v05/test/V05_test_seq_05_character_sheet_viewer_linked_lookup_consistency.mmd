@@ -1,0 +1,62 @@
+sequenceDiagram
+  autonumber
+  participant PUI as PlayerSheetUI
+  participant API as CompendiumRouter
+  participant QUERY as ContentQueryApplicationService
+  participant LRES as LinkedEntryResolutionService
+  participant SHEET as CharacterSheetStore
+  participant WS as ContentStream
+  participant GMUI as ContentManagerUI
+  participant APP as CompendiumApplicationService
+  participant REV as CatalogRevisionRepository
+  participant EVT as ContentEventsMapper
+
+  Note over PUI,EVT: Precondition: actor A references spells [magic_missile, shield], actions [arcane_burst], store revision=720
+
+  PUI->>SHEET: openCharacterSheet(actorA)
+  SHEET->>API: POST /api/content/resolve-character-sheet-refs req-5401
+  API->>QUERY: resolve_sheet_references(req-5401)
+  QUERY->>LRES: resolve_reference_set(actorA refs)
+  LRES-->>QUERY: resolved [spell.magic_missile_v1, spell.shield_v2, action.arcane_burst_v1]
+  QUERY-->>API: resolved payload + catalog_revision=720
+  API-->>SHEET: 200 OK
+  SHEET-->>PUI: render sheet references
+
+  GMUI->>API: PUT /api/spells/spell.shield_v2 req-5402 (buff text update)
+  API->>APP: update_definition(req-5402)
+  APP->>REV: create_revision(reason=mutation, req-5402)
+  REV-->>APP: catalog_revision=721
+  APP->>EVT: to_definition_updated_event(req-5402, spell.shield_v2, rev721)
+  EVT-->>WS: definition_updated(event)
+  APP-->>API: resolved
+  API-->>GMUI: 200 OK
+
+  WS-->>SHEET: definition_updated(spell.shield_v2, rev721)
+  SHEET->>SHEET: detect_revision_gap(local=720, incoming=721)
+  SHEET->>SHEET: invalidate scope=actorA.reference_resolution
+  SHEET-->>PUI: show updating state for affected references
+
+  SHEET->>API: POST /api/content/resolve-character-sheet-refs req-5403 (targeted refetch)
+  API->>QUERY: resolve_sheet_references(req-5403)
+  QUERY->>LRES: resolve_reference_set(actorA refs at rev721)
+  LRES-->>QUERY: resolved [spell.magic_missile_v1, spell.shield_v2(updated), action.arcane_burst_v1]
+  QUERY-->>API: resolved payload + catalog_revision=721
+  API-->>SHEET: 200 OK
+  SHEET-->>PUI: refresh shield entry without full sheet reset
+
+  GMUI->>API: POST /api/spells/spell.shield_v3/supersede req-5404 payload(replaces=spell.shield_v2)
+  API->>APP: supersede_definition(req-5404)
+  APP->>REV: create_revision(reason=supersede, req-5404)
+  REV-->>APP: catalog_revision=722
+  APP->>EVT: to_definition_published_event(req-5404, replacement_target=shield_v3, rev722)
+  EVT-->>WS: definition_published(event)
+
+  WS-->>SHEET: definition_published(shield_v3 replaces shield_v2, rev722)
+  SHEET->>SHEET: follow_replacement_chain(shield_v2->shield_v3)
+  SHEET->>API: POST /api/content/resolve-character-sheet-refs req-5405
+  API->>QUERY: resolve_sheet_references(req-5405)
+  QUERY-->>API: references resolved with shield_v3 at rev722
+  API-->>SHEET: 200 OK
+  SHEET-->>PUI: render shield as latest replacement
+
+  Note over PUI,EVT: Postcondition: character sheet references remain consistent across updates and replacements
