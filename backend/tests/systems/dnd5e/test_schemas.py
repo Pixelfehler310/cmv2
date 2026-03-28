@@ -41,6 +41,8 @@ from src.systems.dnd5e.schemas.encounter import (
 )
 from src.systems.dnd5e.data.loader import CompendiumLoader
 
+pytestmark = pytest.mark.legacy
+
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -192,7 +194,8 @@ class TestActorInstance:
             max_hp=30,
             armor_class=12,
             conditions=[
-                ConditionInstance(condition="Frightened", source_id="dragon_1"),
+                ConditionInstance(condition="Frightened",
+                                  source_id="dragon_1"),
             ],
             effects=[
                 EffectInstance(

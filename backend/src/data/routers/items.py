@@ -7,6 +7,7 @@ from src.database import get_db
 from src.data.lib.item import Item
 from src.schemas.item import ItemResponse
 
+# [LEGACY][V05-05] Superseded by /api/compendium V05 transport endpoints.
 router = APIRouter(prefix="/items", tags=["Items"])
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,8 @@ async def get_items(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(
     result = await db.execute(select(Item).offset(skip).limit(limit))
     items = result.scalars().all()
     if not items:
-        logger.warning("GET /items returned 0 rows (skip=%s limit=%s)", skip, limit)
+        logger.warning(
+            "GET /items returned 0 rows (skip=%s limit=%s)", skip, limit)
     logger.info("GET /items returning count=%s", len(items))
     return items
 

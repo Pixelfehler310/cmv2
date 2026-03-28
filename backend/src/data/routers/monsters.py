@@ -7,6 +7,7 @@ from src.database import get_db
 from src.data.lib.monster import Monster
 from src.schemas.monster import MonsterResponse
 
+# [LEGACY][V05-05] Superseded by /api/compendium V05 transport endpoints.
 router = APIRouter(prefix="/monsters", tags=["Monsters"])
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,8 @@ async def get_monsters(skip: int = 0, limit: int = 100, db: AsyncSession = Depen
     result = await db.execute(select(Monster).offset(skip).limit(limit))
     monsters = result.scalars().all()
     if not monsters:
-        logger.warning("GET /monsters returned 0 rows (skip=%s limit=%s)", skip, limit)
+        logger.warning(
+            "GET /monsters returned 0 rows (skip=%s limit=%s)", skip, limit)
     logger.info("GET /monsters returning count=%s", len(monsters))
     return monsters
 

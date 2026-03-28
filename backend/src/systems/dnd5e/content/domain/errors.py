@@ -17,6 +17,14 @@ class ContentPackNotFoundError(CompendiumDomainError):
         )
 
 
+class DuplicateContentPackIdError(CompendiumDomainError):
+    def __init__(self, pack_id: str):
+        super().__init__(
+            CompendiumErrorCode.PACK_ID_CONFLICT,
+            f"Content pack id '{pack_id}' already exists.",
+        )
+
+
 class DefinitionNotFoundError(CompendiumDomainError):
     def __init__(self, definition_id: str):
         super().__init__(

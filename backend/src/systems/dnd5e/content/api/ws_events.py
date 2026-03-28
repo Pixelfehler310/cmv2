@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+import logging
+
+from src.core.sessions.manager import SessionManager
+from src.core.ws_dispatcher import session_manager
+from src.core.ws_protocol import Visibility, WsOutbound
+from src.systems.dnd5e.content.application.services import ContentMutationEvent
+
+logger = logging.getLogger(__name__)
+
+_LIFECYCLE_EVENT_NAME_MAP: dict[str, str] = {
+    "definition_published": "DefinitionPublished",
+    "definition_archived": "DefinitionArchived",
+    "definition_restored": "DefinitionRestored",
+    "definition_superseded": "DefinitionSuperseded",
+}
+
+
+class ContentStreamWsHandler:
+    """Broadcasts compendium lifecycle mutations into active campaign WS rooms."""
+
+    def __init__(self, manager: SessionManager | None = None):
+        self._manager = manager or session_manager
+
+    async def publish_mutation_event(self, event: ContentMutationEvent) -> None:
+        lifecycle_event = _LIFECYCLE_EVENT_NAME_MAP.get(event.event_type)
+        if lifecycle_event is None:
+            return
+
+        await self.emit_lifecycle_event(
+            event_type=lifecycle_event,
+            definition_id=event.definition_id,
+            pack_id=event.pack_id,
+            replacement_target_id=event.replacement_target_id,
+            request_id=event.request_id,
+            campaign_id=event.campaign_id,
+        )
+
+    async def emit_lifecycle_event(
+        self,
+        *,
+        event_type: str,
+        definition_id: str,
+        pack_id: str | None,
+        request_id: str | None,
+        replacement_target_id: str | None = None,
+        campaign_id: str | None = None,
+    ) -> None:
+        outbound = WsOutbound(
+            type="content_lifecycle_event",
+            request_id=request_id,
+            payload={
+                "event_type": event_type,
+                "definition_id": definition_id,
+                "pack_id": pack_id,
+                "replacement_target_id": replacement_target_id,
+            },
+            visibility=Visibility.ALL,
+        )
+
+        if campaign_id is not None:
+            await self._manager.broadcast(campaign_id, outbound)
+            return
+
+        for active_campaign_id in self._manager.list_campaign_ids():
+            try:
+                await self._manager.broadcast(active_campaign_id, outbound)
+            except Exception:
+                logger.exception(
+                    "Failed to broadcast content lifecycle event to campaign %s",
+                    active_campaign_id,
+                )

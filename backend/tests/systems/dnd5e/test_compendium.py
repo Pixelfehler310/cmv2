@@ -12,6 +12,8 @@ import pytest
 from src.systems.dnd5e.data.registry import CompendiumRegistry
 from src.systems.dnd5e.data.loader import CompendiumLoader
 
+pytestmark = pytest.mark.legacy
+
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -34,7 +36,8 @@ class TestCompendiumLoader:
 
     def test_loader_parses_monster_file(self, loader: CompendiumLoader, registry: CompendiumRegistry):
         """Single monster file → MonsterDefinition registered in registry."""
-        monster = loader.load_monster_file(FIXTURES / "monsters" / "adult-red-dragon.json")
+        monster = loader.load_monster_file(
+            FIXTURES / "monsters" / "adult-red-dragon.json")
 
         assert monster.name == "Adult Red Dragon"
         assert monster.slug == "adult-red-dragon"
@@ -58,7 +61,8 @@ class TestCompendiumLoader:
 
     def test_loader_loads_monster_directory(self, loader: CompendiumLoader, registry: CompendiumRegistry):
         """Load all monster fixtures from directory."""
-        count = loader.load_directory(FIXTURES / "monsters", entity_type="monsters")
+        count = loader.load_directory(
+            FIXTURES / "monsters", entity_type="monsters")
 
         assert count == 2  # adult-red-dragon + goblin
         assert registry.count("monsters") == 2
@@ -67,14 +71,16 @@ class TestCompendiumLoader:
 
     def test_loader_loads_spell_directory(self, loader: CompendiumLoader, registry: CompendiumRegistry):
         """Load all spell fixtures from directory."""
-        count = loader.load_directory(FIXTURES / "spells", entity_type="spells")
+        count = loader.load_directory(
+            FIXTURES / "spells", entity_type="spells")
 
         assert count == 2  # fireball + cure-wounds
         assert registry.count("spells") == 2
 
     def test_loader_handles_nonexistent_directory(self, loader: CompendiumLoader):
         """Nonexistent directory returns 0 loaded."""
-        count = loader.load_directory("/nonexistent/path", entity_type="monsters")
+        count = loader.load_directory(
+            "/nonexistent/path", entity_type="monsters")
         assert count == 0
 
 
@@ -86,7 +92,8 @@ class TestCompendiumRegistry:
 
     def test_registry_lookup_by_slug(self, loader: CompendiumLoader, registry: CompendiumRegistry):
         """Lookup returns exact definition by slug."""
-        loader.load_monster_file(FIXTURES / "monsters" / "adult-red-dragon.json")
+        loader.load_monster_file(
+            FIXTURES / "monsters" / "adult-red-dragon.json")
 
         dragon = registry.get_monster("adult-red-dragon")
         assert dragon is not None
@@ -107,7 +114,8 @@ class TestCompendiumRegistry:
 
     def test_registry_count_after_loading(self, loader: CompendiumLoader, registry: CompendiumRegistry):
         """Count reflects loaded entities."""
-        loader.load_monster_file(FIXTURES / "monsters" / "adult-red-dragon.json")
+        loader.load_monster_file(
+            FIXTURES / "monsters" / "adult-red-dragon.json")
         loader.load_monster_file(FIXTURES / "monsters" / "goblin.json")
         loader.load_spell_file(FIXTURES / "spells" / "fireball.json")
 

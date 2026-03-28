@@ -7,6 +7,7 @@ from src.database import get_db
 from src.data.lib.spell import Spell
 from src.schemas.spell import SpellResponse
 
+# [LEGACY][V05-05] Superseded by /api/compendium V05 transport endpoints.
 router = APIRouter(prefix="/spells", tags=["Spells"])
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,8 @@ async def get_spells(skip: int = 0, limit: int = 100, db: AsyncSession = Depends
     result = await db.execute(select(Spell).offset(skip).limit(limit))
     spells = result.scalars().all()
     if not spells:
-        logger.warning("GET /spells returned 0 rows (skip=%s limit=%s)", skip, limit)
+        logger.warning(
+            "GET /spells returned 0 rows (skip=%s limit=%s)", skip, limit)
     logger.info("GET /spells returning count=%s", len(spells))
     return spells
 

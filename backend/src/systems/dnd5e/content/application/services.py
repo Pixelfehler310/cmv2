@@ -10,6 +10,7 @@ from ..domain.definition_models import DefinitionRecord
 from ..domain.errors import (
     ContentPackNotFoundError,
     DefinitionNotFoundError,
+    DuplicateContentPackIdError,
     DuplicateDefinitionIdError,
     DuplicateDefinitionSlugError,
     IllegalStateDependencyError,
@@ -19,7 +20,8 @@ from ..domain.errors import (
     VersionMismatchError,
 )
 from ..domain.link_models import LinkedEntryReference, RelationKind, ResolveMode
-from ..domain.primitives import LifecycleState
+from ..domain.pack_models import ContentPackRecord
+from ..domain.primitives import DefinitionFamily, LifecycleState
 from ..infrastructure.unit_of_work import CompendiumUnitOfWork
 from ..policies.lifecycle_transition_policy import LifecycleTransitionPolicy
 from ..policies.linked_entry_integrity_policy import LinkedEntryIntegrityPolicy
@@ -32,8 +34,10 @@ class ContentMutationEvent:
     family: str
     lifecycle_state: str
     content_version: int
+    pack_id: str | None = None
     replacement_target_id: str | None = None
     request_id: str | None = None
+    campaign_id: str | None = None
 
 
 EventPublisher = Callable[[ContentMutationEvent], Awaitable[None] | None]
@@ -53,11 +57,50 @@ class CompendiumApplicationService:
         self._event_publisher = event_publisher
         self._link_policy = LinkedEntryIntegrityPolicy()
 
+    async def create_pack(self, pack: ContentPackRecord) -> ContentPackRecord:
+        async with self._uow_factory() as uow:
+            existing = await uow.packs.get_by_id(pack.id)
+            if existing is not None:
+                raise DuplicateContentPackIdError(pack.id)
+
+            created = await uow.packs.create(pack)
+            await uow.commit()
+        return created
+
+    async def list_packs(
+        self,
+        *,
+        lifecycle_state: LifecycleState | None = None,
+    ) -> list[ContentPackRecord]:
+        async with self._uow_factory() as uow:
+            return await uow.packs.list(lifecycle_state=lifecycle_state)
+
+    async def get_pack(self, pack_id: str) -> ContentPackRecord | None:
+        async with self._uow_factory() as uow:
+            return await uow.packs.get_by_id(pack_id)
+
+    async def get_definition(self, definition_id: str) -> DefinitionRecord:
+        async with self._uow_factory() as uow:
+            definition = await uow.definitions.get_by_id(definition_id)
+            if definition is None:
+                raise DefinitionNotFoundError(definition_id)
+            return definition
+
+    async def list_definitions(
+        self,
+        *,
+        pack_id: str,
+        family: DefinitionFamily | None = None,
+    ) -> list[DefinitionRecord]:
+        async with self._uow_factory() as uow:
+            return await uow.definitions.get_by_pack_id(pack_id, family=family)
+
     async def create_definition(
         self,
         definition: DefinitionRecord,
         *,
         request_id: str | None = None,
+        campaign_id: str | None = None,
     ) -> DefinitionRecord:
         async with self._uow_factory() as uow:
             await self._ensure_pack_exists(uow, definition.pack_id)
@@ -87,7 +130,9 @@ class CompendiumApplicationService:
                 family=saved.family.value,
                 lifecycle_state=saved.lifecycle_state.value,
                 content_version=saved.content_version,
+                pack_id=saved.pack_id,
                 request_id=request_id,
+                campaign_id=campaign_id,
             )
         )
         return saved
@@ -99,6 +144,7 @@ class CompendiumApplicationService:
         updates: Mapping[str, Any],
         expected_content_version: int,
         request_id: str | None = None,
+        campaign_id: str | None = None,
     ) -> DefinitionRecord:
         async with self._uow_factory() as uow:
             existing = await uow.definitions.get_by_id(definition_id)
@@ -150,7 +196,9 @@ class CompendiumApplicationService:
                 family=saved.family.value,
                 lifecycle_state=saved.lifecycle_state.value,
                 content_version=saved.content_version,
+                pack_id=saved.pack_id,
                 request_id=request_id,
+                campaign_id=campaign_id,
             )
         )
         return saved
@@ -161,6 +209,7 @@ class CompendiumApplicationService:
         definition_id: str,
         expected_content_version: int,
         request_id: str | None = None,
+        campaign_id: str | None = None,
     ) -> None:
         async with self._uow_factory() as uow:
             existing = await uow.definitions.get_by_id(definition_id)
@@ -196,7 +245,9 @@ class CompendiumApplicationService:
                 family=existing.family.value,
                 lifecycle_state=existing.lifecycle_state.value,
                 content_version=existing.content_version,
+                pack_id=existing.pack_id,
                 request_id=request_id,
+                campaign_id=campaign_id,
             )
         )
 
@@ -205,6 +256,7 @@ class CompendiumApplicationService:
         *,
         definition_id: str,
         request_id: str | None = None,
+        campaign_id: str | None = None,
     ) -> DefinitionRecord:
         async with self._uow_factory() as uow:
             existing = await uow.definitions.get_by_id(definition_id)
@@ -243,7 +295,9 @@ class CompendiumApplicationService:
                 family=saved.family.value,
                 lifecycle_state=saved.lifecycle_state.value,
                 content_version=saved.content_version,
+                pack_id=saved.pack_id,
                 request_id=request_id,
+                campaign_id=campaign_id,
             )
         )
         return saved
@@ -254,6 +308,7 @@ class CompendiumApplicationService:
         old_definition_id: str,
         new_definition_id: str,
         request_id: str | None = None,
+        campaign_id: str | None = None,
     ) -> DefinitionRecord:
         if old_definition_id == new_definition_id:
             raise InvalidReplacementTargetError(
@@ -325,8 +380,10 @@ class CompendiumApplicationService:
                 family=saved.family.value,
                 lifecycle_state=saved.lifecycle_state.value,
                 content_version=saved.content_version,
+                pack_id=saved.pack_id,
                 replacement_target_id=new_definition_id,
                 request_id=request_id,
+                campaign_id=campaign_id,
             )
         )
         return saved

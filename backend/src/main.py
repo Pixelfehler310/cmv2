@@ -9,6 +9,7 @@ from .identity.router import router as identity_router
 from .core.ws_dispatcher import router as ws_dispatcher_router, register_system_handler
 from .systems.dnd5e.ws_handler import Dnd5eWsHandler
 from .systems.dnd5e.encounter_router import router as dnd5e_encounter_router
+from .systems.dnd5e.content.api.router import router as dnd5e_compendium_router
 from .systems.dnd5e.lib import combat_models as _dnd5e_combat_models  # noqa: F401
 from .systems.dnd5e.lib import context_models as _dnd5e_context_models  # noqa: F401
 from .systems.dnd5e.lib import content_models as _dnd5e_content_models  # noqa: F401
@@ -134,6 +135,7 @@ app.include_router(characters.router)
 app.include_router(identity_router)
 app.include_router(ws_dispatcher_router)
 app.include_router(dnd5e_encounter_router)
+app.include_router(dnd5e_compendium_router)
 
 # Dev routes
 if settings.LOAD_MOCK_DATA:

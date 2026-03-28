@@ -10,6 +10,7 @@ Status summary:
 Current focus:
 
 1. PR6 hardening tests/docs/guardrails.
+2. [Review Backlog](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/backlog) (future architectural and feature work)
 
 Cross-cutting constraints:
 

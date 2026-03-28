@@ -81,6 +81,9 @@ class SessionManager:
     def get_room(self, campaign_id: str) -> Optional[CampaignRoom]:
         return self._rooms.get(campaign_id)
 
+    def list_campaign_ids(self) -> list[str]:
+        return list(self._rooms.keys())
+
     def get_connected_users(self, campaign_id: str) -> list[ConnectedUser]:
         room = self._rooms.get(campaign_id)
         if room is None:

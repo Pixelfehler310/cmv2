@@ -13,6 +13,7 @@ from src.schemas.definitions import (
     BackgroundBase, BackgroundResponse
 )
 
+# [LEGACY][V05-05] Superseded by /api/compendium V05 transport endpoints.
 router = APIRouter(prefix="/definitions", tags=["Definitions"])
 logger = logging.getLogger(__name__)
 
@@ -79,5 +80,6 @@ async def get_all_backgrounds(db: AsyncSession = Depends(get_db)):
     backgrounds = result.scalars().all()
     if not backgrounds:
         logger.warning("GET /definitions/backgrounds returned 0 rows")
-    logger.info("GET /definitions/backgrounds returning count=%s", len(backgrounds))
+    logger.info("GET /definitions/backgrounds returning count=%s",
+                len(backgrounds))
     return backgrounds
