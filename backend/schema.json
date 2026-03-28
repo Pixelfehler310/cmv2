@@ -1,5 +1,329 @@
 {
   "$defs": {
+    "AbilityDefinition": {
+      "properties": {
+        "ability_type": {
+          "enum": [
+            "feature",
+            "feat"
+          ],
+          "title": "Ability Type",
+          "type": "string"
+        },
+        "action_operation_specs": {
+          "items": {
+            "$ref": "#/$defs/ActionOperationSpec"
+          },
+          "title": "Action Operation Specs",
+          "type": "array"
+        },
+        "content_version": {
+          "title": "Content Version",
+          "type": "integer"
+        },
+        "family": {
+          "const": "ability",
+          "default": "ability",
+          "title": "Family",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/LifecycleState"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "pack_id": {
+          "title": "Pack Id",
+          "type": "string"
+        },
+        "passive_effects": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/FlatModifierSpec"
+              },
+              {
+                "$ref": "#/$defs/DiceModifierSpec"
+              },
+              {
+                "$ref": "#/$defs/RuleOverrideModifierSpec"
+              }
+            ]
+          },
+          "title": "Passive Effects",
+          "type": "array"
+        },
+        "provenance_author": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provenance Author"
+        },
+        "provenance_source": {
+          "title": "Provenance Source",
+          "type": "string"
+        },
+        "provenance_updated_at": {
+          "format": "date-time",
+          "title": "Provenance Updated At",
+          "type": "string"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "lifecycle_state",
+        "content_version",
+        "schema_version",
+        "pack_id",
+        "provenance_source",
+        "provenance_updated_at",
+        "ability_type",
+        "action_operation_specs",
+        "passive_effects"
+      ],
+      "title": "AbilityDefinition",
+      "type": "object"
+    },
+    "ActionOperationSpec": {
+      "properties": {
+        "activation_cost": {
+          "$ref": "#/$defs/ActivationCost"
+        },
+        "activation_trigger": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Activation Trigger"
+        },
+        "operation_id": {
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "payload": {
+          "discriminator": {
+            "mapping": {
+              "attack_roll": "#/$defs/AttackRollPayload",
+              "effect_application": "#/$defs/EffectApplicationPayload",
+              "heal": "#/$defs/HealPayload",
+              "save": "#/$defs/SavePayload"
+            },
+            "propertyName": "operation_type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AttackRollPayload"
+            },
+            {
+              "$ref": "#/$defs/SavePayload"
+            },
+            {
+              "$ref": "#/$defs/HealPayload"
+            },
+            {
+              "$ref": "#/$defs/EffectApplicationPayload"
+            }
+          ],
+          "title": "Payload"
+        },
+        "resource_consumption": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResourceConsumption"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "targeting_spec": {
+          "$ref": "#/$defs/TargetingSpec"
+        }
+      },
+      "required": [
+        "operation_id",
+        "activation_cost",
+        "targeting_spec",
+        "payload"
+      ],
+      "title": "ActionOperationSpec",
+      "type": "object"
+    },
+    "ActivationCost": {
+      "enum": [
+        "action",
+        "bonus_action",
+        "reaction",
+        "free"
+      ],
+      "title": "ActivationCost",
+      "type": "string"
+    },
+    "AttackRollPayload": {
+      "properties": {
+        "attack_type": {
+          "enum": [
+            "melee_weapon",
+            "ranged_weapon",
+            "melee_spell",
+            "ranged_spell"
+          ],
+          "title": "Attack Type",
+          "type": "string"
+        },
+        "critical_threshold": {
+          "default": 20,
+          "title": "Critical Threshold",
+          "type": "integer"
+        },
+        "damage_instances": {
+          "items": {
+            "$ref": "#/$defs/DamageInstance"
+          },
+          "title": "Damage Instances",
+          "type": "array"
+        },
+        "on_hit_effects": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "On Hit Effects",
+          "type": "array"
+        },
+        "operation_type": {
+          "const": "attack_roll",
+          "default": "attack_roll",
+          "title": "Operation Type",
+          "type": "string"
+        },
+        "stat_override": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stat Override"
+        }
+      },
+      "required": [
+        "attack_type",
+        "damage_instances"
+      ],
+      "title": "AttackRollPayload",
+      "type": "object"
+    },
+    "BackgroundDefinition": {
+      "properties": {
+        "content_version": {
+          "title": "Content Version",
+          "type": "integer"
+        },
+        "family": {
+          "const": "background",
+          "default": "background",
+          "title": "Family",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/LifecycleState"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "pack_id": {
+          "title": "Pack Id",
+          "type": "string"
+        },
+        "provenance_author": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provenance Author"
+        },
+        "provenance_source": {
+          "title": "Provenance Source",
+          "type": "string"
+        },
+        "provenance_updated_at": {
+          "format": "date-time",
+          "title": "Provenance Updated At",
+          "type": "string"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "skill_proficiencies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Skill Proficiencies",
+          "type": "array"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "lifecycle_state",
+        "content_version",
+        "schema_version",
+        "pack_id",
+        "provenance_source",
+        "provenance_updated_at",
+        "skill_proficiencies"
+      ],
+      "title": "BackgroundDefinition",
+      "type": "object"
+    },
     "BackgroundResponse": {
       "properties": {
         "description": {
@@ -634,6 +958,90 @@
       "title": "CharacterResponse",
       "type": "object"
     },
+    "ClassDefinition": {
+      "properties": {
+        "content_version": {
+          "title": "Content Version",
+          "type": "integer"
+        },
+        "family": {
+          "const": "class",
+          "default": "class",
+          "title": "Family",
+          "type": "string"
+        },
+        "hit_die": {
+          "title": "Hit Die",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/LifecycleState"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "pack_id": {
+          "title": "Pack Id",
+          "type": "string"
+        },
+        "provenance_author": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provenance Author"
+        },
+        "provenance_source": {
+          "title": "Provenance Source",
+          "type": "string"
+        },
+        "provenance_updated_at": {
+          "format": "date-time",
+          "title": "Provenance Updated At",
+          "type": "string"
+        },
+        "saving_throw_proficiencies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Saving Throw Proficiencies",
+          "type": "array"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "lifecycle_state",
+        "content_version",
+        "schema_version",
+        "pack_id",
+        "provenance_source",
+        "provenance_updated_at",
+        "hit_die",
+        "saving_throw_proficiencies"
+      ],
+      "title": "ClassDefinition",
+      "type": "object"
+    },
     "ClassResponse": {
       "properties": {
         "description": {
@@ -692,6 +1100,266 @@
       "title": "ClassResponse",
       "type": "object"
     },
+    "ConditionDefinition": {
+      "properties": {
+        "condition_type": {
+          "enum": [
+            "buff",
+            "debuff",
+            "status"
+          ],
+          "title": "Condition Type",
+          "type": "string"
+        },
+        "content_version": {
+          "title": "Content Version",
+          "type": "integer"
+        },
+        "family": {
+          "const": "condition",
+          "default": "condition",
+          "title": "Family",
+          "type": "string"
+        },
+        "has_levels": {
+          "title": "Has Levels",
+          "type": "boolean"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/LifecycleState"
+        },
+        "modifier_specs": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/FlatModifierSpec"
+              },
+              {
+                "$ref": "#/$defs/DiceModifierSpec"
+              },
+              {
+                "$ref": "#/$defs/RuleOverrideModifierSpec"
+              }
+            ]
+          },
+          "title": "Modifier Specs",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "pack_id": {
+          "title": "Pack Id",
+          "type": "string"
+        },
+        "provenance_author": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provenance Author"
+        },
+        "provenance_source": {
+          "title": "Provenance Source",
+          "type": "string"
+        },
+        "provenance_updated_at": {
+          "format": "date-time",
+          "title": "Provenance Updated At",
+          "type": "string"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "lifecycle_state",
+        "content_version",
+        "schema_version",
+        "pack_id",
+        "provenance_source",
+        "provenance_updated_at",
+        "condition_type",
+        "has_levels",
+        "modifier_specs"
+      ],
+      "title": "ConditionDefinition",
+      "type": "object"
+    },
+    "ContentPackRecord": {
+      "properties": {
+        "author_user_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Author User Id"
+        },
+        "compatibility_target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Compatibility Target"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "is_homebrew": {
+          "title": "Is Homebrew",
+          "type": "boolean"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/LifecycleState"
+        },
+        "pack_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pack Key"
+        },
+        "published_version": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Published Version"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "lifecycle_state",
+        "is_homebrew",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ContentPackRecord",
+      "type": "object"
+    },
+    "DamageInstance": {
+      "properties": {
+        "add_stat_modifier": {
+          "title": "Add Stat Modifier",
+          "type": "boolean"
+        },
+        "damage_type": {
+          "title": "Damage Type",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/ResultReference"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "value",
+        "damage_type",
+        "add_stat_modifier"
+      ],
+      "title": "DamageInstance",
+      "type": "object"
+    },
+    "DiceModifierSpec": {
+      "properties": {
+        "condition_gate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Condition Gate"
+        },
+        "dice_notation": {
+          "title": "Dice Notation",
+          "type": "string"
+        },
+        "modifier_type": {
+          "const": "dice",
+          "default": "dice",
+          "title": "Modifier Type",
+          "type": "string"
+        },
+        "target_stat": {
+          "title": "Target Stat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_stat",
+        "dice_notation"
+      ],
+      "title": "DiceModifierSpec",
+      "type": "object"
+    },
     "Effect": {
       "description": "Represents a modifier or rule change applied to a game entity.\nV1 Focus: Static Modifiers.",
       "properties": {
@@ -747,6 +1415,40 @@
         "value"
       ],
       "title": "Effect",
+      "type": "object"
+    },
+    "EffectApplicationPayload": {
+      "properties": {
+        "allow_save_ends": {
+          "title": "Allow Save Ends",
+          "type": "boolean"
+        },
+        "applied_condition_id": {
+          "title": "Applied Condition Id",
+          "type": "string"
+        },
+        "duration_rounds": {
+          "title": "Duration Rounds",
+          "type": "integer"
+        },
+        "operation_type": {
+          "const": "effect_application",
+          "default": "effect_application",
+          "title": "Operation Type",
+          "type": "string"
+        },
+        "requires_concentration": {
+          "title": "Requires Concentration",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "applied_condition_id",
+        "duration_rounds",
+        "requires_concentration",
+        "allow_save_ends"
+      ],
+      "title": "EffectApplicationPayload",
       "type": "object"
     },
     "EffectConfig": {
@@ -807,6 +1509,96 @@
       "title": "EncounterOptionResponse",
       "type": "object"
     },
+    "FlatModifierSpec": {
+      "properties": {
+        "modifier_type": {
+          "const": "flat",
+          "default": "flat",
+          "title": "Modifier Type",
+          "type": "string"
+        },
+        "stack_group": {
+          "title": "Stack Group",
+          "type": "string"
+        },
+        "target_stat": {
+          "title": "Target Stat",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/ResultReference"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "target_stat",
+        "value",
+        "stack_group"
+      ],
+      "title": "FlatModifierSpec",
+      "type": "object"
+    },
+    "HealPayload": {
+      "properties": {
+        "add_stat_modifier": {
+          "title": "Add Stat Modifier",
+          "type": "boolean"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/ResultReference"
+            }
+          ],
+          "title": "Amount"
+        },
+        "operation_type": {
+          "const": "heal",
+          "default": "heal",
+          "title": "Operation Type",
+          "type": "string"
+        },
+        "removes_conditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Removes Conditions",
+          "type": "array"
+        },
+        "stat_used": {
+          "title": "Stat Used",
+          "type": "string"
+        },
+        "temp_hp": {
+          "title": "Temp Hp",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "amount",
+        "add_stat_modifier",
+        "stat_used",
+        "temp_hp"
+      ],
+      "title": "HealPayload",
+      "type": "object"
+    },
     "ItemCreate": {
       "properties": {
         "description": {
@@ -862,6 +1654,106 @@
         "rarity"
       ],
       "title": "ItemCreate",
+      "type": "object"
+    },
+    "ItemDefinition": {
+      "properties": {
+        "action_operation_specs": {
+          "items": {
+            "$ref": "#/$defs/ActionOperationSpec"
+          },
+          "title": "Action Operation Specs",
+          "type": "array"
+        },
+        "content_version": {
+          "title": "Content Version",
+          "type": "integer"
+        },
+        "cost": {
+          "title": "Cost",
+          "type": "integer"
+        },
+        "family": {
+          "const": "item",
+          "default": "item",
+          "title": "Family",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "item_type": {
+          "enum": [
+            "weapon",
+            "armor",
+            "gear",
+            "consumable"
+          ],
+          "title": "Item Type",
+          "type": "string"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/LifecycleState"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "pack_id": {
+          "title": "Pack Id",
+          "type": "string"
+        },
+        "provenance_author": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provenance Author"
+        },
+        "provenance_source": {
+          "title": "Provenance Source",
+          "type": "string"
+        },
+        "provenance_updated_at": {
+          "format": "date-time",
+          "title": "Provenance Updated At",
+          "type": "string"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        },
+        "weight": {
+          "title": "Weight",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "lifecycle_state",
+        "content_version",
+        "schema_version",
+        "pack_id",
+        "provenance_source",
+        "provenance_updated_at",
+        "item_type",
+        "weight",
+        "cost",
+        "action_operation_specs"
+      ],
+      "title": "ItemDefinition",
       "type": "object"
     },
     "ItemInstance": {
@@ -992,6 +1884,149 @@
         "id"
       ],
       "title": "ItemResponse",
+      "type": "object"
+    },
+    "LifecycleState": {
+      "enum": [
+        "draft",
+        "published",
+        "archived",
+        "superseded"
+      ],
+      "title": "LifecycleState",
+      "type": "string"
+    },
+    "LinkedEntryReference": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "relation_kind": {
+          "$ref": "#/$defs/RelationKind"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "resolve_mode": {
+          "$ref": "#/$defs/ResolveMode"
+        },
+        "source_definition_id": {
+          "title": "Source Definition Id",
+          "type": "string"
+        },
+        "source_path": {
+          "title": "Source Path",
+          "type": "string"
+        },
+        "target_definition_id": {
+          "title": "Target Definition Id",
+          "type": "string"
+        },
+        "target_family": {
+          "title": "Target Family",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "source_definition_id",
+        "source_path",
+        "target_definition_id",
+        "target_family",
+        "relation_kind",
+        "required",
+        "resolve_mode"
+      ],
+      "title": "LinkedEntryReference",
+      "type": "object"
+    },
+    "LoreDefinition": {
+      "properties": {
+        "content_version": {
+          "title": "Content Version",
+          "type": "integer"
+        },
+        "family": {
+          "const": "lore",
+          "default": "lore",
+          "title": "Family",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/LifecycleState"
+        },
+        "lore_type": {
+          "enum": [
+            "faction",
+            "region",
+            "place",
+            "deity"
+          ],
+          "title": "Lore Type",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "pack_id": {
+          "title": "Pack Id",
+          "type": "string"
+        },
+        "provenance_author": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provenance Author"
+        },
+        "provenance_source": {
+          "title": "Provenance Source",
+          "type": "string"
+        },
+        "provenance_updated_at": {
+          "format": "date-time",
+          "title": "Provenance Updated At",
+          "type": "string"
+        },
+        "rich_text_content": {
+          "title": "Rich Text Content",
+          "type": "string"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "lifecycle_state",
+        "content_version",
+        "schema_version",
+        "pack_id",
+        "provenance_source",
+        "provenance_updated_at",
+        "lore_type",
+        "rich_text_content"
+      ],
+      "title": "LoreDefinition",
       "type": "object"
     },
     "MonsterActionRef": {
@@ -1180,6 +2215,100 @@
       "title": "MonsterCreate",
       "type": "object"
     },
+    "MonsterDefinition": {
+      "properties": {
+        "action_operation_specs": {
+          "items": {
+            "$ref": "#/$defs/ActionOperationSpec"
+          },
+          "title": "Action Operation Specs",
+          "type": "array"
+        },
+        "armor_class": {
+          "title": "Armor Class",
+          "type": "integer"
+        },
+        "challenge_rating": {
+          "title": "Challenge Rating",
+          "type": "number"
+        },
+        "content_version": {
+          "title": "Content Version",
+          "type": "integer"
+        },
+        "family": {
+          "const": "monster",
+          "default": "monster",
+          "title": "Family",
+          "type": "string"
+        },
+        "hit_points_formula": {
+          "title": "Hit Points Formula",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/LifecycleState"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "pack_id": {
+          "title": "Pack Id",
+          "type": "string"
+        },
+        "provenance_author": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provenance Author"
+        },
+        "provenance_source": {
+          "title": "Provenance Source",
+          "type": "string"
+        },
+        "provenance_updated_at": {
+          "format": "date-time",
+          "title": "Provenance Updated At",
+          "type": "string"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "lifecycle_state",
+        "content_version",
+        "schema_version",
+        "pack_id",
+        "provenance_source",
+        "provenance_updated_at",
+        "challenge_rating",
+        "armor_class",
+        "hit_points_formula",
+        "action_operation_specs"
+      ],
+      "title": "MonsterDefinition",
+      "type": "object"
+    },
     "MonsterResponse": {
       "properties": {
         "actions": {
@@ -1344,6 +2473,205 @@
       "title": "MonsterResponse",
       "type": "object"
     },
+    "RelationKind": {
+      "enum": [
+        "inline_ref",
+        "prerequisite",
+        "replacement",
+        "parent_child",
+        "related",
+        "grants"
+      ],
+      "title": "RelationKind",
+      "type": "string"
+    },
+    "ReplacementChain": {
+      "properties": {
+        "chain_depth": {
+          "title": "Chain Depth",
+          "type": "integer"
+        },
+        "head_definition_id": {
+          "title": "Head Definition Id",
+          "type": "string"
+        },
+        "next_definition_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Definition Id"
+        },
+        "terminal_definition_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Terminal Definition Id"
+        }
+      },
+      "required": [
+        "head_definition_id",
+        "chain_depth"
+      ],
+      "title": "ReplacementChain",
+      "type": "object"
+    },
+    "ResolveMode": {
+      "enum": [
+        "strict",
+        "best_effort"
+      ],
+      "title": "ResolveMode",
+      "type": "string"
+    },
+    "ResourceConsumption": {
+      "properties": {
+        "count": {
+          "title": "Count",
+          "type": "integer"
+        },
+        "resource_type": {
+          "title": "Resource Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "resource_type",
+        "count"
+      ],
+      "title": "ResourceConsumption",
+      "type": "object"
+    },
+    "ResultAttribute": {
+      "description": "Identifies specific data points output by an operation in the V2 graph.\nNOTE: This list is an initial draft and will be extended as V2 mechanics evolve.",
+      "enum": [
+        "total_damage",
+        "actual_heal",
+        "base_die_roll",
+        "saving_throw_margin",
+        "target_count"
+      ],
+      "title": "ResultAttribute",
+      "type": "string"
+    },
+    "ResultReference": {
+      "description": "A pointer from a consumer operation to a source operation's result.",
+      "properties": {
+        "attribute": {
+          "$ref": "#/$defs/ResultAttribute"
+        },
+        "bonus": {
+          "default": 0,
+          "title": "Bonus",
+          "type": "integer"
+        },
+        "multiplier": {
+          "default": 1.0,
+          "title": "Multiplier",
+          "type": "number"
+        },
+        "source_operation_id": {
+          "title": "Source Operation Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_operation_id",
+        "attribute"
+      ],
+      "title": "ResultReference",
+      "type": "object"
+    },
+    "RuleOverrideModifierSpec": {
+      "properties": {
+        "modifier_type": {
+          "const": "rule_override",
+          "default": "rule_override",
+          "title": "Modifier Type",
+          "type": "string"
+        },
+        "override_value": {
+          "title": "Override Value",
+          "type": "string"
+        },
+        "target_stat": {
+          "title": "Target Stat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_stat",
+        "override_value"
+      ],
+      "title": "RuleOverrideModifierSpec",
+      "type": "object"
+    },
+    "SavePayload": {
+      "properties": {
+        "apply_conditions_on_fail": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Apply Conditions On Fail",
+          "type": "array"
+        },
+        "failure_damage": {
+          "items": {
+            "$ref": "#/$defs/DamageInstance"
+          },
+          "title": "Failure Damage",
+          "type": "array"
+        },
+        "operation_type": {
+          "const": "save",
+          "default": "save",
+          "title": "Operation Type",
+          "type": "string"
+        },
+        "save_dc_override": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Save Dc Override"
+        },
+        "save_stat": {
+          "title": "Save Stat",
+          "type": "string"
+        },
+        "success_rule": {
+          "enum": [
+            "half_damage",
+            "no_damage"
+          ],
+          "title": "Success Rule",
+          "type": "string"
+        }
+      },
+      "required": [
+        "save_stat",
+        "failure_damage",
+        "success_rule"
+      ],
+      "title": "SavePayload",
+      "type": "object"
+    },
     "SceneOptionResponse": {
       "properties": {
         "name": {
@@ -1378,6 +2706,87 @@
         "encounter_id"
       ],
       "title": "SelectCampaignContextRequest",
+      "type": "object"
+    },
+    "SpeciesDefinition": {
+      "properties": {
+        "content_version": {
+          "title": "Content Version",
+          "type": "integer"
+        },
+        "family": {
+          "const": "species",
+          "default": "species",
+          "title": "Family",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/LifecycleState"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "pack_id": {
+          "title": "Pack Id",
+          "type": "string"
+        },
+        "provenance_author": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provenance Author"
+        },
+        "provenance_source": {
+          "title": "Provenance Source",
+          "type": "string"
+        },
+        "provenance_updated_at": {
+          "format": "date-time",
+          "title": "Provenance Updated At",
+          "type": "string"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "size": {
+          "title": "Size",
+          "type": "string"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        },
+        "speed": {
+          "title": "Speed",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "lifecycle_state",
+        "content_version",
+        "schema_version",
+        "pack_id",
+        "provenance_source",
+        "provenance_updated_at",
+        "speed",
+        "size"
+      ],
+      "title": "SpeciesDefinition",
       "type": "object"
     },
     "SpeciesResponse": {
@@ -1507,6 +2916,100 @@
       "title": "SpellCreate",
       "type": "object"
     },
+    "SpellDefinition": {
+      "properties": {
+        "action_operation_specs": {
+          "items": {
+            "$ref": "#/$defs/ActionOperationSpec"
+          },
+          "title": "Action Operation Specs",
+          "type": "array"
+        },
+        "casting_time": {
+          "title": "Casting Time",
+          "type": "string"
+        },
+        "content_version": {
+          "title": "Content Version",
+          "type": "integer"
+        },
+        "family": {
+          "const": "spell",
+          "default": "spell",
+          "title": "Family",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "level": {
+          "title": "Level",
+          "type": "integer"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/LifecycleState"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "pack_id": {
+          "title": "Pack Id",
+          "type": "string"
+        },
+        "provenance_author": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provenance Author"
+        },
+        "provenance_source": {
+          "title": "Provenance Source",
+          "type": "string"
+        },
+        "provenance_updated_at": {
+          "format": "date-time",
+          "title": "Provenance Updated At",
+          "type": "string"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "school": {
+          "title": "School",
+          "type": "string"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "lifecycle_state",
+        "content_version",
+        "schema_version",
+        "pack_id",
+        "provenance_source",
+        "provenance_updated_at",
+        "level",
+        "school",
+        "casting_time",
+        "action_operation_specs"
+      ],
+      "title": "SpellDefinition",
+      "type": "object"
+    },
     "SpellResponse": {
       "properties": {
         "casting_time": {
@@ -1573,6 +3076,51 @@
       ],
       "title": "SpellResponse",
       "type": "object"
+    },
+    "TargetingSpec": {
+      "properties": {
+        "max_targets": {
+          "title": "Max Targets",
+          "type": "integer"
+        },
+        "radius_feet": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Radius Feet"
+        },
+        "range_feet": {
+          "title": "Range Feet",
+          "type": "integer"
+        },
+        "type": {
+          "$ref": "#/$defs/TargetingType"
+        }
+      },
+      "required": [
+        "type",
+        "range_feet",
+        "max_targets"
+      ],
+      "title": "TargetingSpec",
+      "type": "object"
+    },
+    "TargetingType": {
+      "enum": [
+        "single",
+        "self",
+        "aoe_sphere",
+        "aoe_cone",
+        "line"
+      ],
+      "title": "TargetingType",
+      "type": "string"
     }
   },
   "properties": {
@@ -1694,6 +3242,121 @@
       },
       "title": "Spells",
       "type": "array"
+    },
+    "v05_abilities": {
+      "items": {
+        "$ref": "#/$defs/AbilityDefinition"
+      },
+      "title": "V05 Abilities",
+      "type": "array"
+    },
+    "v05_backgrounds": {
+      "items": {
+        "$ref": "#/$defs/BackgroundDefinition"
+      },
+      "title": "V05 Backgrounds",
+      "type": "array"
+    },
+    "v05_chains": {
+      "items": {
+        "$ref": "#/$defs/ReplacementChain"
+      },
+      "title": "V05 Chains",
+      "type": "array"
+    },
+    "v05_classes": {
+      "items": {
+        "$ref": "#/$defs/ClassDefinition"
+      },
+      "title": "V05 Classes",
+      "type": "array"
+    },
+    "v05_conditions": {
+      "items": {
+        "$ref": "#/$defs/ConditionDefinition"
+      },
+      "title": "V05 Conditions",
+      "type": "array"
+    },
+    "v05_items": {
+      "items": {
+        "$ref": "#/$defs/ItemDefinition"
+      },
+      "title": "V05 Items",
+      "type": "array"
+    },
+    "v05_links": {
+      "items": {
+        "$ref": "#/$defs/LinkedEntryReference"
+      },
+      "title": "V05 Links",
+      "type": "array"
+    },
+    "v05_lore": {
+      "items": {
+        "$ref": "#/$defs/LoreDefinition"
+      },
+      "title": "V05 Lore",
+      "type": "array"
+    },
+    "v05_monsters": {
+      "items": {
+        "$ref": "#/$defs/MonsterDefinition"
+      },
+      "title": "V05 Monsters",
+      "type": "array"
+    },
+    "v05_packs": {
+      "items": {
+        "$ref": "#/$defs/ContentPackRecord"
+      },
+      "title": "V05 Packs",
+      "type": "array"
+    },
+    "v05_result_attributes": {
+      "items": {
+        "$ref": "#/$defs/ResultAttribute"
+      },
+      "title": "V05 Result Attributes",
+      "type": "array"
+    },
+    "v05_result_references": {
+      "items": {
+        "$ref": "#/$defs/ResultReference"
+      },
+      "title": "V05 Result References",
+      "type": "array"
+    },
+    "v05_species": {
+      "items": {
+        "$ref": "#/$defs/SpeciesDefinition"
+      },
+      "title": "V05 Species",
+      "type": "array"
+    },
+    "v05_spells": {
+      "items": {
+        "$ref": "#/$defs/SpellDefinition"
+      },
+      "title": "V05 Spells",
+      "type": "array"
+    },
+    "v05_value_sources": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "$ref": "#/$defs/ResultReference"
+          }
+        ]
+      },
+      "title": "V05 Value Sources",
+      "type": "array"
     }
   },
   "required": [
@@ -1713,7 +3376,22 @@
     "select_campaign_context_request",
     "species",
     "classes",
-    "backgrounds"
+    "backgrounds",
+    "v05_lore",
+    "v05_species",
+    "v05_backgrounds",
+    "v05_classes",
+    "v05_conditions",
+    "v05_abilities",
+    "v05_spells",
+    "v05_items",
+    "v05_monsters",
+    "v05_packs",
+    "v05_links",
+    "v05_chains",
+    "v05_result_attributes",
+    "v05_result_references",
+    "v05_value_sources"
   ],
   "title": "ExportModel",
   "type": "object"

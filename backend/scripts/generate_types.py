@@ -11,6 +11,9 @@ from src.schemas.item import ItemCreate, ItemResponse
 from src.schemas.monster import MonsterCreate, MonsterResponse
 from src.schemas.spell import SpellCreate, SpellResponse
 
+from src.systems.dnd5e.content.domain.primitives import (
+    ResultAttribute, ResultReference, DynamicValueSource
+)
 from src.systems.dnd5e.content.domain.definition_models import (
     LoreDefinition, SpeciesDefinition, BackgroundDefinition, ClassDefinition,
     ConditionDefinition, AbilityDefinition, SpellDefinition, ItemDefinition, MonsterDefinition
@@ -90,6 +93,10 @@ class ExportModel(BaseModel):
     v05_packs: list[ContentPackRecord]
     v05_links: list[LinkedEntryReference]
     v05_chains: list[ReplacementChain]
+    # Result Piping Refinement
+    v05_result_attributes: list[ResultAttribute]
+    v05_result_references: list[ResultReference]
+    v05_value_sources: list[DynamicValueSource]
 
 
 def build_json_schema() -> dict:

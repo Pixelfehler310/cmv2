@@ -245,6 +245,238 @@ export type Name15 = string;
 export type Range1 = string;
 export type School1 = string;
 export type Spells2 = SpellResponse[];
+export type AbilityType = "feature" | "feat";
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "ActivationCost".
+ */
+export type ActivationCost = "action" | "bonus_action" | "reaction" | "free";
+export type ActivationTrigger = string | null;
+export type OperationId = string;
+export type Payload = AttackRollPayload | SavePayload | HealPayload | EffectApplicationPayload;
+export type AttackType = "melee_weapon" | "ranged_weapon" | "melee_spell" | "ranged_spell";
+export type CriticalThreshold = number;
+export type AddStatModifier = boolean;
+export type DamageType = string;
+export type Value2 = string | number | ResultReference;
+/**
+ * Identifies specific data points output by an operation in the V2 graph.
+ * NOTE: This list is an initial draft and will be extended as V2 mechanics evolve.
+ *
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "ResultAttribute".
+ */
+export type ResultAttribute = "total_damage" | "actual_heal" | "base_die_roll" | "saving_throw_margin" | "target_count";
+export type Bonus = number;
+export type Multiplier = number;
+export type SourceOperationId = string;
+export type DamageInstances = DamageInstance[];
+export type OnHitEffects = {
+  [k: string]: unknown;
+}[];
+export type OperationType = "attack_roll";
+export type StatOverride = string | null;
+export type ApplyConditionsOnFail = string[];
+export type FailureDamage = DamageInstance[];
+export type OperationType1 = "save";
+export type SaveDcOverride = number | null;
+export type SaveStat = string;
+export type SuccessRule = "half_damage" | "no_damage";
+export type AddStatModifier1 = boolean;
+export type Amount = string | number | ResultReference;
+export type OperationType2 = "heal";
+export type RemovesConditions = string[];
+export type StatUsed = string;
+export type TempHp2 = boolean;
+export type AllowSaveEnds = boolean;
+export type AppliedConditionId = string;
+export type DurationRounds = number;
+export type OperationType3 = "effect_application";
+export type RequiresConcentration = boolean;
+export type Count = number;
+export type ResourceType = string;
+export type MaxTargets = number;
+export type RadiusFeet = number | null;
+export type RangeFeet = number;
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "TargetingType".
+ */
+export type TargetingType = "single" | "self" | "aoe_sphere" | "aoe_cone" | "line";
+export type ActionOperationSpecs = ActionOperationSpec[];
+export type ContentVersion = number;
+export type Family = "ability";
+export type Id9 = string;
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "LifecycleState".
+ */
+export type LifecycleState = "draft" | "published" | "archived" | "superseded";
+export type Name16 = string;
+export type PackId = string;
+export type ModifierType = "flat";
+export type StackGroup = string;
+export type TargetStat = string;
+export type Value3 = string | number | ResultReference;
+export type ConditionGate = string | null;
+export type DiceNotation = string;
+export type ModifierType1 = "dice";
+export type TargetStat1 = string;
+export type ModifierType2 = "rule_override";
+export type OverrideValue = string;
+export type TargetStat2 = string;
+export type PassiveEffects = (FlatModifierSpec | DiceModifierSpec | RuleOverrideModifierSpec)[];
+export type ProvenanceAuthor = string | null;
+export type ProvenanceSource = string;
+export type ProvenanceUpdatedAt = string;
+export type SchemaVersion = number;
+export type Slug = string;
+export type V05Abilities = AbilityDefinition[];
+export type ContentVersion1 = number;
+export type Family1 = "background";
+export type Id10 = string;
+export type Name17 = string;
+export type PackId1 = string;
+export type ProvenanceAuthor1 = string | null;
+export type ProvenanceSource1 = string;
+export type ProvenanceUpdatedAt1 = string;
+export type SchemaVersion1 = number;
+export type SkillProficiencies1 = string[];
+export type Slug1 = string;
+export type V05Backgrounds = BackgroundDefinition[];
+export type ChainDepth = number;
+export type HeadDefinitionId = string;
+export type NextDefinitionId = string | null;
+export type TerminalDefinitionId = string | null;
+export type V05Chains = ReplacementChain[];
+export type ContentVersion2 = number;
+export type Family2 = "class";
+export type HitDie1 = string;
+export type Id11 = string;
+export type Name18 = string;
+export type PackId2 = string;
+export type ProvenanceAuthor2 = string | null;
+export type ProvenanceSource2 = string;
+export type ProvenanceUpdatedAt2 = string;
+export type SavingThrowProficiencies = string[];
+export type SchemaVersion2 = number;
+export type Slug2 = string;
+export type V05Classes = ClassDefinition[];
+export type ConditionType = "buff" | "debuff" | "status";
+export type ContentVersion3 = number;
+export type Family3 = "condition";
+export type HasLevels = boolean;
+export type Id12 = string;
+export type ModifierSpecs = (FlatModifierSpec | DiceModifierSpec | RuleOverrideModifierSpec)[];
+export type Name19 = string;
+export type PackId3 = string;
+export type ProvenanceAuthor3 = string | null;
+export type ProvenanceSource3 = string;
+export type ProvenanceUpdatedAt3 = string;
+export type SchemaVersion3 = number;
+export type Slug3 = string;
+export type V05Conditions = ConditionDefinition[];
+export type ActionOperationSpecs1 = ActionOperationSpec[];
+export type ContentVersion4 = number;
+export type Cost = number;
+export type Family4 = "item";
+export type Id13 = string;
+export type ItemType = "weapon" | "armor" | "gear" | "consumable";
+export type Name20 = string;
+export type PackId4 = string;
+export type ProvenanceAuthor4 = string | null;
+export type ProvenanceSource4 = string;
+export type ProvenanceUpdatedAt4 = string;
+export type SchemaVersion4 = number;
+export type Slug4 = string;
+export type Weight2 = number;
+export type V05Items = ItemDefinition[];
+export type Id14 = string;
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "RelationKind".
+ */
+export type RelationKind = "inline_ref" | "prerequisite" | "replacement" | "parent_child" | "related" | "grants";
+export type Required = boolean;
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "ResolveMode".
+ */
+export type ResolveMode = "strict" | "best_effort";
+export type SourceDefinitionId = string;
+export type SourcePath = string;
+export type TargetDefinitionId = string;
+export type TargetFamily = string;
+export type V05Links = LinkedEntryReference[];
+export type ContentVersion5 = number;
+export type Family5 = "lore";
+export type Id15 = string;
+export type LoreType = "faction" | "region" | "place" | "deity";
+export type Name21 = string;
+export type PackId5 = string;
+export type ProvenanceAuthor5 = string | null;
+export type ProvenanceSource5 = string;
+export type ProvenanceUpdatedAt5 = string;
+export type RichTextContent = string;
+export type SchemaVersion5 = number;
+export type Slug5 = string;
+export type V05Lore = LoreDefinition[];
+export type ActionOperationSpecs2 = ActionOperationSpec[];
+export type ArmorClass4 = number;
+export type ChallengeRating2 = number;
+export type ContentVersion6 = number;
+export type Family6 = "monster";
+export type HitPointsFormula = string;
+export type Id16 = string;
+export type Name22 = string;
+export type PackId6 = string;
+export type ProvenanceAuthor6 = string | null;
+export type ProvenanceSource6 = string;
+export type ProvenanceUpdatedAt6 = string;
+export type SchemaVersion6 = number;
+export type Slug6 = string;
+export type V05Monsters = MonsterDefinition[];
+export type AuthorUserId = string | null;
+export type CompatibilityTarget = string | null;
+export type CreatedAt = string;
+export type Id17 = string;
+export type IsHomebrew = boolean;
+export type PackKey = string | null;
+export type PublishedVersion = number | null;
+export type Title = string;
+export type UpdatedAt = string;
+export type V05Packs = ContentPackRecord[];
+export type V05ResultAttributes = ResultAttribute[];
+export type V05ResultReferences = ResultReference[];
+export type ContentVersion7 = number;
+export type Family7 = "species";
+export type Id18 = string;
+export type Name23 = string;
+export type PackId7 = string;
+export type ProvenanceAuthor7 = string | null;
+export type ProvenanceSource7 = string;
+export type ProvenanceUpdatedAt7 = string;
+export type SchemaVersion7 = number;
+export type Size3 = string;
+export type Slug7 = string;
+export type Speed5 = number;
+export type V05Species = SpeciesDefinition[];
+export type ActionOperationSpecs3 = ActionOperationSpec[];
+export type CastingTime2 = string;
+export type ContentVersion8 = number;
+export type Family8 = "spell";
+export type Id19 = string;
+export type Level4 = number;
+export type Name24 = string;
+export type PackId8 = string;
+export type ProvenanceAuthor8 = string | null;
+export type ProvenanceSource8 = string;
+export type ProvenanceUpdatedAt8 = string;
+export type SchemaVersion8 = number;
+export type School2 = string;
+export type Slug8 = string;
+export type V05Spells = SpellDefinition[];
+export type V05ValueSources = (string | number | ResultReference)[];
 
 export interface ExportModel {
   backgrounds: Backgrounds;
@@ -264,6 +496,21 @@ export interface ExportModel {
   species: Species;
   spell_create: SpellCreate;
   spells: Spells2;
+  v05_abilities: V05Abilities;
+  v05_backgrounds: V05Backgrounds;
+  v05_chains: V05Chains;
+  v05_classes: V05Classes;
+  v05_conditions: V05Conditions;
+  v05_items: V05Items;
+  v05_links: V05Links;
+  v05_lore: V05Lore;
+  v05_monsters: V05Monsters;
+  v05_packs: V05Packs;
+  v05_result_attributes: V05ResultAttributes;
+  v05_result_references: V05ResultReferences;
+  v05_species: V05Species;
+  v05_spells: V05Spells;
+  v05_value_sources: V05ValueSources;
   [k: string]: unknown;
 }
 /**
@@ -671,5 +918,374 @@ export interface SpellResponse {
   [k: string]: unknown;
 }
 export interface Components1 {
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "AbilityDefinition".
+ */
+export interface AbilityDefinition {
+  ability_type: AbilityType;
+  action_operation_specs: ActionOperationSpecs;
+  content_version: ContentVersion;
+  family?: Family;
+  id: Id9;
+  lifecycle_state: LifecycleState;
+  name: Name16;
+  pack_id: PackId;
+  passive_effects: PassiveEffects;
+  provenance_author?: ProvenanceAuthor;
+  provenance_source: ProvenanceSource;
+  provenance_updated_at: ProvenanceUpdatedAt;
+  schema_version: SchemaVersion;
+  slug: Slug;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "ActionOperationSpec".
+ */
+export interface ActionOperationSpec {
+  activation_cost: ActivationCost;
+  activation_trigger?: ActivationTrigger;
+  operation_id: OperationId;
+  payload: Payload;
+  resource_consumption?: ResourceConsumption | null;
+  targeting_spec: TargetingSpec;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "AttackRollPayload".
+ */
+export interface AttackRollPayload {
+  attack_type: AttackType;
+  critical_threshold?: CriticalThreshold;
+  damage_instances: DamageInstances;
+  on_hit_effects?: OnHitEffects;
+  operation_type?: OperationType;
+  stat_override?: StatOverride;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "DamageInstance".
+ */
+export interface DamageInstance {
+  add_stat_modifier: AddStatModifier;
+  damage_type: DamageType;
+  value: Value2;
+  [k: string]: unknown;
+}
+/**
+ * A pointer from a consumer operation to a source operation's result.
+ *
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "ResultReference".
+ */
+export interface ResultReference {
+  attribute: ResultAttribute;
+  bonus?: Bonus;
+  multiplier?: Multiplier;
+  source_operation_id: SourceOperationId;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "SavePayload".
+ */
+export interface SavePayload {
+  apply_conditions_on_fail?: ApplyConditionsOnFail;
+  failure_damage: FailureDamage;
+  operation_type?: OperationType1;
+  save_dc_override?: SaveDcOverride;
+  save_stat: SaveStat;
+  success_rule: SuccessRule;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "HealPayload".
+ */
+export interface HealPayload {
+  add_stat_modifier: AddStatModifier1;
+  amount: Amount;
+  operation_type?: OperationType2;
+  removes_conditions?: RemovesConditions;
+  stat_used: StatUsed;
+  temp_hp: TempHp2;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "EffectApplicationPayload".
+ */
+export interface EffectApplicationPayload {
+  allow_save_ends: AllowSaveEnds;
+  applied_condition_id: AppliedConditionId;
+  duration_rounds: DurationRounds;
+  operation_type?: OperationType3;
+  requires_concentration: RequiresConcentration;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "ResourceConsumption".
+ */
+export interface ResourceConsumption {
+  count: Count;
+  resource_type: ResourceType;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "TargetingSpec".
+ */
+export interface TargetingSpec {
+  max_targets: MaxTargets;
+  radius_feet?: RadiusFeet;
+  range_feet: RangeFeet;
+  type: TargetingType;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "FlatModifierSpec".
+ */
+export interface FlatModifierSpec {
+  modifier_type?: ModifierType;
+  stack_group: StackGroup;
+  target_stat: TargetStat;
+  value: Value3;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "DiceModifierSpec".
+ */
+export interface DiceModifierSpec {
+  condition_gate?: ConditionGate;
+  dice_notation: DiceNotation;
+  modifier_type?: ModifierType1;
+  target_stat: TargetStat1;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "RuleOverrideModifierSpec".
+ */
+export interface RuleOverrideModifierSpec {
+  modifier_type?: ModifierType2;
+  override_value: OverrideValue;
+  target_stat: TargetStat2;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "BackgroundDefinition".
+ */
+export interface BackgroundDefinition {
+  content_version: ContentVersion1;
+  family?: Family1;
+  id: Id10;
+  lifecycle_state: LifecycleState;
+  name: Name17;
+  pack_id: PackId1;
+  provenance_author?: ProvenanceAuthor1;
+  provenance_source: ProvenanceSource1;
+  provenance_updated_at: ProvenanceUpdatedAt1;
+  schema_version: SchemaVersion1;
+  skill_proficiencies: SkillProficiencies1;
+  slug: Slug1;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "ReplacementChain".
+ */
+export interface ReplacementChain {
+  chain_depth: ChainDepth;
+  head_definition_id: HeadDefinitionId;
+  next_definition_id?: NextDefinitionId;
+  terminal_definition_id?: TerminalDefinitionId;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "ClassDefinition".
+ */
+export interface ClassDefinition {
+  content_version: ContentVersion2;
+  family?: Family2;
+  hit_die: HitDie1;
+  id: Id11;
+  lifecycle_state: LifecycleState;
+  name: Name18;
+  pack_id: PackId2;
+  provenance_author?: ProvenanceAuthor2;
+  provenance_source: ProvenanceSource2;
+  provenance_updated_at: ProvenanceUpdatedAt2;
+  saving_throw_proficiencies: SavingThrowProficiencies;
+  schema_version: SchemaVersion2;
+  slug: Slug2;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "ConditionDefinition".
+ */
+export interface ConditionDefinition {
+  condition_type: ConditionType;
+  content_version: ContentVersion3;
+  family?: Family3;
+  has_levels: HasLevels;
+  id: Id12;
+  lifecycle_state: LifecycleState;
+  modifier_specs: ModifierSpecs;
+  name: Name19;
+  pack_id: PackId3;
+  provenance_author?: ProvenanceAuthor3;
+  provenance_source: ProvenanceSource3;
+  provenance_updated_at: ProvenanceUpdatedAt3;
+  schema_version: SchemaVersion3;
+  slug: Slug3;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "ItemDefinition".
+ */
+export interface ItemDefinition {
+  action_operation_specs: ActionOperationSpecs1;
+  content_version: ContentVersion4;
+  cost: Cost;
+  family?: Family4;
+  id: Id13;
+  item_type: ItemType;
+  lifecycle_state: LifecycleState;
+  name: Name20;
+  pack_id: PackId4;
+  provenance_author?: ProvenanceAuthor4;
+  provenance_source: ProvenanceSource4;
+  provenance_updated_at: ProvenanceUpdatedAt4;
+  schema_version: SchemaVersion4;
+  slug: Slug4;
+  weight: Weight2;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "LinkedEntryReference".
+ */
+export interface LinkedEntryReference {
+  id: Id14;
+  relation_kind: RelationKind;
+  required: Required;
+  resolve_mode: ResolveMode;
+  source_definition_id: SourceDefinitionId;
+  source_path: SourcePath;
+  target_definition_id: TargetDefinitionId;
+  target_family: TargetFamily;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "LoreDefinition".
+ */
+export interface LoreDefinition {
+  content_version: ContentVersion5;
+  family?: Family5;
+  id: Id15;
+  lifecycle_state: LifecycleState;
+  lore_type: LoreType;
+  name: Name21;
+  pack_id: PackId5;
+  provenance_author?: ProvenanceAuthor5;
+  provenance_source: ProvenanceSource5;
+  provenance_updated_at: ProvenanceUpdatedAt5;
+  rich_text_content: RichTextContent;
+  schema_version: SchemaVersion5;
+  slug: Slug5;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "MonsterDefinition".
+ */
+export interface MonsterDefinition {
+  action_operation_specs: ActionOperationSpecs2;
+  armor_class: ArmorClass4;
+  challenge_rating: ChallengeRating2;
+  content_version: ContentVersion6;
+  family?: Family6;
+  hit_points_formula: HitPointsFormula;
+  id: Id16;
+  lifecycle_state: LifecycleState;
+  name: Name22;
+  pack_id: PackId6;
+  provenance_author?: ProvenanceAuthor6;
+  provenance_source: ProvenanceSource6;
+  provenance_updated_at: ProvenanceUpdatedAt6;
+  schema_version: SchemaVersion6;
+  slug: Slug6;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "ContentPackRecord".
+ */
+export interface ContentPackRecord {
+  author_user_id?: AuthorUserId;
+  compatibility_target?: CompatibilityTarget;
+  created_at: CreatedAt;
+  id: Id17;
+  is_homebrew: IsHomebrew;
+  lifecycle_state: LifecycleState;
+  pack_key?: PackKey;
+  published_version?: PublishedVersion;
+  title: Title;
+  updated_at: UpdatedAt;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "SpeciesDefinition".
+ */
+export interface SpeciesDefinition {
+  content_version: ContentVersion7;
+  family?: Family7;
+  id: Id18;
+  lifecycle_state: LifecycleState;
+  name: Name23;
+  pack_id: PackId7;
+  provenance_author?: ProvenanceAuthor7;
+  provenance_source: ProvenanceSource7;
+  provenance_updated_at: ProvenanceUpdatedAt7;
+  schema_version: SchemaVersion7;
+  size: Size3;
+  slug: Slug7;
+  speed: Speed5;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `ExportModel`'s JSON-Schema
+ * via the `definition` "SpellDefinition".
+ */
+export interface SpellDefinition {
+  action_operation_specs: ActionOperationSpecs3;
+  casting_time: CastingTime2;
+  content_version: ContentVersion8;
+  family?: Family8;
+  id: Id19;
+  level: Level4;
+  lifecycle_state: LifecycleState;
+  name: Name24;
+  pack_id: PackId8;
+  provenance_author?: ProvenanceAuthor8;
+  provenance_source: ProvenanceSource8;
+  provenance_updated_at: ProvenanceUpdatedAt8;
+  schema_version: SchemaVersion8;
+  school: School2;
+  slug: Slug8;
   [k: string]: unknown;
 }
