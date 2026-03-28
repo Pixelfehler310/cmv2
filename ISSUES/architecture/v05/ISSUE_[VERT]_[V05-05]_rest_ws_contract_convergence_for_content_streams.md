@@ -12,7 +12,7 @@ The API Gateway for the Compendium. REST is needed for CRUD Operations und WS (W
 
 ## Implementation Steps (Actionable)
 
-1.  **Create API Router (`backend/src/modules/compendium/api/router.py`):**
+1.  **Create API Router (`backend/src/systems/dnd5e/content/api/router.py`):**
     *   Erstelle einen FastAPI Router: `router = APIRouter(prefix="/api/compendium", tags=["Compendium"])`
     *   **Endpoints für Content Packs:** `POST /packs`, `GET /packs`, `GET /packs/{pack_id}`.
     *   **Endpoints für Definitionen:** 
@@ -24,7 +24,7 @@ The API Gateway for the Compendium. REST is needed for CRUD Operations und WS (W
 2.  **Define HTTP Error Contracts:**
     *   Schreibe Exception Handler, die die Custom Exceptions aus V05-04 (`InvalidLifecycleTransition`) in saubere HTTP `400 Bad Request` oder `409 Conflict` umwandeln.
     *   Nutze das etablierte Error Response Schema (z.B. `{ "error": "VALIDATION_FAILED", "message": "Cannot update published spell." }`).
-3.  **WebSocket Integration (`api/ws_events.py`):**
+3.  **WebSocket Integration (`backend/src/systems/dnd5e/content/api/ws_events.py`):**
     *   Baue den `ContentStreamWsHandler`, falls die Kampagne live läuft und z.B. der DM on-the-fly einen Homebrew Spell auf "Published" setzt.
     *   Das WebSocket muss ein `ContentLifecycleEvent` (z.B. "DefinitionPublished") an den Raum schicken.
 4.  **Legacy Audit & Marking:**

@@ -13,7 +13,7 @@ This issue creates the authoritative Service Layer (Application Services). Es di
 
 ## Implementation Steps (Actionable)
 
-1.  **Create Services (`backend/src/modules/compendium/application/services.py`):**
+1.  **Create Services (`backend/src/systems/dnd5e/content/application/services.py`):**
     *   Erstelle den `CompendiumApplicationService`. Er bekommt das Repository injiziert (Dependency Injection).
 2.  **Implement Create & Update Commands:**
     *   Schreibe `create_definition(...)`: Es prüft über das Repo, ob die ID oder der Slug bereits existiert. Wenn nein: `repository.upsert()`.

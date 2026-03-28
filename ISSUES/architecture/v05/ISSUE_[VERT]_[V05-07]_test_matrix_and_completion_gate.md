@@ -13,7 +13,7 @@ This is the final lock for Vertical-05. Es stellt sicher, dass alle Systeme (Con
 
 ## Implementation Steps (Actionable)
 
-1.  **Write End-to-End Integration Tests (`tests/integration/test_compendium_v05_e2e.py`):**
+1.  **Write End-to-End Integration Tests (`backend/tests/systems/dnd5e/content/integration/test_compendium_v05_e2e.py`):**
     *   **Der "Homebrew" Flow:** 
         1. Sende `POST /packs` (Erstelle Draft Pack).
         2. Sende `POST /definitions` (Erstelle Draft Spell).
@@ -46,5 +46,5 @@ Out of scope:
 3. Der Write-Pfad (SQL) und der Read-Pfad (Indexer) kommunizieren sauber via Events (bzw. Async Tasks).
 
 ## Verification Commands
-1. `docker compose --profile test run --rm backend-test pytest tests/integration/test_compendium_v05_e2e.py -v`
-2. `Coverage > 85% on backend/src/modules/compendium`
+1. `docker compose --profile test run --rm backend-test pytest backend/tests/systems/dnd5e/content/integration/test_compendium_v05_e2e.py -v`
+2. `Coverage > 85% on backend/src/systems/dnd5e/content`

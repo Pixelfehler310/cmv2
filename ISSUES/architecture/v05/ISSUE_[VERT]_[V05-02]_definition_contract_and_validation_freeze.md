@@ -13,7 +13,7 @@ This issue locks canonical definition payloads, lifecycle fields, linked-entry r
 
 ## Implementation Steps (Actionable)
 
-1.  **Create Domain Models (`backend/src/modules/compendium/domain/models.py`):**
+1.  **Create Domain Models (`backend/src/systems/dnd5e/content/domain/definition_models.py`):**
     *   **Basis-Klasse `DefinitionRecord`** anlegen. Muss von Pydantic `BaseModel` erben. Felder: `id` (UUID), `family` (Enum), `pack_id` (UUID), `lifecycle_state` (Enum: draft/published/archived), `content_version` (int).
     *   **Sub-Klassen erstellen**: `ClassDefinition`, `SpeciesDefinition`, `BackgroundDefinition`, `AbilityDefinition` (vereinigt Feat & Feature!), `SpellDefinition`, `ItemDefinition`, `MonsterDefinition`. Alle erben von `DefinitionRecord`.
     *   Erstelle das Modell **`ContentPackRecord`** (Pack-Metadaten, `is_homebrew` flag).

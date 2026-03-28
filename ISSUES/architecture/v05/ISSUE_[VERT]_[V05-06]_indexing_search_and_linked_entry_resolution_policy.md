@@ -13,11 +13,11 @@ Eine relationale Datenbank ist für tiefverschachtelte Listen-Suchen zu langsam.
 
 ## Implementation Steps (Actionable)
 
-1.  **Implement Link Resolution (`backend/src/modules/compendium/application/linked_entry_resolution.py`):**
+1.  **Implement Link Resolution (`backend/src/systems/dnd5e/content/application/resolution.py`):**
     *   Baue einen Recursive-Graph-Resolver. Wenn der Request lautet "Löse Baum für Fighter Class (ID: 123) auf", muss der Service das `LinkedEntryModel` traversieren.
     *   **Deadlock/Cycle Detection:** Baue einen Checker ein, der Infinite-Loops verhindert (`if next_id in visited_set: raise CycleDetected()`).
     *   **Missing Targets:** Falls ein Link ins Leere zeigt (z.B. weil der User Homebrew gelöscht hat), markiere den Link im Resultat als `BROKEN`, anstatt das Schema komplett abstürzen zu lassen.
-2.  **Create Search Index Projection (`backend/src/modules/compendium/infrastructure/search_indexer.py`):**
+2.  **Create Search Index Projection (`backend/src/systems/dnd5e/content/infrastructure/search_indexer.py`):**
     *   Entweder als Denormalisierter Postgres View, per Elasticsearch, oder als In-Memory Cache (Redis).
     *   Das Index-Dokument (Das "Read Model") muss flach sein! z.B. `IndexDocument(id="uuid", family="spell", name_normalized="fireball", search_tokens=["fire", "aoe", "damage"])`.
 3.  **Build the Async Projection Worker:**
