@@ -100,3 +100,14 @@ class ReplacementCycleError(CompendiumDomainError):
 class IllegalStateDependencyError(CompendiumDomainError):
     def __init__(self, message: str):
         super().__init__(CompendiumErrorCode.ILLEGAL_STATE_DEPENDENCY, message)
+
+
+class GraphCycleError(CompendiumDomainError):
+    """Raised when a read-path graph traversal detects a cycle."""
+    def __init__(self, *, definition_id: str, visited_path: list[str]):
+        chain = " -> ".join(visited_path + [definition_id])
+        super().__init__(
+            CompendiumErrorCode.GRAPH_CYCLE_DETECTED,
+            f"Cycle detected during graph traversal: {chain}",
+        )
+        self.visited_path = visited_path

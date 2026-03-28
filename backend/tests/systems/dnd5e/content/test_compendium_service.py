@@ -30,6 +30,7 @@ from src.systems.dnd5e.content.infrastructure.orm import (
     CompendiumDefinitionModel,
     ContentPackModel,
     LinkedEntryModel,
+    SearchIndexModel,
 )
 from src.systems.dnd5e.content.infrastructure.unit_of_work import CompendiumUnitOfWork
 
@@ -48,6 +49,7 @@ async def db_session():
         Base.metadata.tables[ContentPackModel.__tablename__].create(sync_conn)
         Base.metadata.tables[CompendiumDefinitionModel.__tablename__].create(
             sync_conn)
+        Base.metadata.tables[SearchIndexModel.__tablename__].create(sync_conn)
         Base.metadata.tables[LinkedEntryModel.__tablename__].create(sync_conn)
 
     async with engine.begin() as conn:

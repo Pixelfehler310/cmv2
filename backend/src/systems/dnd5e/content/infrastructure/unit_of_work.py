@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repositories import ContentPackRepository, DefinitionRepository, LinkedEntryRepository
+from .search_index_repository import SearchIndexRepository
 
 
 class CompendiumUnitOfWork:
@@ -13,6 +14,7 @@ class CompendiumUnitOfWork:
         self.packs = ContentPackRepository(db)
         self.definitions = DefinitionRepository(db)
         self.links = LinkedEntryRepository(db)
+        self.search_index = SearchIndexRepository(db)
 
     async def __aenter__(self) -> "CompendiumUnitOfWork":
         return self

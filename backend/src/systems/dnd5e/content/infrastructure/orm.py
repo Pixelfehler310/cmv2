@@ -82,6 +82,33 @@ class CompendiumDefinitionModel(Base, UUIDMixin, TimestampMixin):
     )
 
 
+class SearchIndexModel(Base, UUIDMixin, TimestampMixin):
+    __tablename__ = "dnd5e_search_index"
+
+    definition_id: Mapped[str] = mapped_column(
+        ForeignKey("dnd5e_compendium_definitions.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    family: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    pack_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    name_normalized: Mapped[str] = mapped_column(
+        String, nullable=False, index=True)
+    search_blob: Mapped[str] = mapped_column(String, nullable=False, default="")
+    visibility_state: Mapped[str] = mapped_column(
+        String, nullable=False, default="draft", index=True)
+
+    __table_args__ = (
+        Index(
+            "ix_dnd5e_search_index_family_visibility",
+            "family",
+            "visibility_state",
+        ),
+    )
+
+
 class LinkedEntryModel(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "dnd5e_linked_entries"
 

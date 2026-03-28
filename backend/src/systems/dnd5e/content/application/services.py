@@ -19,6 +19,7 @@ from ..domain.errors import (
     LinkedTargetInUseError,
     VersionMismatchError,
 )
+from ..domain.index_models import build_index_document
 from ..domain.link_models import LinkedEntryReference, RelationKind, ResolveMode
 from ..domain.pack_models import ContentPackRecord
 from ..domain.primitives import DefinitionFamily, LifecycleState
@@ -121,6 +122,7 @@ class CompendiumApplicationService:
                 )
 
             saved = await uow.definitions.upsert(definition)
+            await self._update_search_index(uow, saved)
             await uow.commit()
 
         await self._emit(
@@ -187,6 +189,7 @@ class CompendiumApplicationService:
                     )
 
             saved = await uow.definitions.upsert(validated)
+            await self._update_search_index(uow, saved)
             await uow.commit()
 
         await self._emit(
@@ -235,6 +238,7 @@ class CompendiumApplicationService:
                 )
 
             await uow.links.delete_by_source_definition_id(definition_id)
+            await self._delete_search_index(uow, definition_id)
             await uow.definitions.delete(definition_id)
             await uow.commit()
 
@@ -286,6 +290,7 @@ class CompendiumApplicationService:
             published = type(existing).model_validate(updated_data)
 
             saved = await uow.definitions.upsert(published)
+            await self._update_search_index(uow, saved)
             await uow.commit()
 
         await self._emit(
@@ -371,6 +376,7 @@ class CompendiumApplicationService:
             superseded = type(old_definition).model_validate(superseded_data)
 
             saved = await uow.definitions.upsert(superseded)
+            await self._update_search_index(uow, saved)
             await uow.commit()
 
         await self._emit(
@@ -420,3 +426,18 @@ class CompendiumApplicationService:
         pack = await uow.packs.get_by_id(pack_id)
         if pack is None:
             raise ContentPackNotFoundError(pack_id)
+
+    @staticmethod
+    async def _update_search_index(
+        uow: CompendiumUnitOfWork,
+        definition: DefinitionRecord,
+    ) -> None:
+        doc = build_index_document(definition)
+        await uow.search_index.upsert_document(doc)
+
+    @staticmethod
+    async def _delete_search_index(
+        uow: CompendiumUnitOfWork,
+        definition_id: str,
+    ) -> None:
+        await uow.search_index.delete_document(definition_id)

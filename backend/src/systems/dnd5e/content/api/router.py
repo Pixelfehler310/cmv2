@@ -8,6 +8,11 @@ from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
+from src.systems.dnd5e.content.application.resolution import (
+    LinkedEntryResolutionService,
+    ResolvedLink,
+    ResolvedLinkTree,
+)
 from src.systems.dnd5e.content.application.services import CompendiumApplicationService
 from src.systems.dnd5e.content.domain.definition_models import (
     AbilityDefinition,
@@ -23,7 +28,9 @@ from src.systems.dnd5e.content.domain.definition_models import (
 from src.systems.dnd5e.content.domain.errors import (
     CompendiumDomainError,
     ContentPackNotFoundError,
+    GraphCycleError,
 )
+from src.systems.dnd5e.content.domain.index_models import IndexDocument
 from src.systems.dnd5e.content.domain.invariants import CompendiumErrorCode
 from src.systems.dnd5e.content.domain.pack_models import ContentPackRecord
 from src.systems.dnd5e.content.domain.primitives import DefinitionFamily, LifecycleState
@@ -326,5 +333,113 @@ async def supersede_definition(
             request_id=request.headers.get("x-request-id"),
             campaign_id=payload.campaign_id,
         )
+    except Exception as exc:
+        raise _map_domain_exception(exc) from exc
+
+
+# ---------------------------------------------------------------------------
+# V05-06: Search & Link Resolution Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get("/search", response_model=list[IndexDocument])
+async def search_definitions(
+    q: str | None = Query(default=None, description="Full-text search term"),
+    family: DefinitionFamily | None = Query(default=None),
+    lifecycle_state: LifecycleState | None = Query(default=None),
+    pack_id: str | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
+    """Search the denormalized index — does NOT query the definitions table."""
+    try:
+        uow = CompendiumUnitOfWork(db)
+        async with uow:
+            states = [lifecycle_state.value] if lifecycle_state else None
+            results = await uow.search_index.search(
+                query_text=q,
+                family=family.value if family else None,
+                lifecycle_states=states,
+                pack_id=pack_id,
+                limit=limit,
+                offset=offset,
+            )
+            return results
+    except Exception as exc:
+        raise _map_domain_exception(exc) from exc
+
+
+@router.get("/definitions/{definition_id}/links")
+async def get_definition_links(
+    definition_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Resolve forward and reverse links for a definition."""
+    try:
+        resolver = LinkedEntryResolutionService()
+        uow = CompendiumUnitOfWork(db)
+        async with uow:
+            forward_tree = await resolver.resolve_forward_links(definition_id, uow)
+            reverse_links = await resolver.resolve_reverse_links(definition_id, uow)
+
+        return {
+            "definition_id": definition_id,
+            "forward_links": [
+                {
+                    "link_id": link.link_id,
+                    "source_id": link.source_id,
+                    "target_id": link.target_id,
+                    "relation_kind": link.relation_kind,
+                    "status": link.status.value,
+                    "target_name": link.target_name,
+                    "target_family": link.target_family,
+                }
+                for link in forward_tree.links
+            ],
+            "reverse_links": [
+                {
+                    "link_id": link.link_id,
+                    "source_id": link.source_id,
+                    "target_id": link.target_id,
+                    "relation_kind": link.relation_kind,
+                    "status": link.status.value,
+                    "target_name": link.target_name,
+                    "target_family": link.target_family,
+                }
+                for link in reverse_links
+            ],
+            "broken_links": forward_tree.broken_links,
+            "cycle_detected": forward_tree.cycle_detected,
+        }
+    except Exception as exc:
+        raise _map_domain_exception(exc) from exc
+
+
+@router.get("/definitions/{definition_id}/replacement-chain")
+async def get_replacement_chain(
+    definition_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Walk the replacement chain from a definition to its terminal node."""
+    try:
+        resolver = LinkedEntryResolutionService()
+        uow = CompendiumUnitOfWork(db)
+        async with uow:
+            chain = await resolver.resolve_replacement_chain(definition_id, uow)
+
+        return {
+            "definition_id": definition_id,
+            "chain": chain,
+            "terminal_id": chain[-1] if chain else definition_id,
+        }
+    except GraphCycleError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=ErrorResponse(
+                error=CompendiumErrorCode.GRAPH_CYCLE_DETECTED.value,
+                message=str(exc),
+            ).model_dump(),
+        ) from exc
     except Exception as exc:
         raise _map_domain_exception(exc) from exc
