@@ -10,6 +10,15 @@ from src.schemas.definitions import BackgroundResponse, ClassResponse, SpeciesRe
 from src.schemas.item import ItemCreate, ItemResponse
 from src.schemas.monster import MonsterCreate, MonsterResponse
 from src.schemas.spell import SpellCreate, SpellResponse
+
+from src.systems.dnd5e.content.domain.definition_models import (
+    LoreDefinition, SpeciesDefinition, BackgroundDefinition, ClassDefinition,
+    ConditionDefinition, AbilityDefinition, SpellDefinition, ItemDefinition, MonsterDefinition
+)
+from src.systems.dnd5e.content.domain.pack_models import ContentPackRecord
+from src.systems.dnd5e.content.domain.link_models import LinkedEntryReference, ReplacementChain
+from src.systems.dnd5e.content.domain.invariants import CompendiumErrorCode
+
 import argparse
 import difflib
 import json
@@ -68,6 +77,19 @@ class ExportModel(BaseModel):
     species: list[SpeciesResponse]
     classes: list[ClassResponse]
     backgrounds: list[BackgroundResponse]
+    # V05 Contracts
+    v05_lore: list[LoreDefinition]
+    v05_species: list[SpeciesDefinition]
+    v05_backgrounds: list[BackgroundDefinition]
+    v05_classes: list[ClassDefinition]
+    v05_conditions: list[ConditionDefinition]
+    v05_abilities: list[AbilityDefinition]
+    v05_spells: list[SpellDefinition]
+    v05_items: list[ItemDefinition]
+    v05_monsters: list[MonsterDefinition]
+    v05_packs: list[ContentPackRecord]
+    v05_links: list[LinkedEntryReference]
+    v05_chains: list[ReplacementChain]
 
 
 def build_json_schema() -> dict:
