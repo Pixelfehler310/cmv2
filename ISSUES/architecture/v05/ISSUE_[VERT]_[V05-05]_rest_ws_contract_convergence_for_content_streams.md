@@ -27,6 +27,13 @@ The API Gateway for the Compendium. REST is needed for CRUD Operations und WS (W
 3.  **WebSocket Integration (`api/ws_events.py`):**
     *   Baue den `ContentStreamWsHandler`, falls die Kampagne live läuft und z.B. der DM on-the-fly einen Homebrew Spell auf "Published" setzt.
     *   Das WebSocket muss ein `ContentLifecycleEvent` (z.B. "DefinitionPublished") an den Raum schicken.
+4.  **Legacy Audit & Marking:**
+    *   Identifiziere alle REST-Endpoints in `backend/src/api/` (Legacy-Pfade), die nun durch den neuen Compendium-Router ersetzt werden.
+    *   Markiere diese Funktionen mit dem `@deprecated` Decorator oder einem klaren `# [LEGACY]` Kommentar.
+5.  **Test Marking:**
+    *   Führe eine Bestandsaufnahme der Testdateien in `backend/tests/` durch.
+    *   Markiere alle Tests, die sich auf das nun veraltete Content-System beziehen, mit `@pytest.mark.legacy`.
+    *   Registriere den `legacy` Marker in der `pytest.ini`.
 
 ## Scope
 In scope:
@@ -46,6 +53,8 @@ Out of scope:
 1. `GET /docs` (Swagger UI) zeigt alle CRUD Routen mit korrekten Payload-Schemas für Spells, Items, Monsters.
 2. Validation Errors werfen saubere REST JSON-Antworten und fangen Pydantic-Crashes ab.
 3. Live-Event via Websocket wird geschickt, wenn ein Endpoint `supersede_definition` triggert.
+4. Alle ersetzten Legacy-Endpoints in `backend/src/api/` sind klar als veraltet markiert.
+5. `pytest -m "not legacy"` führt alle neuen V05-Tests aus, ohne die alten Systeme zu berühren.
 
 ## Verification Commands
 1. `docker compose up backend` + Öffnen von `http://localhost:8000/docs` zur Schema Prüfung.
