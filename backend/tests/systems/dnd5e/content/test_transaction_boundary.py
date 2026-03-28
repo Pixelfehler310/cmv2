@@ -30,7 +30,8 @@ async def db_session():
 
     def _create_tables(sync_conn):
         Base.metadata.tables[ContentPackModel.__tablename__].create(sync_conn)
-        Base.metadata.tables[CompendiumDefinitionModel.__tablename__].create(sync_conn)
+        Base.metadata.tables[CompendiumDefinitionModel.__tablename__].create(
+            sync_conn)
         Base.metadata.tables[LinkedEntryModel.__tablename__].create(sync_conn)
 
     async with engine.begin() as conn:

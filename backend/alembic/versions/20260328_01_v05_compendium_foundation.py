@@ -26,15 +26,19 @@ def upgrade() -> None:
         sa.Column("author_user_id", sa.String(), nullable=True),
         sa.Column("title", sa.String(), nullable=False),
         sa.Column("lifecycle_state", sa.String(), nullable=False),
-        sa.Column("is_homebrew", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column("is_homebrew", sa.Boolean(),
+                  nullable=False, server_default=sa.false()),
         sa.Column("pack_key", sa.String(), nullable=True),
         sa.Column("compatibility_target", sa.String(), nullable=True),
         sa.Column("published_version", sa.Integer(), nullable=True),
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True),
+                  server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True),
+                  server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("pack_key", name="uq_dnd5e_content_packs_pack_key"),
+        sa.UniqueConstraint(
+            "pack_key", name="uq_dnd5e_content_packs_pack_key"),
     )
     op.create_index(
         "ix_dnd5e_content_packs_lifecycle_homebrew",
@@ -60,13 +64,19 @@ def upgrade() -> None:
         sa.Column("pack_id", sa.String(), nullable=False),
         sa.Column("provenance_source", sa.String(), nullable=False),
         sa.Column("provenance_author", sa.String(), nullable=True),
-        sa.Column("provenance_updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("provenance_updated_at", sa.DateTime(
+            timezone=True), nullable=False),
+        sa.Column("payload", postgresql.JSONB(
+            astext_type=sa.Text()), nullable=False),
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
-        sa.CheckConstraint("content_version >= 1", name="ck_dnd5e_compendium_definitions_content_version"),
-        sa.ForeignKeyConstraint(["pack_id"], ["dnd5e_content_packs.id"], ondelete="CASCADE"),
+        sa.Column("created_at", sa.DateTime(timezone=True),
+                  server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True),
+                  server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.CheckConstraint(
+            "content_version >= 1", name="ck_dnd5e_compendium_definitions_content_version"),
+        sa.ForeignKeyConstraint(
+            ["pack_id"], ["dnd5e_content_packs.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "pack_id",
@@ -121,13 +131,19 @@ def upgrade() -> None:
         sa.Column("target_definition_id", sa.String(), nullable=False),
         sa.Column("target_family", sa.String(), nullable=False),
         sa.Column("relation_kind", sa.String(), nullable=False),
-        sa.Column("required", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column("resolve_mode", sa.String(), nullable=False, server_default=sa.text("'strict'")),
+        sa.Column("required", sa.Boolean(), nullable=False,
+                  server_default=sa.true()),
+        sa.Column("resolve_mode", sa.String(), nullable=False,
+                  server_default=sa.text("'strict'")),
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
-        sa.ForeignKeyConstraint(["source_definition_id"], ["dnd5e_compendium_definitions.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["target_definition_id"], ["dnd5e_compendium_definitions.id"], ondelete="RESTRICT"),
+        sa.Column("created_at", sa.DateTime(timezone=True),
+                  server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True),
+                  server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.ForeignKeyConstraint(["source_definition_id"], [
+                                "dnd5e_compendium_definitions.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["target_definition_id"], [
+                                "dnd5e_compendium_definitions.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "source_definition_id",
@@ -164,20 +180,32 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_dnd5e_linked_entries_target", table_name="dnd5e_linked_entries")
-    op.drop_index("ix_dnd5e_linked_entries_source_relation", table_name="dnd5e_linked_entries")
-    op.drop_index("ix_dnd5e_linked_entries_target_definition_id", table_name="dnd5e_linked_entries")
-    op.drop_index("ix_dnd5e_linked_entries_source_definition_id", table_name="dnd5e_linked_entries")
+    op.drop_index("ix_dnd5e_linked_entries_target",
+                  table_name="dnd5e_linked_entries")
+    op.drop_index("ix_dnd5e_linked_entries_source_relation",
+                  table_name="dnd5e_linked_entries")
+    op.drop_index("ix_dnd5e_linked_entries_target_definition_id",
+                  table_name="dnd5e_linked_entries")
+    op.drop_index("ix_dnd5e_linked_entries_source_definition_id",
+                  table_name="dnd5e_linked_entries")
     op.drop_table("dnd5e_linked_entries")
 
-    op.drop_index("ix_dnd5e_compendium_definitions_payload_gin", table_name="dnd5e_compendium_definitions")
-    op.drop_index("ix_dnd5e_compendium_definitions_pack_family_state", table_name="dnd5e_compendium_definitions")
-    op.drop_index("ix_dnd5e_compendium_definitions_pack_id", table_name="dnd5e_compendium_definitions")
-    op.drop_index("ix_dnd5e_compendium_definitions_lifecycle_state", table_name="dnd5e_compendium_definitions")
-    op.drop_index("ix_dnd5e_compendium_definitions_slug", table_name="dnd5e_compendium_definitions")
-    op.drop_index("ix_dnd5e_compendium_definitions_family", table_name="dnd5e_compendium_definitions")
+    op.drop_index("ix_dnd5e_compendium_definitions_payload_gin",
+                  table_name="dnd5e_compendium_definitions")
+    op.drop_index("ix_dnd5e_compendium_definitions_pack_family_state",
+                  table_name="dnd5e_compendium_definitions")
+    op.drop_index("ix_dnd5e_compendium_definitions_pack_id",
+                  table_name="dnd5e_compendium_definitions")
+    op.drop_index("ix_dnd5e_compendium_definitions_lifecycle_state",
+                  table_name="dnd5e_compendium_definitions")
+    op.drop_index("ix_dnd5e_compendium_definitions_slug",
+                  table_name="dnd5e_compendium_definitions")
+    op.drop_index("ix_dnd5e_compendium_definitions_family",
+                  table_name="dnd5e_compendium_definitions")
     op.drop_table("dnd5e_compendium_definitions")
 
-    op.drop_index("ix_dnd5e_content_packs_lifecycle_state", table_name="dnd5e_content_packs")
-    op.drop_index("ix_dnd5e_content_packs_lifecycle_homebrew", table_name="dnd5e_content_packs")
+    op.drop_index("ix_dnd5e_content_packs_lifecycle_state",
+                  table_name="dnd5e_content_packs")
+    op.drop_index("ix_dnd5e_content_packs_lifecycle_homebrew",
+                  table_name="dnd5e_content_packs")
     op.drop_table("dnd5e_content_packs")

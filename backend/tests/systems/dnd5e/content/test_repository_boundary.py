@@ -31,7 +31,8 @@ async def db_session():
 
     def _create_tables(sync_conn):
         Base.metadata.tables[ContentPackModel.__tablename__].create(sync_conn)
-        Base.metadata.tables[CompendiumDefinitionModel.__tablename__].create(sync_conn)
+        Base.metadata.tables[CompendiumDefinitionModel.__tablename__].create(
+            sync_conn)
         Base.metadata.tables[LinkedEntryModel.__tablename__].create(sync_conn)
 
     async with engine.begin() as conn:
@@ -85,7 +86,8 @@ async def test_definition_repository_returns_domain_models_not_orm(db_session):
 
     pack = await packs.create(_build_pack("pack-1"))
     definition = await definitions.upsert(
-        _build_monster(definition_id="def-1", pack_id=pack.id, slug="goblin", version=1)
+        _build_monster(definition_id="def-1", pack_id=pack.id,
+                       slug="goblin", version=1)
     )
 
     assert isinstance(definition, MonsterDefinition)
@@ -103,10 +105,12 @@ async def test_definition_repository_get_versions_returns_descending_versions(db
 
     pack = await packs.create(_build_pack("pack-2"))
     await definitions.upsert(
-        _build_monster(definition_id="def-v1", pack_id=pack.id, slug="goblin", version=1)
+        _build_monster(definition_id="def-v1", pack_id=pack.id,
+                       slug="goblin", version=1)
     )
     await definitions.upsert(
-        _build_monster(definition_id="def-v2", pack_id=pack.id, slug="goblin", version=2)
+        _build_monster(definition_id="def-v2", pack_id=pack.id,
+                       slug="goblin", version=2)
     )
 
     versions = await definitions.get_versions("def-v1")

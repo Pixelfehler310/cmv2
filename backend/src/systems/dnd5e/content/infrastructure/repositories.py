@@ -116,7 +116,8 @@ class ContentPackRepository:
             id=pack.id,
             author_user_id=pack.author_user_id,
             title=pack.title,
-            lifecycle_state=pack.lifecycle_state.value if isinstance(pack.lifecycle_state, LifecycleState) else str(pack.lifecycle_state),
+            lifecycle_state=pack.lifecycle_state.value if isinstance(
+                pack.lifecycle_state, LifecycleState) else str(pack.lifecycle_state),
             is_homebrew=pack.is_homebrew,
             pack_key=pack.pack_key,
             compatibility_target=pack.compatibility_target,
@@ -134,9 +135,11 @@ class ContentPackRepository:
         return _pack_domain_from_row(row)
 
     async def list(self, *, lifecycle_state: LifecycleState | None = None) -> list[ContentPackRecord]:
-        stmt = select(ContentPackModel).order_by(ContentPackModel.created_at.desc())
+        stmt = select(ContentPackModel).order_by(
+            ContentPackModel.created_at.desc())
         if lifecycle_state is not None:
-            stmt = stmt.where(ContentPackModel.lifecycle_state == lifecycle_state.value)
+            stmt = stmt.where(
+                ContentPackModel.lifecycle_state == lifecycle_state.value)
 
         result = await self._db.execute(stmt)
         return [_pack_domain_from_row(row) for row in result.scalars().all()]
@@ -195,7 +198,8 @@ class DefinitionRepository:
         *,
         family: DefinitionFamily | None = None,
     ) -> list[DefinitionRecord]:
-        stmt = select(CompendiumDefinitionModel).where(CompendiumDefinitionModel.pack_id == pack_id)
+        stmt = select(CompendiumDefinitionModel).where(
+            CompendiumDefinitionModel.pack_id == pack_id)
         if family is not None:
             stmt = stmt.where(CompendiumDefinitionModel.family == family.value)
         stmt = stmt.order_by(CompendiumDefinitionModel.updated_at.desc())
