@@ -17,7 +17,7 @@ from ..domain.definition_models import (
     SpeciesDefinition,
     SpellDefinition,
 )
-from ..domain.link_models import LinkedEntryReference
+from ..domain.link_models import LinkedEntryReference, RelationKind
 from ..domain.pack_models import ContentPackRecord
 from ..domain.primitives import DefinitionFamily, LifecycleState
 from .orm import CompendiumDefinitionModel, ContentPackModel, LinkedEntryModel
@@ -228,6 +228,37 @@ class DefinitionRepository:
         result = await self._db.execute(stmt)
         return [_definition_domain_from_row(row) for row in result.scalars().all()]
 
+    async def get_by_pack_family_slug(
+        self,
+        *,
+        pack_id: str,
+        family: DefinitionFamily,
+        slug: str,
+    ) -> list[DefinitionRecord]:
+        stmt = (
+            select(CompendiumDefinitionModel)
+            .where(
+                CompendiumDefinitionModel.pack_id == pack_id,
+                CompendiumDefinitionModel.family == family.value,
+                CompendiumDefinitionModel.slug == slug,
+            )
+            .order_by(
+                CompendiumDefinitionModel.content_version.desc(),
+                CompendiumDefinitionModel.updated_at.desc(),
+            )
+        )
+        result = await self._db.execute(stmt)
+        return [_definition_domain_from_row(row) for row in result.scalars().all()]
+
+    async def delete(self, definition_id: str) -> bool:
+        row = await self._db.get(CompendiumDefinitionModel, definition_id)
+        if row is None:
+            return False
+
+        await self._db.delete(row)
+        await self._db.flush()
+        return True
+
 
 class LinkedEntryRepository:
     def __init__(self, db: AsyncSession):
@@ -249,6 +280,24 @@ class LinkedEntryRepository:
         await self._db.refresh(row)
         return _linked_entry_domain_from_row(row)
 
+    async def upsert(self, entry: LinkedEntryReference) -> LinkedEntryReference:
+        row = await self._db.get(LinkedEntryModel, entry.id)
+
+        if row is None:
+            return await self.create(entry)
+
+        row.source_definition_id = entry.source_definition_id
+        row.source_path = entry.source_path
+        row.target_definition_id = entry.target_definition_id
+        row.target_family = entry.target_family
+        row.relation_kind = entry.relation_kind.value
+        row.required = entry.required
+        row.resolve_mode = entry.resolve_mode.value
+
+        await self._db.flush()
+        await self._db.refresh(row)
+        return _linked_entry_domain_from_row(row)
+
     async def list_by_source_definition_id(self, source_definition_id: str) -> list[LinkedEntryReference]:
         stmt = (
             select(LinkedEntryModel)
@@ -257,3 +306,42 @@ class LinkedEntryRepository:
         )
         result = await self._db.execute(stmt)
         return [_linked_entry_domain_from_row(row) for row in result.scalars().all()]
+
+    async def list_by_target_definition_id(self, target_definition_id: str) -> list[LinkedEntryReference]:
+        stmt = (
+            select(LinkedEntryModel)
+            .where(LinkedEntryModel.target_definition_id == target_definition_id)
+            .order_by(LinkedEntryModel.created_at.desc())
+        )
+        result = await self._db.execute(stmt)
+        return [_linked_entry_domain_from_row(row) for row in result.scalars().all()]
+
+    async def delete(self, entry_id: str) -> bool:
+        row = await self._db.get(LinkedEntryModel, entry_id)
+        if row is None:
+            return False
+
+        await self._db.delete(row)
+        await self._db.flush()
+        return True
+
+    async def delete_by_source_definition_id(self, source_definition_id: str) -> int:
+        rows = await self.list_by_source_definition_id(source_definition_id)
+        for row in rows:
+            await self.delete(row.id)
+        return len(rows)
+
+    async def get_replacement_target(self, source_definition_id: str) -> str | None:
+        stmt = (
+            select(LinkedEntryModel)
+            .where(
+                LinkedEntryModel.source_definition_id == source_definition_id,
+                LinkedEntryModel.relation_kind == RelationKind.REPLACEMENT.value,
+            )
+            .order_by(LinkedEntryModel.updated_at.desc())
+        )
+        result = await self._db.execute(stmt)
+        row = result.scalars().first()
+        if row is None:
+            return None
+        return row.target_definition_id
