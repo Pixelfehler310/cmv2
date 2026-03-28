@@ -82,35 +82,60 @@ namespace ContentCatalogDomain {
 
   class AbilityDefinition {
     +ability_type: feature | feat
-    +action_operation_specs: list[dict]
-    +passive_effects: list[dict]
+    +action_operation_specs: list[ActionOperationSpec]
+    +passive_effects: list[ModifierSpec]
   }
 
   class SpellDefinition {
     +level: int
     +school: str
     +casting_time: str
-    +action_operation_specs: list[dict]
+    +action_operation_specs: list[ActionOperationSpec]
   }
 
   class ItemDefinition {
     +item_type: weapon | armor | gear | consumable
     +weight: float
     +cost: int
-    +action_operation_specs: list[dict]
+    +action_operation_specs: list[ActionOperationSpec]
   }
 
   class MonsterDefinition {
     +challenge_rating: float
     +armor_class: int
     +hit_points_formula: str
-    +action_operation_specs: list[dict]
+    +action_operation_specs: list[ActionOperationSpec]
   }
 
   class LinkedEntryReference {
     +source_definition_id: str
     +target_definition_id: str
     +relation_kind: grants | prerequisite
+  }
+
+  class LoreDefinition {
+    +lore_type: faction | region | place | deity
+    +rich_text_content: str
+  }
+
+  class ConditionDefinition {
+    +condition_type: buff | debuff | status
+    +has_levels: bool
+    +modifier_specs: list[ModifierSpec]
+  }
+
+  class ModifierSpec {
+    +target_stat: str
+    +modifier_type: flat | dice | multiplier
+    +value: str
+  }
+
+  class ActionOperationSpec {
+    +operation_type: attack | save | heal | utility
+    +target_criteria: str
+    +range: str
+    +duration: str
+    +payload: dict
   }
 }
 
@@ -201,16 +226,22 @@ namespace CharacterDomain {
   }
 }
 
-namespace IntegrationBoundariesV02 {
+namespace IntegrationBoundariesV2 {
   class CombatEncounterRuntime {
-    <<V02 Game State>>
+    <<V2 Game State>>
     +scene_id: str
   }
 
   class CombatActorRuntime {
-    <<V02 Game State>>
+    <<V2 Game State>>
     +actor_id: str
     +source_type: player_character | monster
+  }
+
+  class ExecutableActionRuntime {
+    <<V2 Logic>>
+    +action_id: str
+    +parsed_payload: dict
   }
 }
 
@@ -233,7 +264,16 @@ DefinitionRecord <|-- AbilityDefinition
 DefinitionRecord <|-- SpellDefinition
 DefinitionRecord <|-- ItemDefinition
 DefinitionRecord <|-- MonsterDefinition
+DefinitionRecord <|-- LoreDefinition
+DefinitionRecord <|-- ConditionDefinition
 DefinitionRecord "1" -- "*" LinkedEntryReference : owns links
+
+AbilityDefinition "1" *-- "*" ActionOperationSpec : contains
+AbilityDefinition "1" *-- "*" ModifierSpec : contains
+ConditionDefinition "1" *-- "*" ModifierSpec : contains
+SpellDefinition "1" *-- "*" ActionOperationSpec : contains
+ItemDefinition "1" *-- "*" ActionOperationSpec : contains
+MonsterDefinition "1" *-- "*" ActionOperationSpec : contains
 
 %% Relationships: Campaign
 UserAccount "1" -- "*" Campaign : creates
@@ -265,8 +305,9 @@ CharacterProgression "*" -- "*" AbilityDefinition : references (Feats/Features)
 ItemInstance "*" -- "1" ItemDefinition : instantiated from
 PreparedSpells "*" -- "*" SpellDefinition : references
 
-%% Downstream V02 Integrations
+%% Downstream V2 Integrations
 Scene "1" ..> "0..1" CombatEncounterRuntime : spawns when combat starts
 PlayerCharacterSheet "1" ..> "0..1" CombatActorRuntime : materialized during combat as
 MonsterDefinition "*" ..> "*" CombatActorRuntime : materialized during combat as
 PlannedEncounter "1" ..> "*" CombatActorRuntime : populates
+ActionOperationSpec "*" ..> "1" ExecutableActionRuntime : parsed into V2 Command

@@ -21,10 +21,12 @@ The "Platonic Ideals" of the game's rules. This expands upon the original V05 co
 *   **`DefinitionRecord` (Abstract)**: The universal base class containing canonical UUIDs, versions, and naming conventions.
 *   **Specific Definition Families**: 
     *   **`ClassDefinition`, `SpeciesDefinition`, `BackgroundDefinition`**: Grant overarching traits and abilities to characters.
-    *   **`SpellDefinition`, `ItemDefinition`**: Usable and equipable entities that carry precise `ActionOperationSpec` components for the V02 engine.
+    *   **`SpellDefinition`, `ItemDefinition`**: Usable and equipable entities that carry precise `ActionOperationSpec` components for the V02 engine. (Weapons, for instance, are `ItemDefinition`s where `item_type = weapon`).
     *   **`MonsterDefinition`**: A blueprint containing core stats needed to directly instantiate a `CombatActorRuntime`.
+    *   **`LoreDefinition`**: Narrative and world-building elements (Factions, Regions, Places, Deities) that exist globally in a content pack, making them searchable and referenceable independently of a specific campaign.
 *   **Consolidation of Abilities (`AbilityDefinition`)**: In this architecture, both *Feats* and *Class Features* share an identical schema. Both grant secondary stats, introduce passive effects, or unlock `ActionOperationSpec` elements for the V02 execution engine. Therefore, they are merged under one definition type to reduce schema fragmentation.
 *   **`LinkedEntryReference`**: Ensures referential integrity across the catalog (e.g., a `ClassDefinition` formally grants an `AbilityDefinition` via this link object).
+*   **`ActionOperationSpec`**: A strictly typed definition of action mechanics (attack, save, heal, utility) nested within abilities, spells, and items, to decouple execution semantics from unstructured JSON dictionaries.
 *   **`ContentPackRecord`**: The boundary container. Note that **Homebrew** is treated simply as a `ContentPackRecord` where `author_user_id` is populated and `lifecycle_state: draft` represents work-in-progress custom rules.
 
 ## 4. Campaign Domain
