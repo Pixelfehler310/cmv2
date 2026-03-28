@@ -46,7 +46,8 @@ async def db_session():
 
     def _create_tables(sync_conn):
         Base.metadata.tables[ContentPackModel.__tablename__].create(sync_conn)
-        Base.metadata.tables[CompendiumDefinitionModel.__tablename__].create(sync_conn)
+        Base.metadata.tables[CompendiumDefinitionModel.__tablename__].create(
+            sync_conn)
         Base.metadata.tables[LinkedEntryModel.__tablename__].create(sync_conn)
 
     async with engine.begin() as conn:
@@ -122,7 +123,8 @@ async def test_update_definition_denied_for_published_entity(db_session):
     service = _build_service(db_session, emitted_events)
 
     created = await service.create_definition(
-        _build_monster(definition_id="def-pub", pack_id="pack-1", slug="pub-goblin")
+        _build_monster(definition_id="def-pub",
+                       pack_id="pack-1", slug="pub-goblin")
     )
     published = await service.publish_definition(definition_id=created.id)
 
@@ -133,7 +135,8 @@ async def test_update_definition_denied_for_published_entity(db_session):
             expected_content_version=published.content_version,
         )
 
-    assert CompendiumErrorCode.INVALID_LIFECYCLE_TRANSITION.value in str(exc.value)
+    assert CompendiumErrorCode.INVALID_LIFECYCLE_TRANSITION.value in str(
+        exc.value)
 
 
 @pytest.mark.asyncio
@@ -143,10 +146,12 @@ async def test_supersede_definition_sets_replacement_chain_link(db_session):
     service = _build_service(db_session, emitted_events)
 
     old_created = await service.create_definition(
-        _build_monster(definition_id="def-old", pack_id="pack-1", slug="goblin-old")
+        _build_monster(definition_id="def-old",
+                       pack_id="pack-1", slug="goblin-old")
     )
     new_created = await service.create_definition(
-        _build_monster(definition_id="def-new", pack_id="pack-1", slug="goblin-new")
+        _build_monster(definition_id="def-new",
+                       pack_id="pack-1", slug="goblin-new")
     )
 
     old_published = await service.publish_definition(definition_id=old_created.id)
@@ -177,7 +182,8 @@ async def test_publish_definition_emits_event_only_on_success(db_session):
     service = _build_service(db_session, emitted_events)
 
     created = await service.create_definition(
-        _build_monster(definition_id="def-event", pack_id="pack-1", slug="event-goblin")
+        _build_monster(definition_id="def-event",
+                       pack_id="pack-1", slug="event-goblin")
     )
 
     await service.publish_definition(definition_id=created.id, request_id="req-123")
@@ -204,7 +210,8 @@ async def test_update_definition_requires_expected_content_version(db_session):
     service = _build_service(db_session, emitted_events)
 
     created = await service.create_definition(
-        _build_monster(definition_id="def-version", pack_id="pack-1", slug="version-goblin")
+        _build_monster(definition_id="def-version",
+                       pack_id="pack-1", slug="version-goblin")
     )
 
     with pytest.raises(VersionMismatchError):
@@ -229,7 +236,8 @@ async def test_delete_definition_hard_delete_draft_only(db_session):
     service = _build_service(db_session, emitted_events)
 
     published_candidate = await service.create_definition(
-        _build_monster(definition_id="def-no-delete", pack_id="pack-1", slug="no-delete")
+        _build_monster(definition_id="def-no-delete",
+                       pack_id="pack-1", slug="no-delete")
     )
     await service.publish_definition(definition_id=published_candidate.id)
 
@@ -240,7 +248,8 @@ async def test_delete_definition_hard_delete_draft_only(db_session):
         )
 
     deletable = await service.create_definition(
-        _build_monster(definition_id="def-delete", pack_id="pack-1", slug="delete-me")
+        _build_monster(definition_id="def-delete",
+                       pack_id="pack-1", slug="delete-me")
     )
 
     await service.delete_definition(
@@ -261,12 +270,14 @@ async def test_create_definition_denies_duplicate_slug_in_pack_family(db_session
     service = _build_service(db_session, emitted_events)
 
     await service.create_definition(
-        _build_monster(definition_id="def-dup-1", pack_id="pack-1", slug="dup-slug")
+        _build_monster(definition_id="def-dup-1",
+                       pack_id="pack-1", slug="dup-slug")
     )
 
     with pytest.raises(DuplicateDefinitionSlugError) as exc:
         await service.create_definition(
-            _build_monster(definition_id="def-dup-2", pack_id="pack-1", slug="dup-slug")
+            _build_monster(definition_id="def-dup-2",
+                           pack_id="pack-1", slug="dup-slug")
         )
 
     assert CompendiumErrorCode.DUPLICATE_SLUG.value in str(exc.value)
@@ -308,10 +319,12 @@ async def test_publish_fails_with_draft_dependency(db_session):
 
     # Create Source (Spell) and Target (Condition)
     source = await service.create_definition(
-        _build_monster(definition_id="source-1", pack_id="pack-1", slug="source")
+        _build_monster(definition_id="source-1",
+                       pack_id="pack-1", slug="source")
     )
     target = await service.create_definition(
-        _build_monster(definition_id="target-1", pack_id="pack-1", slug="target")
+        _build_monster(definition_id="target-1",
+                       pack_id="pack-1", slug="target")
     )
 
     # Manually create a link from source to target
@@ -334,7 +347,7 @@ async def test_publish_fails_with_draft_dependency(db_session):
     # Attempt to publish source while target is DRAFT
     with pytest.raises(IllegalStateDependencyError) as exc:
         await service.publish_definition(definition_id=source.id)
-    
+
     assert "cannot depend on DRAFT target" in str(exc.value)
 
 
@@ -358,5 +371,5 @@ async def test_supersede_fails_with_draft_target(db_session):
             old_definition_id=old_def.id,
             new_definition_id=new_def.id,
         )
-    
+
     assert "cannot be superseded by DRAFT target" in str(exc.value)

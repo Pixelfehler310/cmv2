@@ -116,12 +116,14 @@ class CompendiumApplicationService:
                     actual=existing.content_version,
                 )
 
-            self._deny_immutable_field_changes(existing=existing, updates=updates)
+            self._deny_immutable_field_changes(
+                existing=existing, updates=updates)
 
             candidate_data = existing.model_dump(mode="python")
             candidate_data.update(dict(updates))
             candidate_data["content_version"] = existing.content_version + 1
-            candidate_data["provenance_updated_at"] = datetime.now(timezone.utc)
+            candidate_data["provenance_updated_at"] = datetime.now(
+                timezone.utc)
 
             validated = type(existing).model_validate(candidate_data)
 
@@ -309,7 +311,8 @@ class CompendiumApplicationService:
             superseded_data = old_definition.model_dump(mode="python")
             superseded_data["lifecycle_state"] = LifecycleState.SUPERSEDED
             superseded_data["content_version"] = old_definition.content_version + 1
-            superseded_data["provenance_updated_at"] = datetime.now(timezone.utc)
+            superseded_data["provenance_updated_at"] = datetime.now(
+                timezone.utc)
             superseded = type(old_definition).model_validate(superseded_data)
 
             saved = await uow.definitions.upsert(superseded)
@@ -335,11 +338,14 @@ class CompendiumApplicationService:
         updates: Mapping[str, Any],
     ) -> None:
         if "id" in updates and updates["id"] != existing.id:
-            raise InvalidReplacementTargetError("Definition id cannot be changed.")
+            raise InvalidReplacementTargetError(
+                "Definition id cannot be changed.")
         if "family" in updates and updates["family"] != existing.family:
-            raise InvalidReplacementTargetError("Definition family cannot be changed.")
+            raise InvalidReplacementTargetError(
+                "Definition family cannot be changed.")
         if "pack_id" in updates and updates["pack_id"] != existing.pack_id:
-            raise InvalidReplacementTargetError("Definition pack_id cannot be changed.")
+            raise InvalidReplacementTargetError(
+                "Definition pack_id cannot be changed.")
 
     async def _emit(self, event: ContentMutationEvent) -> None:
         if self._event_publisher is None:
