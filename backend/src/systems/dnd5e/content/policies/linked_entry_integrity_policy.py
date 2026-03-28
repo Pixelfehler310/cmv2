@@ -3,12 +3,13 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 
 from ..domain.errors import (
+    IllegalStateDependencyError,
     InvalidReplacementTargetError,
     LinkedTargetNotFoundError,
     ReplacementCycleError,
 )
 from ..domain.link_models import LinkedEntryReference, RelationKind, ResolveMode
-from ..domain.primitives import DefinitionFamily
+from ..domain.primitives import DefinitionFamily, LifecycleState
 
 
 class LinkedEntryIntegrityPolicy:
@@ -68,3 +69,28 @@ class LinkedEntryIntegrityPolicy:
 
             visited.add(cursor)
             cursor = await replacement_target_lookup(cursor)
+
+    @staticmethod
+    async def validate_published_targets_only(
+        *,
+        links: list[LinkedEntryReference],
+        target_lookup: Callable[[str], Awaitable[object | None]],
+    ) -> None:
+        """
+        Ensures that all mandatory links point to PUBLISHED or ARCHIVED entries.
+        Prevents 'Published -> Draft' dependency leaks.
+        """
+        for link in links:
+            if not link.required:
+                continue
+            if link.resolve_mode != ResolveMode.STRICT:
+                continue
+
+            target: Any = await target_lookup(link.target_definition_id)
+            if target is None:
+                raise LinkedTargetNotFoundError(link.target_definition_id)
+
+            if target.lifecycle_state == LifecycleState.DRAFT:
+                raise IllegalStateDependencyError(
+                    f"Published entity cannot depend on DRAFT target '{target.id}'."
+                )

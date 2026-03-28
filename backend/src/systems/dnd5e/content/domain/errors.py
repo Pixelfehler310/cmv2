@@ -87,3 +87,8 @@ class LinkedTargetNotFoundError(CompendiumDomainError):
 class ReplacementCycleError(CompendiumDomainError):
     def __init__(self, message: str):
         super().__init__(CompendiumErrorCode.CYCLE_DETECTED, message)
+
+
+class IllegalStateDependencyError(CompendiumDomainError):
+    def __init__(self, message: str):
+        super().__init__(CompendiumErrorCode.ILLEGAL_STATE_DEPENDENCY, message)

@@ -13,9 +13,15 @@ from src.systems.dnd5e.content.domain.definition_models import MonsterDefinition
 from src.systems.dnd5e.content.domain.errors import (
     DefinitionNotFoundError,
     DuplicateDefinitionSlugError,
+    IllegalStateDependencyError,
     ImmutableDefinitionError,
     ReplacementCycleError,
     VersionMismatchError,
+)
+from src.systems.dnd5e.content.domain.link_models import (
+    LinkedEntryReference,
+    RelationKind,
+    ResolveMode,
 )
 from src.systems.dnd5e.content.domain.invariants import CompendiumErrorCode
 from src.systems.dnd5e.content.domain.pack_models import ContentPackRecord
@@ -293,3 +299,64 @@ async def test_supersede_definition_denies_replacement_cycles(db_session):
         await service.supersede_definition(old_definition_id=c.id, new_definition_id=a.id)
 
     assert CompendiumErrorCode.CYCLE_DETECTED.value in str(exc.value)
+
+
+@pytest.mark.asyncio
+async def test_publish_fails_with_draft_dependency(db_session):
+    await _seed_pack(db_session)
+    service = _build_service(db_session, [])
+
+    # Create Source (Spell) and Target (Condition)
+    source = await service.create_definition(
+        _build_monster(definition_id="source-1", pack_id="pack-1", slug="source")
+    )
+    target = await service.create_definition(
+        _build_monster(definition_id="target-1", pack_id="pack-1", slug="target")
+    )
+
+    # Manually create a link from source to target
+    uow = CompendiumUnitOfWork(db_session)
+    async with uow:
+        await uow.links.create(
+            LinkedEntryReference(
+                id="link-1",
+                source_definition_id=source.id,
+                source_path="$.action_operation_specs[0].payload.applied_condition_id",
+                target_definition_id=target.id,
+                target_family="condition",
+                relation_kind=RelationKind.RELATED,
+                required=True,
+                resolve_mode=ResolveMode.STRICT,
+            )
+        )
+        await uow.commit()
+
+    # Attempt to publish source while target is DRAFT
+    with pytest.raises(IllegalStateDependencyError) as exc:
+        await service.publish_definition(definition_id=source.id)
+    
+    assert "cannot depend on DRAFT target" in str(exc.value)
+
+
+@pytest.mark.asyncio
+async def test_supersede_fails_with_draft_target(db_session):
+    await _seed_pack(db_session)
+    service = _build_service(db_session, [])
+
+    old_def = await service.create_definition(
+        _build_monster(definition_id="old-1", pack_id="pack-1", slug="old")
+    )
+    new_def = await service.create_definition(
+        _build_monster(definition_id="new-1", pack_id="pack-1", slug="new")
+    )
+
+    await service.publish_definition(definition_id=old_def.id)
+    # new_def remains in DRAFT
+
+    with pytest.raises(IllegalStateDependencyError) as exc:
+        await service.supersede_definition(
+            old_definition_id=old_def.id,
+            new_definition_id=new_def.id,
+        )
+    
+    assert "cannot be superseded by DRAFT target" in str(exc.value)

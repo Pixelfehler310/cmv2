@@ -12,6 +12,7 @@ from ..domain.errors import (
     DefinitionNotFoundError,
     DuplicateDefinitionIdError,
     DuplicateDefinitionSlugError,
+    IllegalStateDependencyError,
     ImmutableDefinitionError,
     InvalidReplacementTargetError,
     LinkedTargetInUseError,
@@ -219,6 +220,11 @@ class CompendiumApplicationService:
                 target_lookup=uow.definitions.get_by_id,
             )
 
+            await self._link_policy.validate_published_targets_only(
+                links=links,
+                target_lookup=uow.definitions.get_by_id,
+            )
+
             updated_data = existing.model_dump(mode="python")
             updated_data["lifecycle_state"] = LifecycleState.PUBLISHED
             updated_data["content_version"] = existing.content_version + 1
@@ -265,6 +271,11 @@ class CompendiumApplicationService:
                 old_definition.lifecycle_state,
                 LifecycleState.SUPERSEDED,
             )
+
+            if new_definition.lifecycle_state == LifecycleState.DRAFT:
+                raise IllegalStateDependencyError(
+                    f"A published entity cannot be superseded by DRAFT target '{new_definition.id}'."
+                )
 
             self._link_policy.validate_target_family(
                 source_family=old_definition.family,
