@@ -161,6 +161,14 @@ namespace ComplexScenarioActionSet {
     +phase_2: circular cylinder footprint persisted
     +phase_3: end_turn tick damage while in area
   }
+
+  class ActionJ_LifeDrainVampiricTouch {
+    +requirement_9: result piping (life drain)
+    +spell: Vampiric Touch
+    +op_1: melee_spell_attack (total_damage)
+    +op_2: heal_self (amount = op_1.total_damage * 0.5)
+    +deterministic_note: heal amount depends on resolved damage
+  }
 }
 
 namespace DeterministicEventContracts {
@@ -312,6 +320,7 @@ ActionG_SummonEntity --> SummonLifecycleEvent : emits
 ActionH_TransformEntity --> TransformLifecycleEvent : emits
 ActionI_MultiEffectSingleSpell --> EffectLifecycleEvent : emits
 ActionI_MultiEffectSingleSpell --> ZoneLifecycleEvent : emits
+ActionJ_LifeDrainVampiricTouch --> OperationNode : uses result piping
 
 ActionA_FighterMultiActionTurn ..> CombatActionsDetailedRef : runtime ownership in
 ActionI_MultiEffectSingleSpell ..> EventContractsDetailedRef : ordering contract in

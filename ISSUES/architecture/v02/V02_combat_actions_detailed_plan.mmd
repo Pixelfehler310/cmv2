@@ -56,9 +56,25 @@ namespace CombatExecutionDomain {
     +effect_ref: str | None
     +targeting_mode: explicit | area | self | derived | none
     +target_payload: dict
-    +operation_payload: dict
+    +operation_payload: dict | ResultReference
     +execution_phase: immediate | deferred | tick
     +depends_on_operation_ids: list[str]
+  }
+
+  class ResultAttribute {
+    <<enumeration>>
+    TOTAL_DAMAGE
+    ACTUAL_HEAL
+    BASE_DIE_ROLL
+    SAVING_THROW_MARGIN
+    TARGET_COUNT
+  }
+
+  class ResultReference {
+    +source_operation_id: str
+    +attribute: ResultAttribute
+    +multiplier: float
+    +bonus: int
   }
 
   class OperationTargetSnapshot {

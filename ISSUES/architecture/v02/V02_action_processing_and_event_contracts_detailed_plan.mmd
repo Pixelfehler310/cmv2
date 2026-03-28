@@ -22,7 +22,7 @@ namespace CommandIntakeLayer {
     +effect_ref: str | None
     +targeting_mode: explicit | area | self | derived | none
     +target_payload: dict
-    +operation_payload: dict
+    +operation_payload: dict | ResultReference
     +execution_phase: immediate | deferred | tick
     +depends_on_operation_ids: list[str]
   }
@@ -41,6 +41,7 @@ namespace ProcessingPipeline {
     +authorize(command)
     +resolve_operation_targets(command)
     +build_operation_graph(command)
+    +resolve_result_pipes(command, operation_graph)
     +plan_outcomes(command, operation_graph)
     +apply_immediate_outcomes(plan)
     +materialize_deferred_outcomes(plan)
@@ -59,6 +60,13 @@ namespace ProcessingPipeline {
     +build_operation_graph(command)
     +validate_operation_dependencies(graph)
     +linearize_execution_order(graph)
+  }
+
+  class ResultPipingStage {
+    +resolve_dynamic_references(command)
+    +evaluate_result_attribute(source_op, attribute)
+    +apply_multiplier_and_bonus(base_value, reference)
+    +inject_resolved_values_into_payloads(command)
   }
 
   class TurnBudgetStage {
@@ -277,6 +285,7 @@ RequestValidationPolicy --> ActionProcessingPipeline : accepted command
 
 ActionProcessingPipeline --> TargetResolutionStage : resolve targets
 ActionProcessingPipeline --> OperationGraphStage : build operation graph
+ActionProcessingPipeline --> ResultPipingStage : resolve dynamic pipes
 ActionProcessingPipeline --> TurnBudgetStage : validate/consume budget
 ActionProcessingPipeline --> OutcomeExecutionStage : execute immediate results
 ActionProcessingPipeline --> EffectAndZoneStage : execute deferred results
