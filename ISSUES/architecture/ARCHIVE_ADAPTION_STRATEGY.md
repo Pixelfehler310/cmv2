@@ -9,12 +9,12 @@ When moving content from the legacy vertical issues (V01-V05) to Layer 1 (Contra
 ### A. Identify Domain Primitives
 - **Source**: `V05_business_and_content_entities_class_diagram.mmd` and `V05_business_and_content_entities_overview.md`.
 - **Target**: `ISSUES/architecture/01_contracts/dnd5e/01_content_schema.md`.
-- **Action**: Extract the core "Monster", "Spell", "Item" attributes. Remove any implementation-specific "Repository" or "Service" references.
+- **Action**: Extract the core attributes. **Maintain the diagram in Mermaid** for embedded visibility in the contract file. Save high-fidelity versions as standalone `.d2` if needed for complex maps.
 
 ### B. Extract Action Mechanics
 - **Source**: `V2_action_mechanics_specification.md` and `ISSUE_[VERT]_V02_combat_actions_turn_economy_and_effects.md`.
 - **Target**: `ISSUES/architecture/01_contracts/dnd5e/02_action_mechanics.md`.
-- **Action**: Adapt the "Result Piping" and "Operation Payload" contracts. Ensure they are platform-agnostic (not tied to a specific UI/DB).
+- **Action**: Adapt the "Result Piping" and "Operation Payload" contracts. **Use Mermaid Sequence Diagrams** to document the execution order. Ensure they are platform-agnostic.
 
 ### C. Formalize Lifecycle State Machine
 - **Source**: `ISSUE_[VERT]_V04_content_schema_and_pack_lifecycle.md`.
@@ -39,6 +39,6 @@ When moving content from the legacy vertical issues (V01-V05) to Layer 1 (Contra
 ## 3. The "Completion Gate" for Adaptation
 An archived module is considered "fully adapted" when:
 1.  All core entity models have been moved to Layer 1.
-2.  A Mermaid diagram and explanation file exists in the new structure for each adapted feature.
+2.  A **D2 diagram** (for entities) and/or a **Mermaid diagram** (for logic flow) exists in the new structure for each adapted feature.
 3.  A `test_plan/` subfolder contains natural language tests based on the legacy implementation experience.
 4.  The legacy file is tagged as `[ADAPTED]` in its header.

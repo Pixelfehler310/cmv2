@@ -9,25 +9,27 @@ We separate **Domain Contracts** (What it is) from **Implementations** (How it w
 
 ---
 
-## 2. Module Blueprinting Requirements (Per Module)
+## 2. Module Blueprinting & Diagramming Requirements
 
-Every important module (e.g., Compendium, Combat, Campaign) MUST include the following documentation artifacts:
+Every important module MUST include the following documentation artifacts, using the **Hybrid Diagramming Strategy**:
 
-### A. Mermaid Class Diagrams
-- **Path**: `ISSUES/architecture/01_contracts/<module>/<module>_entities.mmd`
-- **Goal**: Visual representation of entity relationships, attributes, and inheritance.
-- **Requirement**: Use valid Mermaid syntax. Avoid HTML tags in labels. Use quotes for special characters.
+### A. Markdown-Embedded Diagrams (Layer 1 & 2)
+- **Path**: Embedded directly in `.md` files (Contracts or Implementations).
+- **Tool**: **Mermaid**.
+- **Requirement**: Use Mermaid for all diagrams intended for web/GitHub viewing. This includes Entity Class Diagrams, Logic Flows, and Sequence Diagrams.
 
-### B. Describing Explanation Markdown
+### B. Standalone Architectural Maps (Cross-Module)
+- **Path**: `ISSUES/architecture/*.d2`
+- **Tool**: **D2**.
+- **Requirement**: Use D2 for permanent, high-fidelity system maps where layout precision is critical. These act as the "Master Layouts" for the system.
+
+### C. Describing Explanation Markdown
 - **Path**: `ISSUES/architecture/01_contracts/<module>/<module>_entities_explanation.md`
-- **Goal**: Human and AI-readable rationale for the diagram. Explain "Why" before "What".
-
-### C. Complexity Diagrams (Activity/Sequence)
-- **Requirement**: For complex logic like "Action Execution" or "Linked Entry Resolution", provide a Sequence Diagram (`.mmd`) and an Explanation file.
+- **Goal**: Human and AI-readable rationale for the architecture. Explain "Why" before "What".
 
 ### D. Cross-Module Overviews
 - **Goal**: High-level understanding of how modules (e.g., Combat -> Compendium) interact.
-- **Path**: `ISSUES/architecture/PLANNING_OVERVIEW.md` (Maintained as the source of truth).
+- **Path**: `ISSUES/architecture/PLANNING_OVERVIEW.md` (Source of truth maintained in D2).
 
 ---
 
@@ -53,4 +55,4 @@ When scoping a **Contract**, you MUST define the testing interface upfront.
 ## 5. Agent Instructions
 1.  **Read the Contracts First**: Before implementing any feature, read the relevant files in `01_contracts`.
 2.  **Validate against Invariants**: Ensure your implementation strictly adheres to the test plan described in the contract.
-3.  **Update the Map**: If your implementation requires a change to the contract, you MUST update the Mermaid diagrams and explanation files before proceeding.
+3.  **Update the Map**: If your implementation requires a change to the contract, you MUST update the D2/Mermaid diagrams and explanation files before proceeding.

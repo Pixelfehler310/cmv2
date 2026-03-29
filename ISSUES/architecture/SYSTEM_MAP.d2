@@ -1,0 +1,50 @@
+direction: right
+Layer1: "Layer 1: Contracts" {
+  style: {
+    stroke-width: 2
+    border-radius: 8
+  }
+  C01: Base Definition Schema
+  C02: Action Mechanics
+  C03: Event Contracts
+  C04: Character State Logic
+  C01 -> C02
+  C02 -> C03
+  C03 -> C04
+}
+
+Layer2: "Layer 2: Implementations" {
+  style: {
+    stroke-width: 2
+    border-radius: 8
+    fill: "#f8f9fa"
+  }
+  I01: Compendium CRUD
+  I02: Search Indexing
+  I03: Combat Engine
+  I04: Real-time Events
+  I01 -> I02
+  I02 -> I03
+  I03 -> I04
+}
+
+Layer1.C01 -> Layer2.I01: "Implements" {
+  style: {
+    stroke-dash: 5
+    stroke: "#6c757d"
+  }
+}
+
+Layer1.C02 -> Layer2.I03: "Drives" {
+  style: {
+    stroke-dash: 5
+    stroke: "#6c757d"
+  }
+}
+
+Layer1.C03 -> Layer2.I04: "Dispatches" {
+  style: {
+    stroke-dash: 5
+    stroke: "#6c757d"
+  }
+}

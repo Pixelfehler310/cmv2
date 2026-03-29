@@ -4,15 +4,18 @@ This map defines the current state of architecture and implementation for the CM
 
 ## 1. System Map (Cross-Module Overview)
 
+> [!TIP]
+> **View Premium Version**: For a high-fidelity visualization with detailed layouts, view the standalone **[System Map](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/architecture/SYSTEM_MAP.d2)** (Requires VS Code D2 Extension).
+
 ```mermaid
 graph TD
-    subgraph Layer 1: Contracts
+    subgraph L1: Contracts
         C01[Base Definition Schema] --> C02[Action Mechanics]
         C02 --> C03[Event Contracts]
         C03 --> C04[Character State Logic]
     end
 
-    subgraph Layer 2: Implementations
+    subgraph L2: Implementations
         I01[Compendium CRUD] --> I02[Search Indexing]
         I02 --> I03[Combat Engine]
         I03 --> I04[Real-time Events]
@@ -23,7 +26,16 @@ graph TD
     C03 -.-> I04
 ```
 
-## 2. Shared Principles
+## 2. Diagramming Standards
+
+CMV2 uses a **Hybrid Diagramming Strategy**:
+
+| Context | Tool | Rationale |
+| :--- | :--- | :--- |
+| **Embedded in Markdown** | **Mermaid** | Ensures native rendering in GitHub Web, IDEs, and Notion without extra configuration. |
+| **Standalone Architectural Map** | **D2** | Provides premium auto-layout and high-fidelity visualization for complex, stable system boundaries. |
+
+## 3. Shared Principles
 - **No Orphan Logic**: Implementation logic (Layer 2) *must* implement a contract from Layer 1.
 - **Contract Stability**: Contracts are frozen before implementations begin.
 - **Traceability**: Every issue links back to its domain contract.
