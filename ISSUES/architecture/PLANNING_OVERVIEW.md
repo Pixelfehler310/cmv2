@@ -39,6 +39,7 @@ CMV2 uses a **Hybrid Diagramming Strategy**:
 - **No Orphan Logic**: Implementation logic (Layer 2) *must* implement a contract from Layer 1.
 - **Contract Stability**: Contracts are frozen before implementations begin.
 - **Traceability**: Every issue links back to its domain contract.
+- **Quality Integrity (PSQ)**: New production code MUST NOT import legacy `bronze` or `unchecked` modules. (Reference: [PSQ System](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/architecture/00_quality/ISSUE_[QUALITY]_[SYS-01]_production_status_quarantine.md)).
 
 ---
 

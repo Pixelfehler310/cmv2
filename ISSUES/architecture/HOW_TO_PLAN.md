@@ -56,3 +56,24 @@ When scoping a **Contract**, you MUST define the testing interface upfront.
 1.  **Read the Contracts First**: Before implementing any feature, read the relevant files in `01_contracts`.
 2.  **Validate against Invariants**: Ensure your implementation strictly adheres to the test plan described in the contract.
 3.  **Update the Map**: If your implementation requires a change to the contract, you MUST update the D2/Mermaid diagrams and explanation files before proceeding.
+
+---
+
+## 6. Production Status & Quality Tiers (PSQ)
+
+To manage technical debt during re-engineering, every Python module MUST declare its maturity tier via the `__production_status__` metadata at the top of the file.
+
+### Tier Definitions
+
+| Tier | Status | Requirements |
+| :--- | :--- | :--- |
+| **Gold** | `"gold"` | 90%+ Test coverage, Pydantic validation, full documentation, performance optimized. |
+| **Silver** | `"silver"` | Stable logic, full Type-Hints, passes all core invariants. Clean Code standard. |
+| **Bronze** | `"bronze"` | MVP/Prototype code. Functional but "unclean", undocumented, or lacking tests. |
+| **Broken** | `"broken"` | Unusable code. Architecturally or logically false, unused, or fundamentally flawed. |
+| **Unchecked** | `Default` | Legacy code not yet audited. Treated as **Bronze** by guardrails. |
+
+### The "Purity Guardrail"
+- Modules in **Production Scopes** (e.g., `src/systems/dnd5e/`, `src/core/`) are strictly forbidden from importing **Bronze** or **Unchecked** modules.
+- Violations will trigger a `QualityViolation` failure in the CI/CD pipeline.
+- **Reference**: `ISSUES/architecture/00_quality/ISSUE_[QUALITY]_[SYS-01]_production_status_quarantine.md`
