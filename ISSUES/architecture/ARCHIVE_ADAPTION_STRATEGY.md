@@ -42,6 +42,6 @@ When moving content from the legacy vertical issues (V01-V05) to Layer 1 (Contra
 ## 3. The "Completion Gate" for Adaptation
 An archived module is considered "fully adapted" when:
 1.  All core entity models have been moved to Layer 1.
-2.  A **D2 diagram** (for entities) and/or a **Mermaid diagram** (for logic flow) exists in the new structure for each adapted feature.
+2.  A **Mermaid diagram** (for entities and logic flow) exists in the new structure for each adapted feature.
 3.  A `test_plan/` subfolder contains natural language tests based on the legacy implementation experience.
 4.  The legacy file is tagged as `[ADAPTED]` in its header.

@@ -14,7 +14,6 @@ This map defines the current state of architecture and implementation for the CM
 
 > [!TIP]
 > **View Detailed Version**: For the canonical domain split, see the **[Horizontal Architecture Map](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/architecture/HORIZONTAL_OVERVIEW.mmd)**.
-> **View Premium Version**: For high-fidelity visualization, see the **[System Map (D2)](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/architecture/SYSTEM_MAP.d2)**.
 
 ```mermaid
 graph TB
@@ -31,21 +30,16 @@ graph TB
         I_Effects[Effect Manager]
     end
 
-    C_Rules -.-> I_Comp
-    C_Action -.-> I_Engine
-    C_State -.-> I_Engine
-    I_Engine --> I_Effects
-    C_Bridge --> I_Comp
+    C_Rules -. "Schema for" .-> I_Comp
+    C_Action -. "Mechanics for" .-> I_Engine
+    C_State -. "State for" .-> I_Engine
+    I_Engine -- "Dispatches" --> I_Effects
+    C_Bridge -- "Session Context" --> I_Comp
 ```
 
 ## 2. Diagramming Standards
 
-CMV2 uses a **Hybrid Diagramming Strategy**:
-
-| Context | Tool | Rationale |
-| :--- | :--- | :--- |
-| **Embedded in Markdown** | **Mermaid** | Ensures native rendering in GitHub Web, IDEs, and Notion without extra configuration. |
-| **Standalone Architectural Map** | **D2** | Provides premium auto-layout and high-fidelity visualization for complex, stable system boundaries. |
+CMV2 uses **Mermaid** for all architectural documentation. This ensures native rendering in GitHub Web, IDEs, and Notion without extra configuration.
 
 ## 3. Shared Principles
 - **No Orphan Logic**: Implementation logic (Layer 2) *must* implement a contract from Layer 1.

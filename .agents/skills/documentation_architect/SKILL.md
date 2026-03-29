@@ -1,6 +1,6 @@
 ---
 name: "Documentation & Architecture Blueprinting"
-description: "Establishes strict standards for creating and maintaining Horizontal-First plans, Layer 1 Contracts, and Hybrid Diagrams."
+description: "Establishes strict standards for creating and maintaining Horizontal-First plans, Layer 1 Contracts, and Mermaid Diagrams."
 ---
 
 # Documentation & Architecture (Planning Lead)
@@ -10,9 +10,8 @@ description: "Establishes strict standards for creating and maintaining Horizont
 **Core Responsibilities:**
 
 1. **Layer 1 Contracts (Shared Rules):** Define schemas, action mechanics, and event contracts in `ISSUES/architecture/01_contracts/`. These must be platform-agnostic.
-2. **Hybrid Diagramming Strategy:** 
-    - Use **D2** for standalone, high-fidelity system maps (`*.d2`).
-    - Use **Mermaid** for embedded logic flows, sequence diagrams, and entity relationships in Markdown files.
+2. **Mermaid Diagramming Strategy:** 
+    - Use **Mermaid** for all system maps, embedded logic flows, sequence diagrams, and entity relationships in Markdown files.
 3. **Instant Context Management:** Maintain and update `WHAT_WE_ARE_DOING.md` and `CURRENT_TASK.md` at the start and end of every session.
 4. **Test-Plan Protocol:** For every contract, define a `test_plan/` subfolder with natural language invariants and edge cases.
 5. **System Info Repository:** Document deep technical rationale and legacy explanations in `ISSUES/architecture/system_info/`.

@@ -8,8 +8,7 @@ We separate **Domain Contracts** (What it is) from **Implementations** (How it w
 - **Layer 2 (Implementations)**: Developed in vertical sprints once contracts are frozen.
 
 > [!IMPORTANT]
-> **The Horizontal Planning Rule: Deep Conceptualization Gate**
-> No implementation code (Layer 2) or finalized Layer 1 Pydantic/SQL models may be written until a **DEEP conceptualization using diagrams** (Mermaid or D2) has been created and approved.
+> No implementation code (Layer 2) or finalized Layer 1 Pydantic/SQL models may be written until a **DEEP conceptualization using diagrams** (Mermaid) has been created and approved.
 > Reference: [Horizontal Planning Rule](file:///c:/Users/simon/Documents/GitHub/cmv2/.agents/rules/horizontal-planning.md)
 
 ---
@@ -29,17 +28,16 @@ To enforce this architecture, the CMV2 engine leverages specialized AI skills:
 
 ## 2. Module Blueprinting & Diagramming Requirements
 
-Every important module MUST include the following documentation artifacts, using the **Hybrid Diagramming Strategy**:
+Every important module MUST include the following documentation artifacts, using **Mermaid Diagrams**:
 
-### A. Markdown-Embedded Diagrams (Layer 1 & 2)
+### A. Embedded Diagrams (Layer 1 & 2)
 - **Path**: Embedded directly in `.md` files (Contracts or Implementations).
 - **Tool**: **Mermaid**.
 - **Requirement**: Use Mermaid for all diagrams intended for web/GitHub viewing. This includes Entity Class Diagrams, Logic Flows, and Sequence Diagrams.
 
-### B. Standalone Architectural Maps (Cross-Module)
-- **Path**: `ISSUES/architecture/*.d2`
-- **Tool**: **D2**.
-- **Requirement**: Use D2 for permanent, high-fidelity system maps where layout precision is critical. These act as the "Master Layouts" for the system.
+### B. Architectural Overviews
+- **Goal**: High-level understanding of how modules (e.g., Combat -> Compendium) interact.
+- **Path**: `ISSUES/architecture/PLANNING_OVERVIEW.md` or embedded in the relevant contract issue.
 
 ### C. Describing Explanation Markdown
 - **Path**: `ISSUES/architecture/01_contracts/<module>/<module>_entities_explanation.md`
@@ -47,7 +45,7 @@ Every important module MUST include the following documentation artifacts, using
 
 ### D. Cross-Module Overviews
 - **Goal**: High-level understanding of how modules (e.g., Combat -> Compendium) interact.
-- **Path**: `ISSUES/architecture/PLANNING_OVERVIEW.md` (Source of truth maintained in D2).
+- **Path**: `ISSUES/architecture/PLANNING_OVERVIEW.md` (Maintained using Mermaid).
 
 ### E. Managed Context Documents
 - **Goal**: Provide instant context for current work.
@@ -88,7 +86,7 @@ When scoping a **Contract**, you MUST define the testing interface upfront.
 3.  **Update the Context**: When completing a task or starting a new one, you MUST update `CURRENT_TASK.md` to reflect the change.
 4.  **Document Deep Context**: If you encounter or design a complex system, create or update a file in `system_info/`.
 5.  **Validate against Invariants**: Ensure your implementation strictly adheres to the test plan described in the contract.
-6.  **Update the Map**: If your implementation requires a change to the contract, you MUST update the D2/Mermaid diagrams and explanation files before proceeding.
+6.  **Update the Map**: If your implementation requires a change to the contract, you MUST update the Mermaid diagrams and explanation files before proceeding.
 
 ---
 

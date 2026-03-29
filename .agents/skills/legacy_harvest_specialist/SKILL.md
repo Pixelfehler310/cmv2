@@ -12,7 +12,7 @@ description: "Dedicated to extracting domain primitives from the Legacy Archive 
 1. **Extraction Protocol (Archive Strategy):** Parse `ISSUES/archive/vertical_legacy/` (V01-V05) for reusable domain logic.
 2. **Domain Primitive Identification:** Identify Monsters, Spells, Items, and Mechanics that must be moved to Layer 1. 
 3. **Refactor Proposals:** Design strategies to convert messy, vertical, storage-focused legacy code into clean, horizontal, service-oriented Layer 2 implementations.
-4. **Completion Gate Management:** Ensure every adapted archived module meets the "Completion Gate" (Marked as `[ADAPTED]`, D2/Mermaid diagrams updated).
+4. **Completion Gate Management:** Ensure every adapted archived module meets the "Completion Gate" (Marked as `[ADAPTED]`, Mermaid diagrams updated).
 5. **System Info Deep Dives:** Document "How I did it once" in `system_info/legacy/` before redesigning it for "The Rule for how it MUST be done always" in `01_contracts/`.
 
 **Operating Principles:**

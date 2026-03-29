@@ -5,6 +5,7 @@ To ensure a single, authoritative definition of "D&D 5e Rules" that is shared be
 
 ## Layer 1: The Definition Envelopes
 
+
 Every rule entity MUST inherit from the `DefinitionRecord`.
 
 ### 1. Monster Definition Schema

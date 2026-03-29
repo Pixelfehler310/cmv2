@@ -15,7 +15,7 @@ We are currently in a **Horizontal Planning** phase. This means we are defining 
 
 1.  **Contract-First**: Every feature starts with a Layer 1 contract in `01_contracts/`.
 2.  **Horizontal Governance**: Adhering to the **Deep Conceptualization Gate**—no code before approved diagrams.
-3.  **Hybrid Diagramming**: Using **D2** for long-term system maps and **Mermaid** for embedded logic flows.
+3.  **Standardized Diagramming**: Using **Mermaid** for all system maps and embedded logic flows to ensure native rendering and consistency.
 4.  **Production Status Quarantine (PSQ)**: Protecting new "Gold" standards from "Bronze" legacy code.
 
 ## Active Priorities
