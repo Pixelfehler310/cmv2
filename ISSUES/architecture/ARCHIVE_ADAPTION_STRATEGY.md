@@ -2,6 +2,9 @@
 
 This strategy document defines how to harvest, extract, and adapt existing intelligence from the **Legacy Vertical Planning** (`ISSUES/archive/vertical_legacy/`) into the new **Contract-First** layered architecture.
 
+> [!IMPORTANT]
+> **Rule Alignment**: All harvesting activities are governed by the **[Horizontal Planning Rule](file:///c:/Users/simon/Documents/GitHub/cmv2/.agents/rules/horizontal-planning.md)**. The `legacy_harvest_specialist` AI skill is responsible for ensuring that extracted primitives are solidified horizontally before any implementation code is written.
+
 ## 1. Extraction Protocol
 
 When moving content from the legacy vertical issues (V01-V05) to Layer 1 (Contracts), follow these steps:

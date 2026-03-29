@@ -7,6 +7,24 @@ We separate **Domain Contracts** (What it is) from **Implementations** (How it w
 - **Layer 1 (Contracts)**: Must be solidified horizontally across all related modules before deepening implementation.
 - **Layer 2 (Implementations)**: Developed in vertical sprints once contracts are frozen.
 
+> [!IMPORTANT]
+> **The Horizontal Planning Rule: Deep Conceptualization Gate**
+> No implementation code (Layer 2) or finalized Layer 1 Pydantic/SQL models may be written until a **DEEP conceptualization using diagrams** (Mermaid or D2) has been created and approved.
+> Reference: [Horizontal Planning Rule](file:///c:/Users/simon/Documents/GitHub/cmv2/.agents/rules/horizontal-planning.md)
+
+---
+
+## 2. Agent Skills & Governance
+
+To enforce this architecture, the CMV2 engine leverages specialized AI skills:
+
+| Skill | Responsibility in Horizontal Planning |
+| :--- | :--- |
+| **documentation_architect** | Establishes strict standards for Horizontal-First plans and Hybrid Diagrams. |
+| **legacy_harvest_specialist** | Dedicated to extracting domain primitives from the Legacy Archive for L1 contracts. |
+| **backend_architect** | Focuses on TDD for complex game mechanics and PSQ Purity Guardrails. |
+| **campaign_world_lore_master** | Ensures technical structures support the creative nuances of the campaign world. |
+
 ---
 
 ## 2. Module Blueprinting & Diagramming Requirements
@@ -91,4 +109,15 @@ To manage technical debt during re-engineering, every Python module MUST declare
 ### The "Purity Guardrail"
 - Modules in **Production Scopes** (e.g., `src/systems/dnd5e/`, `src/core/`) are strictly forbidden from importing **Bronze** or **Unchecked** modules.
 - Violations will trigger a `QualityViolation` failure in the CI/CD pipeline.
-- **Reference**: `ISSUES/architecture/00_quality/ISSUE_[QUALITY]_[SYS-01]_production_status_quarantine.md`
+- **Reference**: `ISSUES/archive/quality/ISSUE_[QUALITY]_[SYS-01]_production_status_quarantine.md`
+
+---
+
+## 7. Archiving Policy: Preserving the "Brain"
+
+Finished issues and superseded documentation MUST NOT be deleted. Instead, they are moved to the `ISSUES/archive/` directory to preserve the historical rationale for both human developers and AI agents.
+
+### Archiving Rules
+1.  **Maintain Path Context**: Move items from `ISSUES/architecture/<folder>/` to `ISSUES/archive/<folder>/`.
+2.  **No Deletions**: Historical context is essential for AI agents to understand why decisions were made.
+3.  **Cross-References**: When archiving a foundational issue, update any "Live" documents (like this one) to point to the new location in the archive.

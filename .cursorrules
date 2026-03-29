@@ -15,6 +15,11 @@ You are working on the **Open RPG Engine**, a modular, SRD 5.1-based Virtual Tab
     - **Frontend:** Support Style Mods (CSS Variables/Themes).
     - **Backend:** Support Content Mods (JSON Data) and Logic Mods (Swappable Processors).
 
+## Horizontal Planning Rules (STRICT)
+
+1.  **Diagrams First, Code Second**: No Layer 1 Contract implementation (code) is allowed before **DEEP conceptioning using diagrams** (Mermaid/D2) is completed and approved.
+2.  **Horizontal-First Strategy**: Solidify domain-wide contracts horizontally across all related modules before deepening vertical implementation.
+
 ## Tech Stack
 
 - **Backend:** Python 3.11+, FastAPI, Pydantic, PostgreSQL (Async/Tortoise ORM).

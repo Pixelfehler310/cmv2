@@ -1,0 +1,48 @@
+%% CMV2 Horizontal Architecture Overview
+%% Purpose: Visualizing the split between Layer 1 (Contracts) and Layer 2 (Implementations)
+graph TB
+    subgraph L1 [Layer 1: Contracts - Constant Data & Interface Shapes]
+        direction TB
+        C_Rules[D1: Rule Schema<br/>JSON-Schema for Monsters/Spells/Items]
+        C_Action[D2: Action Mechanics<br/>OperationSpecs & Result Refs]
+        C_State[D3: State Models<br/>CombatActor, TurnBudget, EffectInstance]
+        C_Bridge[D4: Session Contracts<br/>Event Envelopes & API Shapes]
+        
+        C_Rules --> C_Action
+        C_Action --> C_State
+        C_State --> C_Bridge
+    end
+
+    subgraph L2 [Layer 2: Implementations - Logic & Persistence]
+        direction TB
+        I_Comp[Compendium Service<br/>CRUD / Search / Revisioning]
+        I_Engine[Deterministic Combat Engine<br/>Action Resolution / Turn Management]
+        I_Effects[Effect Lifecycle Manager<br/>Tick / Expire / Trigger logic]
+        
+        I_Comp -.-> I_Engine
+        I_Engine --> I_Effects
+    end
+
+    %% Mapping Contracts to Implementations
+    C_Rules -.->|Defines| I_Comp
+    C_Action -.->|Drives| I_Engine
+    C_State -.->|Informs| I_Engine
+    C_Bridge -.->|Envelops| I_Comp
+    
+    %% Stylings
+    classDef contract fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#01579b;
+    classDef implement fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#4a148c;
+    classDef domain fill:#f5f5f5,stroke:#333,stroke-width:1px,stroke-dasharray: 5 5;
+
+    class L1 domain;
+    class L2 domain;
+    class C_Rules,C_Action,C_State,C_Bridge contract;
+    class I_Comp,I_Engine,I_Effects implement;
+    
+    %% Governance Note
+    GovNote[Governance: Deep Conceptualization Gate<br/>No code before approved diagrams]
+    GovNote -.-> L1
+    GovNote -.-> L2
+    
+    class GovNote gov;
+    classDef gov fill:#fffde7,stroke:#fbc02d,stroke-width:2px,stroke-dasharray: 5 5,color:#fbc02d;

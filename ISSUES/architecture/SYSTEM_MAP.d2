@@ -48,3 +48,17 @@ Layer1.C03 -> Layer2.I04: "Dispatches" {
     stroke: "#6c757d"
   }
 }
+
+Governance: "Horizontal Governance" {
+  style: {
+    stroke: "#fbc02d"
+    stroke-dash: 5
+    fill: "#fffde7"
+  }
+  Rule: "Deep Conceptualization Gate"
+  Agent: "documentation_architect"
+  Rule -> Agent: "Verified By"
+}
+
+Governance -> Layer1: "Governs"
+Governance -> Layer2: "Governs"

@@ -13,25 +13,29 @@ This map defines the current state of architecture and implementation for the CM
 ## 1. System Map (Cross-Module Overview)
 
 > [!TIP]
-> **View Premium Version**: For a high-fidelity visualization with detailed layouts, view the standalone **[System Map](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/architecture/SYSTEM_MAP.d2)** (Requires VS Code D2 Extension).
+> **View Detailed Version**: For the canonical domain split, see the **[Horizontal Architecture Map](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/architecture/HORIZONTAL_OVERVIEW.mmd)**.
+> **View Premium Version**: For high-fidelity visualization, see the **[System Map (D2)](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/architecture/SYSTEM_MAP.d2)**.
 
 ```mermaid
-graph TD
-    subgraph L1: Contracts
-        C01[Base Definition Schema] --> C02[Action Mechanics]
-        C02 --> C03[Event Contracts]
-        C03 --> C04[Character State Logic]
+graph TB
+    subgraph L1 [Layer 1: Contracts]
+        C_Rules[D1: Rule Schema]
+        C_Action[D2: Action Mechanics]
+        C_State[D3: State Models]
+        C_Bridge[D4: Session Contracts]
     end
 
-    subgraph L2: Implementations
-        I01[Compendium CRUD] --> I02[Search Indexing]
-        I02 --> I03[Combat Engine]
-        I03 --> I04[Real-time Events]
+    subgraph L2 [Layer 2: Implementations]
+        I_Comp[Compendium Service]
+        I_Engine[Combat Engine]
+        I_Effects[Effect Manager]
     end
 
-    C01 -.-> I01
-    C02 -.-> I03
-    C03 -.-> I04
+    C_Rules -.-> I_Comp
+    C_Action -.-> I_Engine
+    C_State -.-> I_Engine
+    I_Engine --> I_Effects
+    C_Bridge --> I_Comp
 ```
 
 ## 2. Diagramming Standards
@@ -47,7 +51,9 @@ CMV2 uses a **Hybrid Diagramming Strategy**:
 - **No Orphan Logic**: Implementation logic (Layer 2) *must* implement a contract from Layer 1.
 - **Contract Stability**: Contracts are frozen before implementations begin.
 - **Traceability**: Every issue links back to its domain contract.
-- **Quality Integrity (PSQ)**: New production code MUST NOT import legacy `bronze` or `unchecked` modules. (Reference: [PSQ System](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/architecture/00_quality/ISSUE_[QUALITY]_[SYS-01]_production_status_quarantine.md)).
+- **Quality Integrity (PSQ)**: New production code MUST NOT import legacy `bronze` or `unchecked` modules. (Reference: [PSQ System](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/archive/quality/ISSUE_[QUALITY]_[SYS-01]_production_status_quarantine.md)).
+- **Horizontal Governance**: No code or models are finalized without a Deep Conceptualization diagram. (Reference: [Horizontal Planning Rule](file:///c:/Users/simon/Documents/GitHub/cmv2/.agents/rules/horizontal-planning.md)).
+- **Role of the Agent**: The `documentation_architect` AI skill is responsible for verifying these conceptualization gates.
 
 ---
 

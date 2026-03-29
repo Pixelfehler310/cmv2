@@ -14,8 +14,9 @@ We are currently in a **Horizontal Planning** phase. This means we are defining 
 ## Key Strategic Pillars
 
 1.  **Contract-First**: Every feature starts with a Layer 1 contract in `01_contracts/`.
-2.  **Hybrid Diagramming**: Using **D2** for long-term system maps and **Mermaid** for embedded logic flows.
-3.  **Production Status Quarantine (PSQ)**: Protecting new "Gold" standards from "Bronze" legacy code.
+2.  **Horizontal Governance**: Adhering to the **Deep Conceptualization Gate**—no code before approved diagrams.
+3.  **Hybrid Diagramming**: Using **D2** for long-term system maps and **Mermaid** for embedded logic flows.
+4.  **Production Status Quarantine (PSQ)**: Protecting new "Gold" standards from "Bronze" legacy code.
 
 ## Active Priorities
 
