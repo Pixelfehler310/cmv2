@@ -9,7 +9,7 @@ When moving content from the legacy vertical issues (V01-V05) to Layer 1 (Contra
 ### A. Identify Domain Primitives
 - **Source**: `V05_business_and_content_entities_class_diagram.mmd` and `V05_business_and_content_entities_overview.md`.
 - **Target**: `ISSUES/architecture/01_contracts/dnd5e/01_content_schema.md`.
-- **Action**: Extract the core attributes. **Maintain the diagram in Mermaid** for embedded visibility in the contract file. Save high-fidelity versions as standalone `.d2` if needed for complex maps.
+- **Action**: Extract the core attributes. **Maintain the diagram in Mermaid**. If the legacy logic is complex, create a deep-dive explanation in `ISSUES/architecture/system_info/legacy/<domain>_legacy_explanation.md` BEFORE adapting.
 
 ### B. Extract Action Mechanics
 - **Source**: `V2_action_mechanics_specification.md` and `ISSUE_[VERT]_V02_combat_actions_turn_economy_and_effects.md`.

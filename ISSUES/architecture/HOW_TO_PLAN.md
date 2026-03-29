@@ -31,6 +31,18 @@ Every important module MUST include the following documentation artifacts, using
 - **Goal**: High-level understanding of how modules (e.g., Combat -> Compendium) interact.
 - **Path**: `ISSUES/architecture/PLANNING_OVERVIEW.md` (Source of truth maintained in D2).
 
+### E. Managed Context Documents
+- **Goal**: Provide instant context for current work.
+- **Paths**:
+    - `ISSUES/architecture/WHAT_WE_ARE_DOING.md`: High-level strategic roadmap for the current phase.
+    - `ISSUES/architecture/CURRENT_TASK.md`: Why the current task is happening, what happened before, and what comes next.
+
+### F. System Information Repository
+- **Goal**: Centralized storage for deep technical explanations.
+- **Path**: `ISSUES/architecture/system_info/`
+    - `legacy/`: Descriptions of legacy systems being adapted.
+    - `architecture/`: Explanations of new architecture designs (e.g., Result Piping).
+
 ---
 
 ## 3. Test-Plan Protocol (The "Shift-Left" Strategy)
@@ -54,8 +66,11 @@ When scoping a **Contract**, you MUST define the testing interface upfront.
 
 ## 5. Agent Instructions
 1.  **Read the Contracts First**: Before implementing any feature, read the relevant files in `01_contracts`.
-2.  **Validate against Invariants**: Ensure your implementation strictly adheres to the test plan described in the contract.
-3.  **Update the Map**: If your implementation requires a change to the contract, you MUST update the D2/Mermaid diagrams and explanation files before proceeding.
+2.  **Check for Instant Context**: Always read `WHAT_WE_ARE_DOING.md` and `CURRENT_TASK.md` at the start of a session.
+3.  **Update the Context**: When completing a task or starting a new one, you MUST update `CURRENT_TASK.md` to reflect the change.
+4.  **Document Deep Context**: If you encounter or design a complex system, create or update a file in `system_info/`.
+5.  **Validate against Invariants**: Ensure your implementation strictly adheres to the test plan described in the contract.
+6.  **Update the Map**: If your implementation requires a change to the contract, you MUST update the D2/Mermaid diagrams and explanation files before proceeding.
 
 ---
 

@@ -1,5 +1,13 @@
 # CMV2 Planning Overview: The "Horizontal-First" Roadmap
 
+> [!IMPORTANT]
+> **Instant Context**:
+> - [What We Are Doing](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/architecture/WHAT_WE_ARE_DOING.md) — High-level strategy for this phase.
+> - [Current Task Context](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/architecture/CURRENT_TASK.md) — Why this task is happening now.
+> 
+> **Deep Technical Information**:
+> Explore the **[System Information Repository](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/architecture/system_info/)** for detailed explanations of legacy systems and new architectural designs.
+
 This map defines the current state of architecture and implementation for the CMV2 engine.
 
 ## 1. System Map (Cross-Module Overview)
