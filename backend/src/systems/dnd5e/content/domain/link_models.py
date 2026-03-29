@@ -1,3 +1,4 @@
+__production_status__ = "gold"
 from enum import Enum
 from typing import Optional
 from pydantic import BaseModel

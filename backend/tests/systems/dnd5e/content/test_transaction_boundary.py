@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 
 import pytest
+
+pytestmark = [pytest.mark.v05, pytest.mark.gold]
 from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine

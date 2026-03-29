@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src.database import get_db
-from src.data.lib.monster import Monster
+from src.legacy.data.lib.monster import Monster
 from src.schemas.monster import MonsterResponse
 
 # [LEGACY][V05-05] Superseded by /api/compendium V05 transport endpoints.

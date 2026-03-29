@@ -1,3 +1,4 @@
+__production_status__ = "gold"
 from typing import Tuple
 
 from ..domain.primitives import LifecycleState

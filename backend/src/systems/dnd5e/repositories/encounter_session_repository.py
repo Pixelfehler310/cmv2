@@ -4,7 +4,7 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.campaigns.lib.campaign import Campaign
+from src.legacy.campaigns.lib.campaign import Campaign
 
 
 class EncounterSessionRepositoryProtocol(Protocol):

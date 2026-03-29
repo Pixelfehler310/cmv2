@@ -12,6 +12,7 @@ All domain logic lives in CombatService and services/validation.py.
 """
 
 from __future__ import annotations
+__production_status__ = "bronze"
 
 import logging
 from typing import Any, Optional

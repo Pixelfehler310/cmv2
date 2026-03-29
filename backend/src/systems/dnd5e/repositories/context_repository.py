@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.campaigns.lib.campaign import Campaign
+from src.legacy.campaigns.lib.campaign import Campaign
 from src.systems.dnd5e.lib.context_models import EncounterCatalogRecord, SceneCatalogRecord
 
 

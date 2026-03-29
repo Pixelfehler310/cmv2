@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.systems.dnd5e.schemas.encounter import EncounterState
 from src.systems.dnd5e.services.combat_service import CombatService
 from src.database import get_db
-from src.data.lib.loader import DataLoader
+from src.legacy.data.lib.loader import DataLoader
 from src.systems.dnd5e.services.content_pack_importer import ContentPackImporter, ConflictPolicy
 
 logger = logging.getLogger(__name__)

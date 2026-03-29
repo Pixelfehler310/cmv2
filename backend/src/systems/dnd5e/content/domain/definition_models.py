@@ -1,3 +1,4 @@
+__production_status__ = "gold"
 from datetime import datetime
 from typing import Optional, List, Literal
 from pydantic import BaseModel, Field, model_validator

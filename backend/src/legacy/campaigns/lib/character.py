@@ -2,9 +2,9 @@ from sqlalchemy import String, Integer, JSON, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 from src.common.mixins import UUIDMixin, TimestampMixin
-from src.data.lib.species import Species
-from src.data.lib.class_model import ClassModel
-from src.data.lib.background import Background
+from src.legacy.data.lib.species import Species
+from src.legacy.data.lib.class_model import ClassModel
+from src.legacy.data.lib.background import Background
 
 
 class Character(Base, UUIDMixin, TimestampMixin):

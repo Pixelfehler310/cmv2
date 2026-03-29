@@ -1,4 +1,5 @@
 from __future__ import annotations
+__production_status__ = "gold"
 
 from dataclasses import dataclass, field
 from enum import Enum

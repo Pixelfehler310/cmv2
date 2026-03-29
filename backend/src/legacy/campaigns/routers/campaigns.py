@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from src.database import get_db
-from src.campaigns.lib.campaign import Campaign, CampaignMember, CampaignRole
-from src.campaigns.lib.character import Character
+from src.legacy.campaigns.lib.campaign import Campaign, CampaignMember, CampaignRole
+from src.legacy.campaigns.lib.character import Character
 from src.schemas.campaign import CampaignCreate, CampaignResponse
 from src.schemas.context import (
     CampaignContextResponse,

@@ -1,4 +1,6 @@
 import pytest
+
+pytestmark = [pytest.mark.v05, pytest.mark.gold]
 from datetime import datetime
 import pydantic
 

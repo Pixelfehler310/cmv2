@@ -6,17 +6,17 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from src.data.lib.item import Item
-from src.data.lib.spell import Spell
-from src.data.lib.monster import Monster
-from src.data.lib.species import Species
-from src.data.lib.class_model import ClassModel
-from src.data.lib.background import Background
-from src.data.lib.feat import Feat
-from src.data.lib.feature import Feature
+from src.legacy.data.lib.item import Item
+from src.legacy.data.lib.spell import Spell
+from src.legacy.data.lib.monster import Monster
+from src.legacy.data.lib.species import Species
+from src.legacy.data.lib.class_model import ClassModel
+from src.legacy.data.lib.background import Background
+from src.legacy.data.lib.feat import Feat
+from src.legacy.data.lib.feature import Feature
 from src.schemas.monster import MonsterCreate
-from src.campaigns.lib.campaign import Campaign
-from src.campaigns.lib.character import Character
+from src.legacy.campaigns.lib.campaign import Campaign
+from src.legacy.campaigns.lib.character import Character
 from src.systems.dnd5e.services.content_pack_importer import ContentPackImporter, ConflictPolicy
 from src.database import Base
 

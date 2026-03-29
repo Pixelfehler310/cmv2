@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src.database import get_db
-from src.data.lib.species import Species
-from src.data.lib.class_model import ClassModel
-from src.data.lib.background import Background
+from src.legacy.data.lib.species import Species
+from src.legacy.data.lib.class_model import ClassModel
+from src.legacy.data.lib.background import Background
 from src.schemas.definitions import (
     SpeciesBase, SpeciesResponse,
     ClassBase, ClassResponse,

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.campaigns.lib.campaign import CampaignMember
+from src.legacy.campaigns.lib.campaign import CampaignMember
 from src.database import get_db
 from src.identity.dependencies import get_current_active_user
 from src.identity.models import User

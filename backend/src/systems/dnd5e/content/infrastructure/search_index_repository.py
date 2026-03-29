@@ -1,4 +1,5 @@
 from __future__ import annotations
+__production_status__ = "gold"
 
 from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -11,6 +11,8 @@ Tests the denormalized search index (CQRS ReadModel):
 from datetime import datetime, timezone
 
 import pytest
+
+pytestmark = [pytest.mark.v05, pytest.mark.gold]
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 

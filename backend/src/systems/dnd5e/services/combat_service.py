@@ -1,4 +1,5 @@
 from __future__ import annotations
+__production_status__ = "bronze"
 
 from dataclasses import dataclass
 import json
@@ -12,9 +13,9 @@ from sqlalchemy.orm import selectinload
 
 from src.core.sessions.models import SessionContext, UserRole
 from src.config import settings
-from src.data.lib.monster import Monster
-from src.campaigns.lib.campaign import Campaign
-from src.campaigns.lib.character import Character
+from src.legacy.data.lib.monster import Monster
+from src.legacy.campaigns.lib.campaign import Campaign
+from src.legacy.campaigns.lib.character import Character
 from ..engine.stat_calculator import calculate_proficiency_bonus
 
 from ..engine.combat_state import get_active_combatant, next_turn, start_combat
