@@ -1,45 +1,60 @@
-# Backend Features Breakdown
+# Backend Feature Specification
 
-This document provides a granular view of the functional and architectural capabilities of the CMV2 backend.
+This document summarizes the core functional domains and technical capabilities of the CMV2 backend.
 
-## 1. Identity & Subscription Domain
-*   **User Multi-Tenancy**: Securely isolates user data with OAuth2/JWT-based authentication and role-based access control.
-*   **Subscription & Quota Management**: Enforces tiered resource limits for assets, concurrent campaigns, and storage quotas via user subscription records.
-*   **Content Entitlements**: Manages granular read/use permissions, bridging a user's library with specific official or shared content packs.
+## 1. Content Management System (CMS)
+The foundation of the engine, providing a comprehensive CRUD (Create, Read, Update, Delete) pipeline for all game-rule definitions.
+*   **Polymorphic Rule Definitions**: Native support for **Monsters**, **Spells**, **Items**, **Classes**, **Species**, **Backgrounds**, **Feats**, **Conditions**, and **Effects**.
+*   **Mechanical Definitions**: Discrete persistence models for `ActionSpecs` and `OperationSpecs` to decouple logic from raw data.
+*   **Recursive Linkage**: Maintains authoritative links between definitions (e.g., a Class referencing its specific Abilities).
 
-## 2. Asset Management Domain
-*   **Rich Media Library**: Provides high-performance metadata tracking and storage pointers for user-uploaded maps, tokens, and audio assets.
-*   **Hierarchical Asset Organization**: Enables structured media management through a user-defined folder hierarchy.
+## 2. Content Organization & Lifecycles
+Framework for managing how content is grouped and versioned before it enters a campaign.
+*   **Homebrew Content Packs**: User-authored rule collections with explicit ownership.
+*   **Content Pack Lifecycle**: Support for Draft and Published states, ensuring stable rule-graphs for active campaigns.
+*   **Version-Controlled Packs**: Enables reliable distribution and updates across multiple campaign instances.
 
-## 3. Compendium & Rules Domain
-*   **Universal Rule Schema**: Standardizes the data structures for all game rules (Classes, Species, Items, Spells) into a consistent, versioned inheritance model.
-*   **Referential Integrity (Linked Entries)**: Formally enforces relationships between game rules, such as a Class granting specific Abilities at certain levels.
-*   **Action & Operation Specifications**: Uses strictly typed mechanical definitions for attacks, saves, and healing to decouple execution logic from raw data.
-*   **Lore & World-Building Catalog**: Provides a searchable database for narrative elements like Factions, Regions, Places, and Deities that exist independently of specific campaigns.
-*   **Content Pack Lifecycle**: Supports the full lifecycle of "Homebrew" content, from private drafts to versioned, published packs.
-*   **Search & Discovery (CQRS)**: Implements a denormalized read-path for millisecond-latency lookup of rules and definitions across the entire catalog.
+## 3. Campaign Management
+Orchestration for long-running narrative and mechanical sessions.
+*   **Multi-Player Campaign Root**: Hierarchical state management for campaigns, members, and roles (DM/Player).
+*   **Campaign Content Policies**: Fine-grained "Content Whitelisting," allowing DMs to control which rule packs are active in their world.
+*   **Scene & Encounter Pre-Staging**: Preparing tactical environments and monster deployments ahead of live play.
+*   **Narrative Journaling**: Persistent, rich-text tracking for session logs and player handouts.
 
-## 4. Campaign & Session Domain
-*   **Persistent Campaign Root**: Manages the multi-player session lifecycle, resolving DM and Player roles and tracking long-term playthrough state.
-*   **Campaign Content Policy**: Empowers DMs to control which content packs (official or custom) are available to players within a specific session.
-*   **Scene & Encounter Preparation**: Allows pre-staging of maps, narrative nodes, and monster placements to streamline live session flow.
-*   **Narrative Journaling**: Provides campaign-scoped rich-text tracking for session logs, player handouts, and DM secrets.
+## 4. Content Portability (Import/Export)
+Bi-directional data movement for rule-sets and campaign state.
+*   **Standardized Exchange Formats**: Native support for **JSON** and structured **ZIP** archives organized by definition type.
+*   **SRD Data Pipeline**: Sophisticated mapping tools to ingest and normalize external rule-sets (like the D&D 5e SRD) into the engine's authoritative format.
 
-## 5. Character Sheet Domain
-*   **Persistent Character Sheets**: Acts as the permanent, authoritative anchor for character stats, progression choices, and base metrics.
-*   **Progression Engine**: Automatically calculates and applies adjustments from species, background, and class definitions to a character's core stats.
-*   **Inventory & Spell Management**: Tracks unique instances of items and prepared spells, maintaining state like equipment status and custom names.
+## 5. Wiki, Link Resolution, & Search (CQRS)
+The high-performance read-path for in-session rule discovery.
+*   **Denormalized Search Index**: Millisecond-latency full-text search independent of the main transactional database.
+*   **Recursive Graph Resolution**: Dynamically traversing complex link trees (e.g., "Find all abilities granted by the Level 3 Fighter class").
+*   **Referential Integrity Checks**: Automatically detects and marks broken rule-links for easy correction.
 
-## 6. Tactical Combat Engine
-*   **Runtime Lifecycle Orchestration**: Manages deterministic transitions between campaign exploration and active combat scenes.
-*   **Command-Based Action Resolution**: Ensures tactical maneuvers, attacks, and spells are executed against valid targets with correct mechanical outcomes.
-*   **Turn Economy & Resource Budgets**: Tracks real-time resource availability (Actions, Reactions) and prevents illegal action sequences.
-*   **Effect & Condition Automation**: Handles the automated ticking, concentration checks, and expiration of status effects and conditions.
+## 6. Tactical Combat & Action Engine
+The most complex logic layer, governing real-time game mechanics.
+*   **Unified Turn Economy**: Automated tracking of Action, Bonus Action, Reaction, and Free Action budgets per turn.
+*   **Action Execution Pipeline**: A sophisticated **Result Piping Engine** for resolving complex, multi-stage rules like life drain or conditional ability scaling.
+*   **Hybrid Play Orchestration**: Supports `pending_choice` and `pending_roll` interrupts for seamless blending of automated and manual tactical play.
 
-## Architectural Features (Backend Core)
-*   **Async PostgreSQL Persistence**: Uses strongly-typed repository patterns with SQLAlchemy and Alembic migrations for robust data consistency.
-*   **Async Application Services**: Orchestrates complex business logic and cross-domain invariants in a high-concurrency, non-blocking environment.
-*   **Domain Validation & Invariants**: Enforces strict Pydantic-based contracts and business rules at the application boundary to prevent state corruption.
-*   **Integrated Test Matrix**: Validates horizontal and vertical integration using automated test suites powered by Postgres Testcontainers.
-*   **Multiplexed Event Dispatching**: Synchronizes real-time state across multiple clients using a high-performance WebSocket dispatcher.
-*   **CQRS Read-Path Projections**: Maintains high-speed search indexes via asynchronous workers that project database mutations into flat, searchable documents.
+## 7. Spatial Map System
+Visual and interactive environment management.
+*   **Map Management**: Layered assets with metadata for tactical positioning and line-of-sight preparation.
+*   **Interactive Scenes**: Links maps with campaign narrative context to create immersive roleplaying stages.
+
+## 8. Comprehensive Character System
+Authoritative source for character identity and state.
+*   **Automated Character Sheets**: Real-time attribute calculation and derived state management (e.g., Base HP, Stats).
+*   **Entity Bridging**: Direct integration with the Compendium for effortless rule referencing during combat and progression.
+*   - **Inventory & Spellbook State**: Tracks prepared spells and item instances with stateful metadata (EQUIPPED, CHARGES).
+
+## 9. User & Identity Domain
+SaaS-grade identity and tenancy management.
+*   **Multi-Tenant Isolation**: Secure, strictly separated user environments integrated with OAuth2/JWT authentication providers.
+*   **Global User Profiles**: Persistent global settings and identity resolution across diverse campaigns.
+
+## 10. Real-time Event Synchronization (WebSockets)
+Low-latency communication layer for multi-player state consensus.
+*   **Multiplexed Dispatcher**: Synchronizes Combat Events, Chat Logs, Map Position Updates, and System Notifications in real-time.
+*   **Deterministic Event Contracts**: Standardized backend-to-frontend event payloads for reliable client-side state projection.
