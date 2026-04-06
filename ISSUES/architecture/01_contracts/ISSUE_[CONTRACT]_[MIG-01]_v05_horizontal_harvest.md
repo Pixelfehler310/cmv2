@@ -87,6 +87,9 @@ Use the following symbols and enum values as canonical unless an explicit contra
 
 ## Contract Freeze Gate
 
+Detailed per-contract gate status is tracked in:
+`ISSUES/architecture/01_contracts/FREEZE_GATE_STATUS.md`
+
 - [x] Each module has one explanation markdown.
 - [x] Each module contains at least one Mermaid diagram.
 - [x] Each module has a corresponding `test_plan` markdown.

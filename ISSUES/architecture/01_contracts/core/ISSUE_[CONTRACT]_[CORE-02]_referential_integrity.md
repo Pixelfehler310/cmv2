@@ -1,10 +1,13 @@
 # ISSUE [CONTRACT] [CORE-02]: Referential Integrity and Link Graph
 
 ## Why This Exists
+
 Link integrity must be a domain contract, not a storage detail, so all consumers can resolve references deterministically and deny invalid graphs early.
 
 ## Link Contract
+
 Each link is represented as `LinkedEntryReference` with:
+
 1. `id`
 2. `source_definition_id`
 3. `source_path`
@@ -15,14 +18,34 @@ Each link is represented as `LinkedEntryReference` with:
 8. `resolve_mode`
 
 ## Required Behaviors
+
 1. Required links must deny if the target does not exist.
 2. Cycle creation must deny before persistence.
 3. Resolution must support strict and best-effort modes.
 4. Replacement chains must resolve to current visible terminal.
 5. Delete operations must deny if protected links still depend on target.
 
+## Contract Invariants
+
+1. Every `LinkedEntryReference` must define both source and target identifiers.
+2. `resolve_mode` must be one of the canonical modes supported by `ResolveMode`.
+3. Required links (`required=true`) must never resolve to missing targets.
+4. The link graph must remain acyclic for dependency edges that are cycle-protected.
+5. Replacement chains must terminate at one visible terminal node.
+6. Protected incoming dependencies must block destructive operations on the target node.
+
+## Validation Directives
+
+1. Missing target validation: deny required links with `LINKED_TARGET_NOT_FOUND` when target is absent.
+2. Cycle validation: deny writes introducing source-target path cycles using `CYCLE_DETECTED` or `GRAPH_CYCLE_DETECTED`.
+3. Resolve mode validation: deny links with unsupported `resolve_mode` values.
+4. Replacement chain validation: deny chains that are broken, cyclic, or exceed policy depth.
+5. Delete guard validation: deny delete when protected links still reference the target using `LINKED_TARGET_IN_USE`.
+
 ## Denial Taxonomy
+
 Use `CompendiumErrorCode` values:
+
 1. `LINKED_TARGET_NOT_FOUND`
 2. `CYCLE_DETECTED`
 3. `GRAPH_CYCLE_DETECTED`
@@ -30,6 +53,7 @@ Use `CompendiumErrorCode` values:
 5. `INVALID_REPLACEMENT_TARGET`
 
 ## Mermaid Class Diagram
+
 ```mermaid
 classDiagram
     class LinkedEntryReference {
@@ -62,11 +86,13 @@ classDiagram
 ```
 
 ## Extracted From
+
 1. `ISSUES/archive/vertical_legacy/v05/V05_content_management_query_and_projection_detailed_plan.mmd`
 2. `ISSUES/archive/vertical_legacy/v05/v05_migration_notes.md`
 3. `ISSUES/archive/vertical_legacy/v05/V05_architecture_Q_and_A.md`
 
 ## Canonical Symbols
+
 1. `LinkedEntryReference`, `RelationKind`, `ResolveMode`, `ReplacementChain` in `backend/src/systems/dnd5e/content/domain/link_models.py`
 2. `CompendiumErrorCode` in `backend/src/systems/dnd5e/content/domain/invariants.py`
 3. `LinkedEntryIntegrityPolicy` in `backend/src/systems/dnd5e/content/policies/linked_entry_integrity_policy.py`

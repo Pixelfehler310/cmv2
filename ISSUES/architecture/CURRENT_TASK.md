@@ -27,10 +27,14 @@ To provide instant clear context for both human developers and AI agents during 
 
 ### **Next Steps**:
 
-1. Complete freeze-gate review across CORE-01..CORE-05 and DND5E-02..DND5E-04.
-2. Run Mermaid render pass and fix any syntax drift.
-3. Add `[ADAPTED]` headers to legacy V05 source docs once traceability review passes.
-4. Start Layer 2 implementation issues only after contract freeze sign-off.
+1. Complete contract hardening pass for CORE-01..CORE-05 and DND5E-02..DND5E-04:
+   - Exhaustive contract invariants
+   - Explicit validation directives
+   - Completed event/recovery behavior definitions
+2. Track freeze progress in `ISSUES/architecture/01_contracts/FREEZE_GATE_STATUS.md`.
+3. Run Mermaid render pass and fix any syntax drift.
+4. Add `[ADAPTED]` headers to legacy V05 source docs once traceability review passes.
+5. Start Layer 2 implementation issues only after contract freeze sign-off.
 
 ---
 
