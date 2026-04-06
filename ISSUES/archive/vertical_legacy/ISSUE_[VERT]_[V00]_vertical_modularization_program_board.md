@@ -10,7 +10,7 @@ It keeps sequencing, dependencies, risk, and completion criteria coherent while 
 
 Reference playbook:
 
-- docs/architecture/shared/05_vertical_module_execution_plan.md
+- docs/archive/planning_legacy/docs_architecture/shared/05_vertical_module_execution_plan.md
 
 ## Scope
 

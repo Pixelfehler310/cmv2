@@ -1,0 +1,107 @@
+flowchart TB
+  LEG_A["Legend: Active"]
+  LEG_I["Legend: Implemented"]
+  LEG_P["Legend: Planned"]
+  subgraph ROOT["backend/src"]
+    CORE["core/<br/>ws_protocol.py<br/>ws_dispatcher.py<br/>sessions/"]
+    SYS["systems/dnd5e/"]
+    IDENTITY["identity/<br/>models.py<br/>schemas.py<br/>router.py<br/>dependencies.py"]
+    PLATFORM["common/<br/>database.py<br/>config.py<br/>schema_migrations.py"]
+  end
+
+  subgraph CUR["Current Package Anchors (as implemented)"]
+    CUR_APP["systems/dnd5e/application/<br/>action_execution_service.py<br/>context_service.py"]
+    CUR_DOMAIN["systems/dnd5e/domain/<br/>authorization.py<br/>action_economy.py<br/>action_resolution_pipeline.py"]
+    CUR_ENGINE["systems/dnd5e/engine/<br/>dice.py<br/>damage.py<br/>effect_engine.py<br/>concentration.py"]
+    CUR_REPO["systems/dnd5e/repositories/<br/>action_execution_repository.py<br/>encounter_session_repository.py<br/>context_repository.py"]
+    CUR_SERV["systems/dnd5e/services/<br/>combat_service.py<br/>validation.py<br/>content_pack_importer.py"]
+    CUR_SCHEMA["systems/dnd5e/schemas/<br/>contracts.py<br/>definitions.py<br/>encounter.py<br/>instances.py"]
+    CUR_TRANSPORT["systems/dnd5e/ws_handler.py<br/>systems/dnd5e/encounter_router.py<br/>systems/dnd5e/event_types.py<br/>systems/dnd5e/reason_codes.py<br/>systems/dnd5e/permissions.py"]
+    CUR_CONTENT["systems/dnd5e/content/<br/>domain/<br/>application/<br/>policies/<br/>infrastructure/"]
+  end
+
+  subgraph TARGET["Target Namespace Modules (full backend application)"]
+    T_RUNTIME["systems/dnd5e/runtime/<br/>domain/<br/>application/<br/>policies/<br/>infrastructure/<br/>api/"]
+    T_ACTIONS["systems/dnd5e/actions/<br/>contracts/<br/>pipeline/<br/>targeting/<br/>execution/<br/>effects/"]
+    T_CONTENT_W["systems/dnd5e/content_write/<br/>domain/<br/>application/<br/>policies/<br/>infrastructure/<br/>api/"]
+    T_CONTENT_R["systems/dnd5e/content_query/<br/>contracts/<br/>pipeline/<br/>projection/<br/>consistency/<br/>api/"]
+    T_CAMPAIGNS["systems/dnd5e/campaigns/<br/>domain/<br/>application/<br/>policies/<br/>infrastructure/<br/>api/"]
+    T_SHEETS["systems/dnd5e/sheets/<br/>domain/<br/>application/<br/>hydration/<br/>infrastructure/<br/>api/"]
+    T_ASSETS["systems/dnd5e/assets/<br/>domain/<br/>application/<br/>infrastructure/<br/>api/"]
+    T_ENTITLE["identity/entitlements/<br/>application/<br/>policies/<br/>infrastructure/"]
+    T_EVENTS["systems/dnd5e/events/<br/>contracts/<br/>ordering/<br/>visibility/<br/>publisher/"]
+    T_RECOVERY["systems/dnd5e/recovery/<br/>audit_log/<br/>checkpoint/<br/>drift_policy/"]
+    T_SHARED["shared/contracts/<br/>shared/persistence/<br/>shared/policies/"]
+  end
+
+  subgraph PLAN["Planned Extension Namespaces (separate scope)"]
+    P_WORLD["systems/dnd5e/world/ (V03)<br/>region/<br/>place/<br/>faction/<br/>npc/"]
+    P_SCHEMA["systems/dnd5e/content_schema/ (V04)<br/>pack_lifecycle/<br/>compatibility/<br/>provenance/"]
+    P_PROJECTION["systems/dnd5e/projection_contracts/ (V06)<br/>frontend_read_models/<br/>contract_tests/"]
+  end
+
+  ROOT --> CORE
+  ROOT --> SYS
+  ROOT --> IDENTITY
+  ROOT --> PLATFORM
+
+  SYS --> CUR_APP
+  SYS --> CUR_DOMAIN
+  SYS --> CUR_ENGINE
+  SYS --> CUR_REPO
+  SYS --> CUR_SERV
+  SYS --> CUR_SCHEMA
+  SYS --> CUR_TRANSPORT
+  SYS --> CUR_CONTENT
+
+  CUR_APP -. split and relocate .-> T_RUNTIME
+  CUR_DOMAIN -. split and relocate .-> T_RUNTIME
+  CUR_DOMAIN -. split action policies .-> T_ACTIONS
+  CUR_ENGINE -. move operation engines .-> T_ACTIONS
+  CUR_REPO -. split repositories .-> T_RUNTIME
+  CUR_SERV -. split orchestration .-> T_ACTIONS
+  CUR_SERV -. split content services .-> T_CONTENT_W
+  CUR_SCHEMA -. split contracts .-> T_ACTIONS
+  CUR_SCHEMA -. split query envelopes .-> T_CONTENT_R
+  CUR_TRANSPORT -. split by module .-> T_RUNTIME
+  CUR_TRANSPORT -. split by module .-> T_ACTIONS
+  CUR_TRANSPORT -. split by module .-> T_CONTENT_W
+  CUR_TRANSPORT -. split by module .-> T_CONTENT_R
+  CUR_CONTENT -. retain and partition .-> T_CONTENT_W
+  CUR_CONTENT -. retain and partition .-> T_CONTENT_R
+
+  T_CAMPAIGNS --> T_RUNTIME
+  T_CAMPAIGNS --> T_CONTENT_W
+  T_SHEETS --> T_CONTENT_R
+  T_SHEETS --> T_ACTIONS
+  T_ASSETS --> T_CONTENT_W
+  T_ENTITLE --> T_CAMPAIGNS
+  T_ENTITLE --> T_CONTENT_R
+
+  T_ACTIONS --> T_EVENTS
+  T_RUNTIME --> T_EVENTS
+  T_CONTENT_W --> T_EVENTS
+  T_CONTENT_R --> T_EVENTS
+  T_EVENTS --> T_RECOVERY
+
+  T_RUNTIME --> T_SHARED
+  T_ACTIONS --> T_SHARED
+  T_CONTENT_W --> T_SHARED
+  T_CONTENT_R --> T_SHARED
+  T_CAMPAIGNS --> T_SHARED
+  T_SHEETS --> T_SHARED
+  T_ASSETS --> T_SHARED
+
+  T_CONTENT_W -. planned dependency .-> P_SCHEMA
+  T_CONTENT_R -. planned dependency .-> P_PROJECTION
+  T_ACTIONS -. planned dependency .-> P_PROJECTION
+  T_CAMPAIGNS -. planned dependency .-> P_WORLD
+  T_SHEETS -. planned dependency .-> P_WORLD
+
+  classDef active fill:#d9f7be,stroke:#389e0d,color:#000000;
+  classDef implemented fill:#d6e4ff,stroke:#1d39c4,color:#000000;
+  classDef planned fill:#fff7bf,stroke:#d48806,color:#000000;
+
+  class LEG_A,T_RUNTIME,T_ACTIONS,T_CONTENT_W,T_CONTENT_R,T_CAMPAIGNS,T_SHEETS,T_ASSETS,T_ENTITLE,T_EVENTS,T_RECOVERY,T_SHARED active;
+  class LEG_I,CORE,SYS,IDENTITY,PLATFORM,CUR_APP,CUR_DOMAIN,CUR_ENGINE,CUR_REPO,CUR_SERV,CUR_SCHEMA,CUR_TRANSPORT,CUR_CONTENT implemented;
+  class LEG_P,P_WORLD,P_SCHEMA,P_PROJECTION planned;

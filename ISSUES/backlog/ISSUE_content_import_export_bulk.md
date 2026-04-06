@@ -2,7 +2,7 @@
 
 Status: Backlogged
 Owner: Architecture
-Vertical: [V04 Content Schema and Pack Lifecycle](file:///c:/Users/simon/Documents/GitHub/cmv2/docs/architecture/shared/05_vertical_module_execution_plan.md#L185-L193)
+Vertical: [V04 Content Schema and Pack Lifecycle](../../docs/archive/planning_legacy/docs_architecture/shared/05_vertical_module_execution_plan.md)
 
 ## Goal
 

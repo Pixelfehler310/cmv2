@@ -7,6 +7,7 @@ This document provides a high-level summary of the current strategic focus for t
 We are currently in a **Horizontal Planning** phase. This means we are defining the "Contracts" (the interfaces and data structures) for all core systems before deep-diving into the final implementations.
 
 ### Why?
+
 - **Consistency**: To ensure that a "Monster" or "Spell" is understood identically by the Compendium, the Combat Engine, and the UI.
 - **Modularity**: To allow different parts of the system to be developed in parallel without constant breakage.
 - **Auditability**: To have a clear "Source of Truth" for how the game rules are mapped to code.
@@ -27,4 +28,4 @@ We are currently in a **Horizontal Planning** phase. This means we are defining 
 ---
 
 > [!TIP]
-> **Check the [Planning Overview](file:///c:/Users/simon/Documents/GitHub/cmv2/ISSUES/architecture/PLANNING_OVERVIEW.md)** for a visual map of how these components fit together.
+> **Check the [Planning Overview](PLANNING_OVERVIEW.md)** for a visual map of how these components fit together.

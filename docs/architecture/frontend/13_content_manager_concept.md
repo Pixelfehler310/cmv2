@@ -12,6 +12,7 @@ type: Architecture Concept
 Following the successful implementation of the dynamic JSON data seeding pipeline in the backend, the next major objective is to build the frontend interfaces to actually visualize, manage, and interact with this data. The **Content Manager** (part of the `packages/management-view`) will serve as the Game Master's primary hub for viewing the database state, reviewing homebrew materials, and preparing for campaigns.
 
 **Core Goals:**
+
 1. **Comprehensive Entity Coverage**: Visualize and manage every backend model, from campaigns to individual encounter states.
 2. **Mock Data Validation**: Serve as the first true frontend test harness for the data we just seeded.
 3. **Scalable Data Presentation**: Establish robust, reusable data tables capable of sorting, filtering, and paginating hundreds of entries.
@@ -24,6 +25,7 @@ Following the successful implementation of the dynamic JSON data seeding pipelin
 The Content Manager will exist under a protected route within the main application shell, likely accessed via a persistent sidebar or top navigation bar when a GM is in the management context.
 
 ### 2.1 Route Structure
+
 ```typescript
 // Proposed react-router-dom route tree in apps/host
 <Route path="/management" element={<ManagementLayout />}>
@@ -73,6 +75,7 @@ journey
 The Content Manager is designed to handle high information density gracefully. We will utilize a "Master-Detail" interaction pattern to keep the user in context without constant page navigations.
 
 ### 3.1 The Master-Detail Pattern
+
 Instead of navigating to a new `/spells/fireball` page when clicking a spell, the table (Master) remains active while a slide-over panel (Detail) animates in from the right side of the screen.
 
 ```mermaid
@@ -80,16 +83,16 @@ graph TD
     subgraph Management View Layout
         A[Sidebar Navigation] -->|Persistent| B(Content Area)
     end
-    
+
     subgraph Content Area
         B --> C[Page Header & Actions]
         B --> S[Content Side Navigation]
         S --> D[Categorized Tabs]
         D --> E[Data Table Container]
-        
+
         E -->|Click Row| F[Detail Slide-Over Panel]
     end
-    
+
     subgraph Detail Slide-Over
         F --> G[Header: Entity Name & Badges]
         F --> H[Tabs: Overview, Stats, Raw JSON]
@@ -100,8 +103,8 @@ graph TD
 ### 3.2 Key Components & Prop Interfaces
 
 1. **`ContentManagerLayout`**: The wrapper that renders the page title ("Content Manager"), the global search bar, and the horizontal `Tabs` component to switch between entity types (Monsters, Spells, Items, etc.).
-   
-2. **`GenericDataTable<T>`**: A highly generic, highly typed table component wrapping `@tanstack/react-table`. 
+2. **`GenericDataTable<T>`**: A highly generic, highly typed table component wrapping `@tanstack/react-table`.
+
    ```typescript
    interface GenericDataTableProps<T> {
      data: T[];
@@ -112,16 +115,18 @@ graph TD
      emptyStateMessage?: ReactNode;
    }
    ```
+
    - Supports sortable column headers.
    - Supports global fuzzy filtering.
    - Supports pagination.
    - Distinct row rendering based on the type (e.g., Spells show level/school columns, Monsters show CR/Type columns).
 
 3. **`EntityDetailPanel`**: A slide-over component (`Dialog` or `Sheet` from the design system) that receives the selected entity ID, fetches its full details, and renders them.
+
    ```typescript
    interface EntityDetailPanelProps {
      entityId: string | null;
-     entityType: 'monster' | 'spell' | 'item' | 'definition';
+     entityType: "monster" | "spell" | "item" | "definition";
      isOpen: boolean;
      onClose: () => void;
    }
@@ -138,7 +143,9 @@ graph TD
 ---
 
 ### 3.3 Encounter Visualization (Dev Mode)
+
 Unlike static reference data, Encounters represent live, in-memory system states. The Content Manager will include a "Live States" view specifically to:
+
 1. **Visualize In-Memory Encounters**: Display encounters loaded via the `@api/dev/load-seeds` endpoint.
 2. **State Synchronization Check**: Compare the local frontend `GameStateStore` with the raw JSON provided by the dev router to ensure WebSocket synchronization is accurate.
 3. **Turn Order Preview**: Render the initiative list as a simple table before it reaches the full VTT DM View.
@@ -150,6 +157,7 @@ Unlike static reference data, Encounters represent live, in-memory system states
 To ensure snappy performance and robust caching, we will use **TanStack React Query**.
 
 ### 4.1 API Client Generation
+
 Given our FastAPI backend, we should use a generated typed client (e.g., via `openapi-ts` or Orval) to ensure the frontend TypeScript interfaces perfectly match the backend Pydantic schemas (like `SpellResponse`, `MonsterResponse`).
 
 ### 4.2 Query Architecture & Cache Invalidation
@@ -168,7 +176,7 @@ sequenceDiagram
     DB-->>API: Return rows
     API-->>RQ: Return JSON Array
     RQ-->>UI: Serve & Cache Data
-    
+
     Note over UI, DB: Opening the Detail Panel
     UI->>RQ: useQuery(['monsters', 'mon_123'])
     alt Active in Cache
@@ -180,7 +188,7 @@ sequenceDiagram
         API-->>RQ: Return JSON Object
         RQ-->>UI: Serve & Cache Data
     end
-    
+
     Note over UI, DB: Updating a Monster (Future CRUD)
     UI->>API: PUT /api/monsters/mon_123
     API->>DB: UPDATE table
@@ -190,16 +198,17 @@ sequenceDiagram
 ```
 
 ### 4.3 Custom Hooks Blueprint
+
 We will abstract the queries into custom hooks to keep components clean.
 
 ```typescript
 // packages/management-view/src/hooks/useMonsters.ts
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@cmv2/bridge';
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@cmv2/bridge";
 
 export const useMonstersList = (params: PaginationParams) => {
   return useQuery({
-    queryKey: ['monsters', 'list', params],
+    queryKey: ["monsters", "list", params],
     queryFn: () => apiClient.monsters.list(params),
     keepPreviousData: true, // Smooth pagination without flashing loading spinners
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
@@ -208,7 +217,7 @@ export const useMonstersList = (params: PaginationParams) => {
 
 export const useMonsterDetail = (id: string | null) => {
   return useQuery({
-    queryKey: ['monsters', 'detail', id],
+    queryKey: ["monsters", "detail", id],
     queryFn: () => apiClient.monsters.get(id!),
     enabled: !!id, // Only fetch if an ID is selected
     staleTime: 1000 * 60 * 5,
@@ -232,20 +241,23 @@ Because our primary short-term goal is visualizing the backend's JSON seeding, t
 As mandated by the core design principles, the Content Manager cannot be a generic, boring admin panel. It must feel premium, state-of-the-art, and highly dynamic.
 
 ### 6.1 Animations & Transitions
-1. **Micro-Animations**: 
+
+1. **Micro-Animations**:
    - Row hovers in the data table should subtly elevate the row and transition a background color using smooth bezier curves (`transition-all duration-300 ease-in-out`).
    - The slide-over Detail Panel must slide in (`translateX: 0` from `translateX: 100%`) while a slight backdrop blur (`backdrop-blur-sm`) is applied to the main table behind it, focusing the user's attention.
-2. **Layout Shifts**: 
+2. **Layout Shifts**:
    - Avoid jarring layout jumps when loading data. Use skeleton loaders (shimmer effects) within the `GenericDataTable` instead of blocking spinners.
 
 ### 6.2 Typography & Badging
+
 1. **Fonts**: Utilize the project's selected Google Fonts (e.g., Inter for UI, maybe a serif for fantasy flavor in headers) consistently via the design system tokens.
-2. **Pill-Shaped Badges**: 
+2. **Pill-Shaped Badges**:
    - Use pill-shaped badges for entity types (e.g., a fiery orange badge filled with `bg-orange-500/20 text-orange-400` for "Evocation", a dark purple badge for "Necromancy").
    - Challenge Ratings (CR) for monsters should be color-coded (Green for CR 0-4, Yellow for 5-10, Red for deadly).
 3. **Card-Based UI**: Even within lists, wrap interactive sections in subtly bordered, slightly rounded cards with glassmorphism effects where appropriate (e.g., the detail panel's inner sections).
 
 ### 6.3 Empty States
+
 If the `LOAD_MOCK_DATA` was false and the database is empty, the table should not just show "No data." It should render a beautifully illustrated or icon-driven empty state prompting the GM to "Create your first Monster" or "Run the Seed Script," accompanied by a subtle breathing animation on the primary Call-To-Action button.
 
 ---
@@ -254,18 +266,18 @@ If the `LOAD_MOCK_DATA` was false and the database is empty, the table should no
 
 To ensure "all content" is manageable, we map every backend model to a frontend view:
 
-| Category | Entity | Backend Endpoint | Key Detail Views |
-| :--- | :--- | :--- | :--- |
-| **Core** | Campaigns | `/api/campaigns` | World Notes, Playable Characters |
-| **Core** | Characters | `/api/characters` | Stats, Inventory, Spells |
-| **Reference** | Monsters | `/api/monsters` | Statblock, Actions, Loot |
-| **Reference** | Spells | `/api/spells` | Description, Scaling, Effects |
-| **Reference** | Items | `/api/items` | Properties, Effects, Rarity |
-| **Lore** | Species | `/api/definitions/species` | Traits, Speed, Language |
-| **Lore** | Classes | `/api/definitions/classes` | Hit Die, Proficiencies, Progression |
-| **Lore** | Feats | `/api/definitions/feats` | Prerequisites, Effects |
-| **Lore** | Backgrounds | `/api/definitions/backgrounds`| Skills, Equipment, Features |
-| **Live** | Encounters | `/api/dev/load-seeds`* | Initiative, Map Pos, Active Effects |
+| Category      | Entity      | Backend Endpoint               | Key Detail Views                    |
+| :------------ | :---------- | :----------------------------- | :---------------------------------- |
+| **Core**      | Campaigns   | `/api/campaigns`               | World Notes, Playable Characters    |
+| **Core**      | Characters  | `/api/characters`              | Stats, Inventory, Spells            |
+| **Reference** | Monsters    | `/api/monsters`                | Statblock, Actions, Loot            |
+| **Reference** | Spells      | `/api/spells`                  | Description, Scaling, Effects       |
+| **Reference** | Items       | `/api/items`                   | Properties, Effects, Rarity         |
+| **Lore**      | Species     | `/api/definitions/species`     | Traits, Speed, Language             |
+| **Lore**      | Classes     | `/api/definitions/classes`     | Hit Die, Proficiencies, Progression |
+| **Lore**      | Feats       | `/api/definitions/feats`       | Prerequisites, Effects              |
+| **Lore**      | Backgrounds | `/api/definitions/backgrounds` | Skills, Equipment, Features         |
+| **Live**      | Encounters  | `/api/dev/load-seeds`\*        | Initiative, Map Pos, Active Effects |
 
 > [!NOTE]
 > Encounters are currently managed via the Dev API but will transition to a production `/api/encounters` for persistent state management.
@@ -274,9 +286,10 @@ To ensure "all content" is manageable, we map every backend model to a frontend 
 
 ## 9. Implementation Checklist & Phase Integration
 
-This concept seamlessly integrates into **Phase 2 — Management View Core: Dashboard & CRUD** of our existing `11_implementation_phase_plan.md`.
+This concept seamlessly integrates into **Phase 2 — Management View Core: Dashboard & CRUD** of the archived implementation plan in `docs/archive/planning_legacy/docs_architecture/frontend/11_implementation_phase_plan.md`.
 
 ### Immediate Next Steps (If conceptually approved)
+
 1. Initialize the routing structure in `apps/host` pointing to the `management-view` package.
 2. Build the `GenericDataTable` wrapper utilizing `@civic/design-system` tokens and set up the column definitions for Monsters.
 3. Implement the React Query hooks targeting our existing FastAPI backend endpoints (which are now properly seeded).

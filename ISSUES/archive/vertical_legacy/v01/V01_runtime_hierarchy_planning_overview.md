@@ -2,7 +2,7 @@
 
 Status: Draft for Planning
 Related module issue: ISSUE [VERT][V01]
-Related playbook: docs/architecture/shared/05_vertical_module_execution_plan.md
+Related playbook: docs/archive/planning_legacy/docs_architecture/shared/05_vertical_module_execution_plan.md
 Related diagram: V01_runtime_hierarchy_detailed_plan.mmd
 
 Detailed issue set:

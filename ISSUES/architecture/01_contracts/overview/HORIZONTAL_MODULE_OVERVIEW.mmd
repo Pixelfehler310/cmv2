@@ -1,0 +1,92 @@
+graph TB
+  LEG_A["Legend: Active"]
+  LEG_I["Legend: Implemented"]
+  LEG_P["Legend: Planned"]
+
+  subgraph "Feature Modules (Active and Implemented Core)"
+    RH["Runtime Hierarchy (V01)<br/>Campaign -> Scene -> Combat lifecycle"]
+    AX["Action Execution and Turn Economy (V02)<br/>Operation graph, targeting, budgets, effects"]
+    CW["Content Write Path (V05)<br/>Definition CRUD, lifecycle transitions, link integrity"]
+    CR["Content Query and Projection (V05)<br/>Search, detail hydration, revision-aware reads"]
+    CP["Campaign Scope and Membership (V05 extension)<br/>Membership, role policy, content policy"]
+    CH["Character Sheet Domain (V05 extension)<br/>Progression, inventory, prepared spells, hydration"]
+    IE["Identity and Entitlements (V05 extension)<br/>Accounts, subscriptions, pack access"]
+    AM["Asset Management (V05 extension)<br/>Asset records, folders, media references"]
+    API["Transport Interfaces<br/>REST routers and WebSocket handlers"]
+    AUD["Audit and Recovery<br/>Checkpoints, drift detection, replay"]
+  end
+
+  subgraph "Horizontal Contracts (Layer 1)"
+    HC_LIF["Lifecycle and Revision Contract"]
+    HC_REF["Referential Integrity Contract"]
+    HC_ACT["Action Operation Graph Contract"]
+    HC_EVT["Event Ordering and Correlation Contract"]
+    HC_PROJ["Projection Consistency Contract"]
+    HC_AUTH["Authorization and Visibility Contract"]
+  end
+
+  subgraph "Infrastructure"
+    INF_DB["PostgreSQL Source of Truth"]
+    INF_IDX["Search Projection Store"]
+    INF_BUS["Event Stream / Message Bus"]
+    INF_BLOB["Asset Blob Storage"]
+    INF_OBS["Monitoring and Telemetry"]
+  end
+
+  subgraph "Planned Extensions (Separate Scope)"
+    PX_WC["V03 World Context Runtime<br/>Region, Place, Faction, NPC"]
+    PX_SCHEMA["V04 Content Schema and Pack Lifecycle<br/>Compatibility, provenance, supersedence"]
+    PX_EVT["V06 Event Contract Freeze and Frontend Projection"]
+  end
+
+  IE --> CP
+  IE --> CH
+  CP --> RH
+  CP --> CW
+  CH --> CR
+  CH --> AX
+  AM --> CW
+
+  AX --> HC_ACT
+  AX --> HC_EVT
+  AX --> HC_AUTH
+  RH --> HC_LIF
+  RH --> HC_AUTH
+  CW --> HC_LIF
+  CW --> HC_REF
+  CW --> HC_AUTH
+  CR --> HC_PROJ
+  CR --> HC_REF
+  CR --> HC_EVT
+
+  API --> RH
+  API --> AX
+  API --> CW
+  API --> CR
+  API --> CP
+  API --> CH
+
+  RH --> INF_DB
+  AX --> INF_DB
+  CW --> INF_DB
+  CR --> INF_IDX
+  AX --> INF_BUS
+  CR --> INF_BUS
+  AM --> INF_BLOB
+  AUD --> INF_DB
+  AUD --> INF_OBS
+  INF_BUS --> INF_OBS
+
+  CW -. planned contract dependency .-> PX_SCHEMA
+  CR -. planned projection dependency .-> PX_EVT
+  AX -. planned event dependency .-> PX_EVT
+  CP -. planned world binding .-> PX_WC
+  CH -. planned world lookup .-> PX_WC
+
+  classDef active fill:#d9f7be,stroke:#389e0d,color:#000000;
+  classDef implemented fill:#d6e4ff,stroke:#1d39c4,color:#000000;
+  classDef planned fill:#fff7bf,stroke:#d48806,color:#000000;
+
+  class LEG_A,CW,CR,HC_LIF,HC_REF,HC_ACT,HC_EVT,HC_PROJ,HC_AUTH active;
+  class LEG_I,RH,AX,CP,CH,IE,AM,API,AUD,INF_DB,INF_IDX,INF_BUS,INF_BLOB,INF_OBS implemented;
+  class LEG_P,PX_WC,PX_SCHEMA,PX_EVT planned;

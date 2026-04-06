@@ -42,4 +42,12 @@ Planning policy:
 
 Execution playbook:
 
-1. `docs/architecture/shared/05_vertical_module_execution_plan.md`
+1. `docs/archive/planning_legacy/docs_architecture/shared/05_vertical_module_execution_plan.md`
+
+Archived architecture maps:
+
+1. `architecture/HORIZONTAL_OVERVIEW.mmd` (superseded by `ISSUES/architecture/01_contracts/overview/HORIZONTAL_MODULE_OVERVIEW.mmd` and `ISSUES/architecture/01_contracts/overview/HORIZONTAL_BACKEND_NAMESPACE_OVERVIEW.mmd`)
+
+Archived architecture strategy docs:
+
+1. `architecture/ARCHIVE_ADAPTION_STRATEGY.md` (superseded by `ISSUES/architecture/01_contracts/ISSUE_[CONTRACT]_[MIG-01]_v05_horizontal_harvest.md`)

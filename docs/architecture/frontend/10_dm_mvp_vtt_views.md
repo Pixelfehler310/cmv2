@@ -33,7 +33,7 @@ graph LR
 
 ## 3. The DM Control Panel (Private)
 
-This is an iteration of the previously detailed `07_dm_view_detailed_plan.md`, heavily adapted for the MVP.
+This is an iteration of the archived detailed draft in `docs/archive/planning_legacy/docs_architecture/frontend/07_dm_view_detailed_plan.md`, heavily adapted for the MVP.
 
 ### Layout & Context-Aware Command Deck
 

@@ -8,8 +8,8 @@ This document records where the DM-first implementation currently stands and def
 
 It is intentionally practical and should be read together with:
 
-- `docs/architecture/frontend/11_implementation_phase_plan.md`
-- `docs/architecture/frontend/12_dm_view_seed_phase_plan.md`
+- `docs/archive/planning_legacy/docs_architecture/frontend/11_implementation_phase_plan.md`
+- `docs/archive/planning_legacy/docs_architecture/frontend/12_dm_view_seed_phase_plan.md`
 - `docs/frontend/reference/04_stage_view.md`
 - `docs/frontend/reference/05_dm_podium_layout.md`
 - `docs/frontend/reference/06_dm_command_deck.md`
