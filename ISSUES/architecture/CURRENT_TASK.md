@@ -33,8 +33,13 @@ To provide instant clear context for both human developers and AI agents during 
    - Completed event/recovery behavior definitions
 2. Track freeze progress in `ISSUES/architecture/01_contracts/FREEZE_GATE_STATUS.md`.
 3. Run Mermaid render pass and fix any syntax drift.
-4. Add `[ADAPTED]` headers to legacy V05 source docs once traceability review passes.
-5. Start Layer 2 implementation issues only after contract freeze sign-off.
+4. Resolve reopened freeze blockers:
+   - Improve plain-language contract clarity for testability
+   - Define DND5E-05 character/sheet contract
+   - Define CAM-01 campaign management contract
+5. Add `[ADAPTED]` headers to legacy V05 source docs once traceability review passes.
+6. Record the Sprint 2 scope choice in `ISSUES/architecture/02_implementations/SPRINT_02_SCOPE_DECISION.md`.
+7. Start Layer 2 implementation issues only after contract freeze sign-off (or explicit compendium-only scope decision).
 
 ---
 

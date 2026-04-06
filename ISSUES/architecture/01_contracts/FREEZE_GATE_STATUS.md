@@ -12,6 +12,8 @@ This file is the detailed freeze-gate source of truth for Sprint 1 contract hard
 6. Contract lists canonical gold symbols.
 7. Contract boundary does not overlap responsibilities with sibling contracts.
 8. Contract-specific known gaps are closed for freeze readiness.
+9. Contract purpose is understandable enough to derive executable tests without ambiguity.
+10. Release-scope domain coverage is complete, or explicitly marked out of scope with approved rationale.
 
 ## CORE Contracts
 
@@ -110,3 +112,14 @@ This file is the detailed freeze-gate source of truth for Sprint 1 contract hard
 1. DND5E-01 remains an umbrella/index and is out of freeze-ready scope for this sprint.
 2. Freeze readiness is granted per contract only when all eight criteria are checked.
 3. Mermaid render pass status should be recorded here after validation is run.
+
+## Current Blockers (Reopened)
+
+1. [ ] Clarity blocker: Core intent and testing interpretation needed clearer plain-language explanation for implementers and testers.
+2. [ ] Domain coverage blocker: DND5E contract set does not yet include explicit character-sheet/character entity contract module.
+3. [ ] Domain coverage blocker: Campaign management contract module is not yet defined in Layer 1.
+
+## Freeze Interpretation
+
+1. Sprint 1 hardening is complete for the scoped modules listed above.
+2. Full freeze for broader content + character + campaign management scope is **not complete** until blockers are resolved or explicitly scoped out.
