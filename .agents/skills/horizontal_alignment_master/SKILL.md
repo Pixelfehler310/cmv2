@@ -20,4 +20,4 @@ description: "Dedicated to narrative and world-building data to ensure technical
 - **Read the System Map First:** Always check the Mermaid map for module boundaries before changing Layer 1 contracts.
 - **Traceability:** Every module's implementation must be traceable back to its domain contract.
 - **Consistency over Verticality:** If a feature breaks the horizontal contract, stop and fix the contract first.
-- **Why This Architecture:** Refer to `../../../ISSUES/architecture/PLANNING_OVERVIEW.md#L68` for the rationale.
+- **Why This Architecture:** Refer to `../../../ISSUES/architecture/PLANNING_OVERVIEW.md` for the rationale.

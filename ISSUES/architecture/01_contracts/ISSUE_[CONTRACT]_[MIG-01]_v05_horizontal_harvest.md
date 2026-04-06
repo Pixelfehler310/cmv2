@@ -16,14 +16,14 @@ Create a modular Layer 1 contract set from legacy V05 architecture, while using 
 
 | Module ID | Target File                                                                                        | Purpose                                            | Status  |
 | :-------- | :------------------------------------------------------------------------------------------------- | :------------------------------------------------- | :------ |
-| CORE-01   | `ISSUES/architecture/01_contracts/core/ISSUE_[CONTRACT]_[CORE-01]_pack_lifecycle.md`               | Lifecycle state machine and legal transitions      | Planned |
-| CORE-02   | `ISSUES/architecture/01_contracts/core/ISSUE_[CONTRACT]_[CORE-02]_referential_integrity.md`        | Linked graph contracts and cycle denial            | Planned |
-| CORE-03   | `ISSUES/architecture/01_contracts/core/ISSUE_[CONTRACT]_[CORE-03]_query_projection_consistency.md` | Revision, projection, and invalidation consistency | Planned |
-| CORE-04   | `ISSUES/architecture/01_contracts/core/ISSUE_[CONTRACT]_[CORE-04]_session_event_envelopes.md`      | Request and event envelope contracts               | Planned |
-| CORE-05   | `ISSUES/architecture/01_contracts/core/ISSUE_[CONTRACT]_[CORE-05]_layer_ownership.md`              | Allowed dependency directions across layers        | Planned |
-| DND5E-02  | `ISSUES/architecture/01_contracts/dnd5e/ISSUE_[CONTRACT]_[DND5E-02]_content_schema.md`             | Canonical DND5E definition schemas                 | Planned |
-| DND5E-03  | `ISSUES/architecture/01_contracts/dnd5e/ISSUE_[CONTRACT]_[DND5E-03]_action_mechanics.md`           | ActionOperationSpec and ModifierSpec contracts     | Planned |
-| DND5E-04  | `ISSUES/architecture/01_contracts/dnd5e/ISSUE_[CONTRACT]_[DND5E-04]_content_query_projection.md`   | DND5E query/read-model contracts                   | Planned |
+| CORE-01   | `ISSUES/architecture/01_contracts/core/ISSUE_[CONTRACT]_[CORE-01]_pack_lifecycle.md`               | Lifecycle state machine and legal transitions      | Drafted |
+| CORE-02   | `ISSUES/architecture/01_contracts/core/ISSUE_[CONTRACT]_[CORE-02]_referential_integrity.md`        | Linked graph contracts and cycle denial            | Drafted |
+| CORE-03   | `ISSUES/architecture/01_contracts/core/ISSUE_[CONTRACT]_[CORE-03]_query_projection_consistency.md` | Revision, projection, and invalidation consistency | Drafted |
+| CORE-04   | `ISSUES/architecture/01_contracts/core/ISSUE_[CONTRACT]_[CORE-04]_session_event_envelopes.md`      | Request and event envelope contracts               | Drafted |
+| CORE-05   | `ISSUES/architecture/01_contracts/core/ISSUE_[CONTRACT]_[CORE-05]_layer_ownership.md`              | Allowed dependency directions across layers        | Drafted |
+| DND5E-02  | `ISSUES/architecture/01_contracts/dnd5e/ISSUE_[CONTRACT]_[DND5E-02]_content_schema.md`             | Canonical DND5E definition schemas                 | Drafted |
+| DND5E-03  | `ISSUES/architecture/01_contracts/dnd5e/ISSUE_[CONTRACT]_[DND5E-03]_action_mechanics.md`           | ActionOperationSpec and ModifierSpec contracts     | Drafted |
+| DND5E-04  | `ISSUES/architecture/01_contracts/dnd5e/ISSUE_[CONTRACT]_[DND5E-04]_content_query_projection.md`   | DND5E query/read-model contracts                   | Drafted |
 
 ## Harvest Operating Policy (On Demand)
 
@@ -87,9 +87,9 @@ Use the following symbols and enum values as canonical unless an explicit contra
 
 ## Contract Freeze Gate
 
-- [ ] Each module has one explanation markdown.
-- [ ] Each module contains at least one Mermaid diagram.
-- [ ] Each module has a corresponding `test_plan` markdown.
+- [x] Each module has one explanation markdown.
+- [x] Each module contains at least one Mermaid diagram.
+- [x] Each module has a corresponding `test_plan` markdown.
 - [ ] Each module lists extracted legacy sources.
 - [ ] Each module lists canonical gold symbols it depends on.
 - [ ] Module boundaries are non-overlapping.

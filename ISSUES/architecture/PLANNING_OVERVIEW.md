@@ -59,7 +59,7 @@ CMV2 uses **Mermaid** for all architectural documentation. This ensures native r
 
 - **Status**: Harvesting from Legacy V05.
 - **Goal**: Define the canonical structure for Monsters, Spells, Items, and Lore.
-- **Reference**: `ISSUES/architecture/01_contracts/ISSUE_[CONTRACT]_[DND5E-01]_base_rule_schema.md` (Planned).
+- **Reference**: `ISSUES/architecture/01_contracts/ISSUE_[CONTRACT]_[DND5E-01]_base_rule_schema.md`.
 
 ### [L2] Current Implementation Focus: **Compendium & Character Bridging**
 

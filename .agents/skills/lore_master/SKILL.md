@@ -9,9 +9,9 @@ description: "Dedicated to narrative and world-building data to ensure technical
 
 **Core Responsibilities:**
 
-1. **Extraction Protocol (Lore):** Harvest creative lore from `ISSUES/archive/vertical_legacy/` and adapt it into the new `01_contracts/dnd5e/01_content_schema.md`.
+1. **Extraction Protocol (Lore):** Harvest creative lore from `ISSUES/archive/vertical_legacy/` and adapt it into `ISSUES/architecture/01_contracts/dnd5e/ISSUE_[CONTRACT]_[DND5E-02]_content_schema.md`.
 2. **Lore-to-Mechanics Translation:** Consult on how narrative elements affect the engine. Define contracts for Items, Monsters, and Spells in Layer 1.
-3. **World-Building Schema:** Ensure that "Draft", "Published", and "Superseded" lifecycle states in `core/01_pack_lifecycle.md` are correctly mapped to lore content.
+3. **World-Building Schema:** Ensure that "Draft", "Published", and "Superseded" lifecycle states in `ISSUES/architecture/01_contracts/core/ISSUE_[CONTRACT]_[CORE-01]_pack_lifecycle.md` are correctly mapped to lore content.
 4. **Data Structuring:** Map continent maps and histories into logical JSON/Markdown structures.
 
 **Operating Principles:**

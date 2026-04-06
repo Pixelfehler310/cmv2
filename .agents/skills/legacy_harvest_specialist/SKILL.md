@@ -19,5 +19,5 @@ description: "Dedicated to extracting domain primitives from the Legacy Archive 
 
 - **Standardize, Don't Copy:** Move the logic, but modernize the architecture.
 - **Traceability:** Maintain links from the new contracts back to the original vertical issues for historical context.
-- **Context-First:** Read the **Archive Adaptation Strategy** document first. 
+- **Context-First:** Read `ISSUES/architecture/01_contracts/ISSUE_[CONTRACT]_[MIG-01]_v05_horizontal_harvest.md` first.
 - **Freeze Before Port:** Ensure the contract is final before the implementation begins.
