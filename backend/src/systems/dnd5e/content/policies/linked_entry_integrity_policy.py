@@ -2,10 +2,12 @@ from __future__ import annotations
 __production_status__ = "gold"
 
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from ..domain.errors import (
     IllegalStateDependencyError,
     InvalidReplacementTargetError,
+    LinkedTargetInUseError,
     LinkedTargetNotFoundError,
     ReplacementCycleError,
 )
@@ -30,6 +32,15 @@ class LinkedEntryIntegrityPolicy:
             raise InvalidReplacementTargetError(
                 "Replacement links require source and target to share the same family."
             )
+
+    @staticmethod
+    def validate_resolve_modes(*, links: list[LinkedEntryReference]) -> None:
+        allowed_modes = {ResolveMode.STRICT, ResolveMode.BEST_EFFORT}
+        for link in links:
+            if link.resolve_mode not in allowed_modes:
+                raise InvalidReplacementTargetError(
+                    f"Unsupported resolve_mode '{link.resolve_mode}'."
+                )
 
     @staticmethod
     async def validate_required_targets_exist(
@@ -95,3 +106,16 @@ class LinkedEntryIntegrityPolicy:
                 raise IllegalStateDependencyError(
                     f"Published entity cannot depend on DRAFT target '{target.id}'."
                 )
+
+    @staticmethod
+    def validate_delete_dependencies(
+        *,
+        target_definition_id: str,
+        incoming_links: list[LinkedEntryReference],
+    ) -> None:
+        protected_links = [link for link in incoming_links if link.required]
+        if protected_links:
+            raise LinkedTargetInUseError(
+                definition_id=target_definition_id,
+                reference_count=len(protected_links),
+            )

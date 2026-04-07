@@ -30,6 +30,10 @@ class ContentPackModel(Base, UUIDMixin, TimestampMixin):
         Integer, nullable=True)
 
     __table_args__ = (
+        CheckConstraint(
+            "lifecycle_state IN ('draft','published','archived')",
+            name="ck_dnd5e_content_packs_lifecycle_state",
+        ),
         UniqueConstraint("pack_key", name="uq_dnd5e_content_packs_pack_key"),
         Index("ix_dnd5e_content_packs_lifecycle_homebrew",
               "lifecycle_state", "is_homebrew"),
@@ -62,6 +66,10 @@ class CompendiumDefinitionModel(Base, UUIDMixin, TimestampMixin):
     __table_args__ = (
         CheckConstraint("content_version >= 1",
                         name="ck_dnd5e_compendium_definitions_content_version"),
+        CheckConstraint(
+            "lifecycle_state IN ('draft','published','archived','superseded')",
+            name="ck_dnd5e_compendium_definitions_lifecycle_state",
+        ),
         UniqueConstraint(
             "pack_id",
             "family",

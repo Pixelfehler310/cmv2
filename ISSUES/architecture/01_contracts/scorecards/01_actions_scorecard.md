@@ -4,7 +4,7 @@
 
 1. Module: actions
 2. Module type: core-heavy
-3. Reviewer: GitHub Copilot (AI preliminary)
+3. Reviewer: simon (owner final review)
 4. Date: 2026-04-07
 5. Revision: v1
 
@@ -28,6 +28,7 @@
 
 1. Final score: 91
 2. Meets minimum 85: Yes
-3. Module freeze decision: Frozen (AI preliminary)
-4. Approved by: AI preliminary
+3. Module freeze decision: Frozen (owner approved)
+4. Approved by: simon (owner)
 5. Approval date: 2026-04-07
+

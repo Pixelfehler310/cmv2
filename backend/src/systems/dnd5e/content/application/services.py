@@ -14,10 +14,8 @@ from ..domain.errors import (
     DuplicateContentPackIdError,
     DuplicateDefinitionIdError,
     DuplicateDefinitionSlugError,
-    IllegalStateDependencyError,
     ImmutableDefinitionError,
     InvalidReplacementTargetError,
-    LinkedTargetInUseError,
     VersionMismatchError,
 )
 from ..domain.index_models import build_index_document
@@ -154,10 +152,14 @@ class CompendiumApplicationService:
             if existing is None:
                 raise DefinitionNotFoundError(definition_id)
 
-            if existing.lifecycle_state != LifecycleState.DRAFT:
+            try:
+                LifecycleTransitionPolicy.validate_delete_permission(
+                    state=existing.lifecycle_state
+                )
+            except ValueError:
                 raise ImmutableDefinitionError(
                     lifecycle_state=existing.lifecycle_state.value
-                )
+                ) from None
 
             if expected_content_version != existing.content_version:
                 raise VersionMismatchError(
@@ -232,11 +234,10 @@ class CompendiumApplicationService:
                 )
 
             reverse_refs = await uow.links.list_by_target_definition_id(definition_id)
-            if reverse_refs:
-                raise LinkedTargetInUseError(
-                    definition_id=definition_id,
-                    reference_count=len(reverse_refs),
-                )
+            self._link_policy.validate_delete_dependencies(
+                target_definition_id=definition_id,
+                incoming_links=reverse_refs,
+            )
 
             await uow.links.delete_by_source_definition_id(definition_id)
             await self._delete_search_index(uow, definition_id)
@@ -274,6 +275,7 @@ class CompendiumApplicationService:
             )
 
             links = await uow.links.list_by_source_definition_id(existing.id)
+            self._link_policy.validate_resolve_modes(links=links)
             await self._link_policy.validate_required_targets_exist(
                 links=links,
                 target_lookup=uow.definitions.get_by_id,
@@ -330,15 +332,10 @@ class CompendiumApplicationService:
             if new_definition is None:
                 raise DefinitionNotFoundError(new_definition_id)
 
-            LifecycleTransitionPolicy.deny_on_invalid_transition(
-                old_definition.lifecycle_state,
-                LifecycleState.SUPERSEDED,
+            LifecycleTransitionPolicy.validate_supersedence(
+                source_state=old_definition.lifecycle_state,
+                replacement_state=new_definition.lifecycle_state,
             )
-
-            if new_definition.lifecycle_state == LifecycleState.DRAFT:
-                raise IllegalStateDependencyError(
-                    f"A published entity cannot be superseded by DRAFT target '{new_definition.id}'."
-                )
 
             self._link_policy.validate_target_family(
                 source_family=old_definition.family,

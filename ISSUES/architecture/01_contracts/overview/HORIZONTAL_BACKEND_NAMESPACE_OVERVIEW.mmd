@@ -40,6 +40,12 @@ flowchart TB
     P_PROJECTION["systems/dnd5e/projection_contracts/ (V06)<br/>frontend_read_models/<br/>contract_tests/"]
   end
 
+  subgraph PR1["PR-1 Core Infrastructure (new)"]
+    PR1_LIFECYCLE["CORE-01<br/>Lifecycle transition enforcement"]
+    PR1_INTEGRITY["CORE-02<br/>Link integrity + delete guards"]
+    PR1_OWNERSHIP["CORE-05<br/>Layer ownership boundary tests"]
+  end
+
   ROOT --> CORE
   ROOT --> SYS
   ROOT --> IDENTITY
@@ -98,10 +104,17 @@ flowchart TB
   T_CAMPAIGNS -. planned dependency .-> P_WORLD
   T_SHEETS -. planned dependency .-> P_WORLD
 
+  PR1_LIFECYCLE --> CUR_CONTENT
+  PR1_LIFECYCLE --> T_CONTENT_W
+  PR1_INTEGRITY --> CUR_CONTENT
+  PR1_INTEGRITY --> T_CONTENT_W
+  PR1_OWNERSHIP --> CUR_APP
+  PR1_OWNERSHIP --> CUR_TRANSPORT
+
   classDef active fill:#d9f7be,stroke:#389e0d,color:#000000;
   classDef implemented fill:#d6e4ff,stroke:#1d39c4,color:#000000;
   classDef planned fill:#fff7bf,stroke:#d48806,color:#000000;
 
-  class LEG_A,T_RUNTIME,T_ACTIONS,T_CONTENT_W,T_CONTENT_R,T_CAMPAIGNS,T_SHEETS,T_ASSETS,T_ENTITLE,T_EVENTS,T_RECOVERY,T_SHARED active;
-  class LEG_I,CORE,SYS,IDENTITY,PLATFORM,CUR_APP,CUR_DOMAIN,CUR_ENGINE,CUR_REPO,CUR_SERV,CUR_SCHEMA,CUR_TRANSPORT,CUR_CONTENT implemented;
+  class LEG_A,PR1_LIFECYCLE,PR1_INTEGRITY,PR1_OWNERSHIP active;
+  class LEG_I,CORE,SYS,IDENTITY,PLATFORM,CUR_APP,CUR_DOMAIN,CUR_ENGINE,CUR_REPO,CUR_SERV,CUR_SCHEMA,CUR_TRANSPORT,CUR_CONTENT,T_RUNTIME,T_ACTIONS,T_CONTENT_W,T_CONTENT_R,T_CAMPAIGNS,T_SHEETS,T_ASSETS,T_ENTITLE,T_EVENTS,T_RECOVERY,T_SHARED implemented;
   class LEG_P,P_WORLD,P_SCHEMA,P_PROJECTION planned;

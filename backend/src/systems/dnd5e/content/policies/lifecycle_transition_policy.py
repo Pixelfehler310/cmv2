@@ -1,5 +1,4 @@
 __production_status__ = "gold"
-from typing import Tuple
 
 from ..domain.primitives import LifecycleState
 from ..domain.invariants import CompendiumErrorCode
@@ -16,18 +15,15 @@ class LifecycleTransitionPolicy:
     _VALID_TRANSITIONS = {
         LifecycleState.DRAFT: {
             LifecycleState.PUBLISHED,
-            LifecycleState.ARCHIVED,
         },
         LifecycleState.PUBLISHED: {
             LifecycleState.ARCHIVED,
             LifecycleState.SUPERSEDED,
-            LifecycleState.DRAFT,  # E.g. unpublishing back to draft
         },
         LifecycleState.ARCHIVED: {
-            LifecycleState.DRAFT,  # Restore back to draft
-            LifecycleState.PUBLISHED, # Restore directly to active
+            LifecycleState.PUBLISHED,
         },
-        LifecycleState.SUPERSEDED: set(), # Terminal state
+        LifecycleState.SUPERSEDED: set(),
     }
 
     @classmethod
@@ -41,12 +37,41 @@ class LifecycleTransitionPolicy:
     @classmethod
     def can_restore(cls, current_state: LifecycleState) -> bool:
         """Archived items can be restored"""
-        return current_state == LifecycleState.ARCHIVED
+        return LifecycleState.PUBLISHED in cls._VALID_TRANSITIONS[current_state]
 
     @classmethod
     def can_supersede(cls, current_state: LifecycleState) -> bool:
         """Only published items can be formally superseded by a replacement chain"""
         return LifecycleState.SUPERSEDED in cls._VALID_TRANSITIONS[current_state]
+
+    @classmethod
+    def validate_transition(
+        cls,
+        *,
+        current_state: LifecycleState,
+        target_state: LifecycleState,
+    ) -> None:
+        cls.deny_on_invalid_transition(current_state, target_state)
+
+    @classmethod
+    def validate_supersedence(
+        cls,
+        *,
+        source_state: LifecycleState,
+        replacement_state: LifecycleState,
+    ) -> None:
+        cls.deny_on_invalid_transition(source_state, LifecycleState.SUPERSEDED)
+        if replacement_state == LifecycleState.DRAFT:
+            raise ContentLifecycleError(
+                "Supersedence replacement target cannot be in draft state."
+            )
+
+    @classmethod
+    def validate_delete_permission(cls, *, state: LifecycleState) -> None:
+        if state != LifecycleState.DRAFT:
+            raise ContentLifecycleError(
+                f"Delete denied for lifecycle_state={state.value}; only draft definitions may be deleted."
+            )
 
     @classmethod
     def deny_on_invalid_transition(

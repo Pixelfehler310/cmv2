@@ -35,6 +35,7 @@ from src.systems.dnd5e.content.infrastructure.orm import (
     SearchIndexModel,
 )
 from src.systems.dnd5e.content.infrastructure.unit_of_work import CompendiumUnitOfWork
+from src.systems.dnd5e.content.policies.lifecycle_transition_policy import ContentLifecycleError
 
 
 @pytest.fixture
@@ -370,10 +371,10 @@ async def test_supersede_fails_with_draft_target(db_session):
     await service.publish_definition(definition_id=old_def.id)
     # new_def remains in DRAFT
 
-    with pytest.raises(IllegalStateDependencyError) as exc:
+    with pytest.raises(ContentLifecycleError) as exc:
         await service.supersede_definition(
             old_definition_id=old_def.id,
             new_definition_id=new_def.id,
         )
 
-    assert "cannot be superseded by DRAFT target" in str(exc.value)
+    assert "replacement target cannot be in draft state" in str(exc.value)

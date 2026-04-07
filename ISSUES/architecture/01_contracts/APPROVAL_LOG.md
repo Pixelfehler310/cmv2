@@ -13,18 +13,18 @@ This dashboard is the source of truth for module-level architecture approvals.
 
 | Module        | Type       | Stage 2 Diagram Review | Stage 3 Freeze | Score (/100) | Approval Date | Notes                                               |
 | :------------ | :--------- | :--------------------- | :------------- | :----------- | :------------ | :-------------------------------------------------- |
-| runtime       | core-heavy | Frozen                 | Frozen         | 90           | 2026-04-07    | AI pre-freeze recorded; owner confirmation pending. |
-| actions       | core-heavy | Frozen                 | Frozen         | 91           | 2026-04-07    | AI pre-freeze recorded; owner confirmation pending. |
-| content_write | core-heavy | Frozen                 | Frozen         | 90           | 2026-04-07    | AI pre-freeze recorded; owner confirmation pending. |
-| content_query | core-heavy | Frozen                 | Frozen         | 90           | 2026-04-07    | AI pre-freeze recorded; owner confirmation pending. |
-| campaigns     | support    | Frozen                 | Frozen         | 85           | 2026-04-07    | AI pre-freeze recorded; owner confirmation pending. |
-| sheets        | support    | Frozen                 | Frozen         | 87           | 2026-04-07    | AI pre-freeze recorded; owner confirmation pending. |
-| identity      | support    | Frozen                 | Frozen         | 85           | 2026-04-07    | AI pre-freeze recorded; owner confirmation pending. |
-| assets        | support    | Frozen                 | Frozen         | 85           | 2026-04-07    | AI pre-freeze recorded; owner confirmation pending. |
-| events        | support    | Frozen                 | Frozen         | 87           | 2026-04-07    | AI pre-freeze recorded; owner confirmation pending. |
-| recovery      | support    | Frozen                 | Frozen         | 87           | 2026-04-07    | AI pre-freeze recorded; owner confirmation pending. |
-| shared        | support    | Frozen                 | Frozen         | 94           | 2026-04-07    | AI pre-freeze recorded; owner confirmation pending. |
-| transport     | support    | Frozen                 | Frozen         | 85           | 2026-04-07    | AI pre-freeze recorded; owner confirmation pending. |
+| runtime       | core-heavy | Frozen                 | Frozen         | 90           | 2026-04-07    | Owner final sign-off recorded (simon).              |
+| actions       | core-heavy | Frozen                 | Frozen         | 91           | 2026-04-07    | Owner final sign-off recorded (simon).              |
+| content_write | core-heavy | Frozen                 | Frozen         | 90           | 2026-04-07    | Owner final sign-off recorded (simon).              |
+| content_query | core-heavy | Frozen                 | Frozen         | 90           | 2026-04-07    | Owner final sign-off recorded (simon).              |
+| campaigns     | support    | Frozen                 | Frozen         | 85           | 2026-04-07    | Owner final sign-off recorded (simon).              |
+| sheets        | support    | Frozen                 | Frozen         | 87           | 2026-04-07    | Owner final sign-off recorded (simon).              |
+| identity      | support    | Frozen                 | Frozen         | 85           | 2026-04-07    | Owner final sign-off recorded (simon).              |
+| assets        | support    | Frozen                 | Frozen         | 85           | 2026-04-07    | Owner final sign-off recorded (simon).              |
+| events        | support    | Frozen                 | Frozen         | 87           | 2026-04-07    | Owner final sign-off recorded (simon).              |
+| recovery      | support    | Frozen                 | Frozen         | 87           | 2026-04-07    | Owner final sign-off recorded (simon).              |
+| shared        | support    | Frozen                 | Frozen         | 94           | 2026-04-07    | Owner final sign-off recorded (simon).              |
+| transport     | support    | Frozen                 | Frozen         | 85           | 2026-04-07    | Owner final sign-off recorded (simon).              |
 
 ## Gate Checks
 

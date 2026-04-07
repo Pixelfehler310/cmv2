@@ -1,7 +1,7 @@
 __production_status__ = "gold"
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from .primitives import LifecycleState
 
@@ -16,6 +16,12 @@ class ContentPackRecord(BaseModel):
     published_version: Optional[int] = None
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode="after")
+    def validate_lifecycle_state(self) -> "ContentPackRecord":
+        if self.lifecycle_state == LifecycleState.SUPERSEDED:
+            raise ValueError("Content packs cannot use superseded lifecycle state.")
+        return self
     
     def publish(self) -> None:
         pass

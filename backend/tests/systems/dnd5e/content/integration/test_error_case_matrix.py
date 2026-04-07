@@ -154,9 +154,9 @@ class TestLifecycleTransitionMatrix:
     ContentLifecycleError with the correct code.
 
     Valid transitions (per LifecycleTransitionPolicy):
-      DRAFT      → {PUBLISHED, ARCHIVED}
-      PUBLISHED  → {ARCHIVED, SUPERSEDED, DRAFT}
-      ARCHIVED   → {DRAFT, PUBLISHED}
+            DRAFT      → {PUBLISHED}
+            PUBLISHED  → {ARCHIVED, SUPERSEDED}
+            ARCHIVED   → {PUBLISHED}
       SUPERSEDED → {} (terminal)
     """
 
@@ -169,6 +169,9 @@ class TestLifecycleTransitionMatrix:
             (LifecycleState.SUPERSEDED, LifecycleState.ARCHIVED),
             # draft cannot go directly to superseded
             (LifecycleState.DRAFT, LifecycleState.SUPERSEDED),
+            (LifecycleState.DRAFT, LifecycleState.ARCHIVED),
+            (LifecycleState.PUBLISHED, LifecycleState.DRAFT),
+            (LifecycleState.ARCHIVED, LifecycleState.DRAFT),
             # archived cannot go to superseded
             (LifecycleState.ARCHIVED, LifecycleState.SUPERSEDED),
         ],
@@ -181,11 +184,8 @@ class TestLifecycleTransitionMatrix:
         "current, target",
         [
             (LifecycleState.DRAFT, LifecycleState.PUBLISHED),
-            (LifecycleState.DRAFT, LifecycleState.ARCHIVED),
             (LifecycleState.PUBLISHED, LifecycleState.ARCHIVED),
             (LifecycleState.PUBLISHED, LifecycleState.SUPERSEDED),
-            (LifecycleState.PUBLISHED, LifecycleState.DRAFT),
-            (LifecycleState.ARCHIVED, LifecycleState.DRAFT),
             (LifecycleState.ARCHIVED, LifecycleState.PUBLISHED),
         ],
     )

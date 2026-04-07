@@ -11,6 +11,7 @@ from src.systems.dnd5e.content.domain.primitives import (
     TargetingSpec, DamageInstance
 )
 from src.systems.dnd5e.content.domain.definition_models import LoreDefinition
+from src.systems.dnd5e.content.domain.pack_models import ContentPackRecord
 from src.systems.dnd5e.content.domain.invariants import CompendiumErrorCode
 
 def test_definition_record_valid_content_version():
@@ -147,3 +148,15 @@ def test_action_operation_spec_missing_fields():
     }
     with pytest.raises(pydantic.ValidationError):
         ActionOperationSpec.model_validate(raw_dict)
+
+
+def test_content_pack_rejects_superseded_lifecycle_state():
+    with pytest.raises(pydantic.ValidationError):
+        ContentPackRecord(
+            id="pack-invalid",
+            title="Invalid Pack",
+            lifecycle_state=LifecycleState.SUPERSEDED,
+            is_homebrew=True,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )

@@ -153,7 +153,7 @@ This file is the detailed freeze-gate source of truth for Sprint 1 contract hard
 ## Freeze Interpretation
 
 1. Sprint 1 hardening is complete for CORE-01..CORE-05, DND5E-02..DND5E-05, and CAM-01.
-2. Full Layer 1 freeze is documentation-ready pending explicit owner sign-off.
+2. Full Layer 1 freeze is approved with explicit owner sign-off recorded on 2026-04-07.
 
 ## Module Scoring Snapshot
 
@@ -172,4 +172,4 @@ Implementation must remain blocked unless all conditions pass:
 5. Portfolio average score across in-scope modules is at least `88/100`.
 6. Scope decision in `ISSUES/architecture/02_implementations/SPRINT_02_SCOPE_DECISION.md` references the exact approved module set.
 
-Current status snapshot: all six conditions are satisfied in architecture artifacts, pending explicit owner sign-off.
+Current status snapshot: all six conditions are satisfied in architecture artifacts, and explicit owner sign-off is recorded.

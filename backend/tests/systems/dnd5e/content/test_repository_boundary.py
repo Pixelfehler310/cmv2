@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -121,3 +122,20 @@ async def test_definition_repository_get_versions_returns_descending_versions(db
 
     assert [item.content_version for item in versions] == [2, 1]
     assert all(isinstance(item, MonsterDefinition) for item in versions)
+
+
+def test_api_layer_does_not_import_repositories_directly():
+    repo_root = Path(__file__).resolve().parents[4]
+    router_path = repo_root / "src" / "systems" / "dnd5e" / "content" / "api" / "router.py"
+    router_source = router_path.read_text(encoding="utf-8")
+
+    assert "content.infrastructure.repositories" not in router_source
+
+
+def test_infrastructure_layer_does_not_import_policy_modules():
+    repo_root = Path(__file__).resolve().parents[4]
+    infra_path = repo_root / "src" / "systems" / "dnd5e" / "content" / "infrastructure"
+
+    for py_file in infra_path.glob("*.py"):
+        source = py_file.read_text(encoding="utf-8")
+        assert "content.policies" not in source

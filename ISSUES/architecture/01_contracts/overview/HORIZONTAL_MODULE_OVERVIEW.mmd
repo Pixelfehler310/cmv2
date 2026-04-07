@@ -25,6 +25,12 @@ graph TB
     HC_AUTH["Authorization and Visibility Contract"]
   end
 
+  subgraph "PR-1 Newly Landed Foundations"
+    N_CORE01["CORE-01 Lifecycle Policy Hardening"]
+    N_CORE02["CORE-02 Link Integrity Enforcement"]
+    N_CORE05["CORE-05 Layer Ownership Guards"]
+  end
+
   subgraph "Infrastructure"
     INF_DB["PostgreSQL Source of Truth"]
     INF_IDX["Search Projection Store"]
@@ -83,10 +89,18 @@ graph TB
   CP -. planned world binding .-> PX_WC
   CH -. planned world lookup .-> PX_WC
 
+  N_CORE01 --> CW
+  N_CORE01 --> HC_LIF
+  N_CORE02 --> CW
+  N_CORE02 --> HC_REF
+  N_CORE05 --> API
+  N_CORE05 --> CW
+  N_CORE05 --> HC_AUTH
+
   classDef active fill:#d9f7be,stroke:#389e0d,color:#000000;
   classDef implemented fill:#d6e4ff,stroke:#1d39c4,color:#000000;
   classDef planned fill:#fff7bf,stroke:#d48806,color:#000000;
 
-  class LEG_A,CW,CR,HC_LIF,HC_REF,HC_ACT,HC_EVT,HC_PROJ,HC_AUTH active;
-  class LEG_I,RH,AX,CP,CH,IE,AM,API,AUD,INF_DB,INF_IDX,INF_BUS,INF_BLOB,INF_OBS implemented;
+  class LEG_A,N_CORE01,N_CORE02,N_CORE05 active;
+  class LEG_I,RH,AX,CW,CR,CP,CH,IE,AM,API,AUD,HC_LIF,HC_REF,HC_ACT,HC_EVT,HC_PROJ,HC_AUTH,INF_DB,INF_IDX,INF_BUS,INF_BLOB,INF_OBS implemented;
   class LEG_P,PX_WC,PX_SCHEMA,PX_EVT planned;
