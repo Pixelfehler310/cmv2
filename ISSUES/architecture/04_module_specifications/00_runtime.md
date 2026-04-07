@@ -92,7 +92,7 @@ Primary denial families:
 1. `invalid_message`
 2. `forbidden`
 3. `not_owner`
-4. `encounter_session_required`
+4. `scene_combat_session_required`
 5. `invalid_turn_phase`
 
 ## Recovery and Idempotency

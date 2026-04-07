@@ -10,7 +10,7 @@ Action validation, target resolution, budget enforcement, and execution outcome 
 2. `ActionResolutionRequest` for normalized inbound command payloads.
 3. `ActionResolutionContext` for request and turn correlation state.
 4. `ActorInstance` for mutable combatant runtime state.
-5. `EncounterState` for encounter aggregate, phase, and active turn state.
+5. `SceneCombatState` for scene combat-state aggregate, phase, and active turn state.
 6. `AuthorizationResult` for allow or deny decision payload.
 7. `ActionBudgetCheckResult` for action-economy gate outcomes.
 8. `AttackResult`, `SaveActionResult`, `HealingResult` for typed outcomes.
@@ -19,7 +19,7 @@ Action validation, target resolution, budget enforcement, and execution outcome 
 ## Externally Callable Methods (20+)
 
 1. `CombatService.execute_action(...)`
-2. `CombatService.get_turn_budget(encounter, actor_id)`
+2. `CombatService.get_turn_budget(scene, actor_id)`
 3. `CombatService.request_action_preview(...)`
 4. `resolve_attack(attacker, target, action_def, ...)`
 5. `resolve_save_action(caster, targets, action_def, ...)`
@@ -45,7 +45,7 @@ Action validation, target resolution, budget enforcement, and execution outcome 
 1. Every method declares input context object and required fields.
 2. Every method declares output envelope or result type.
 3. Every denial path maps to stable reason codes.
-4. Every state mutation path identifies affected encounter fields.
+4. Every state mutation path identifies affected scene combat-state fields.
 
 ## Critical Flows
 
@@ -69,7 +69,7 @@ Each flow requires resolved, denied, and retry or idempotency notes.
 Mutability rules:
 
 1. Resolution request and context are immutable.
-2. Combatant and encounter objects are mutable only in service-resolver path.
+2. Combatant and scene combat-state objects are mutable only in service-resolver path.
 3. Derived contexts are immutable and recomputed per request.
 
 ## Constraints and Denial Mapping

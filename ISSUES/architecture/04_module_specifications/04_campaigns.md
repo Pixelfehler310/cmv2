@@ -10,7 +10,7 @@ Campaign identity, membership policy, lifecycle gates, and cross-campaign bounda
 2. `CampaignMember` role and entitlement binding.
 3. `CampaignRole` value enum for DM, player, spectator policy lanes.
 4. `CampaignContextApplicationService` for context retrieval and mutation orchestration.
-5. `CampaignContextResponse` read model for active scene and encounter pointer.
+5. `CampaignContextResponse` read model for active scene and active combat-state pointer.
 6. `AdminBypassContext` computed privilege overlay.
 
 ## Externally Callable Methods (10+)
@@ -22,7 +22,7 @@ Campaign identity, membership policy, lifecycle gates, and cross-campaign bounda
 5. `delete_campaign(campaign_id, current_user, db)`
 6. `get_campaign_context(campaign_id, current_user, db)`
 7. `list_campaign_scenes(campaign_id, current_user, db)`
-8. `list_scene_encounters(campaign_id, scene_id, current_user, db)`
+8. `list_scene_combat_states(campaign_id, scene_id, current_user, db)`
 9. `select_campaign_context(campaign_id, request, current_user, db)`
 10. `_resolve_member_or_raise(db, campaign_id, current_user)`
 11. `_campaign_with_character_relations()`
@@ -31,7 +31,7 @@ Campaign identity, membership policy, lifecycle gates, and cross-campaign bounda
 
 1. Campaign creation with automatic DM enrollment.
 2. Join campaign with idempotent already-member handling.
-3. DM-only context selection for scene and encounter switching.
+3. DM-only context selection for scene and combat-state switching.
 4. Campaign delete with cascade cleanup and role checks.
 
 ## Context Objects
@@ -63,7 +63,7 @@ Reason-code families:
 2. `campaigns.permission.insufficient_role`
 3. `campaigns.not_found.campaign`
 4. `campaigns.not_found.scene`
-5. `campaigns.not_found.encounter`
+5. `campaigns.not_found.scene_combat_state`
 6. `campaigns.conflict.already_member`
 
 ## Recovery and Idempotency

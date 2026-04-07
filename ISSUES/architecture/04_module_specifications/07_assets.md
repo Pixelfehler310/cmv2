@@ -8,7 +8,7 @@ Asset registration, linkage, ownership policy, and archival lifecycle.
 
 1. `AssetDefinition` for canonical media metadata and lifecycle.
 2. `AssetRegistry` for registration and retrieval orchestration.
-3. `AssetLinkage` for scene and encounter linkage records.
+3. `AssetLinkage` for scene and combat-state linkage records.
 4. `AssetOwnershipPolicy` for read-modify-share permission control.
 5. `AssetLifecycleManager` for publish-archive-retention transitions.
 6. `AssetMetadata` and `AccessControl` as immutable value models.
