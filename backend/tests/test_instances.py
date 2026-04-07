@@ -2,8 +2,8 @@ import pytest
 from src.schemas.item import ItemResponse
 from src.schemas.monster import MonsterResponse
 from src.schemas.character import CharacterBase
-from src.campaigns.lib.inventory import InventoryManager
-from src.campaigns.lib.instance_factory import InstanceFactory
+from src.legacy.campaigns.lib.inventory import InventoryManager
+from src.legacy.campaigns.lib.instance_factory import InstanceFactory
 
 
 class TestInventoryManager:

@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock
 from src.main import app
 from src.database import get_db
-from src.campaigns.lib.campaign import Campaign
-from src.campaigns.lib.character import Character
+from src.legacy.campaigns.lib.campaign import Campaign
+from src.legacy.campaigns.lib.character import Character
 from src.identity.dependencies import get_current_active_user
 from src.identity.models import User
 

@@ -1,6 +1,6 @@
 import pytest
-from src.data.lib.monster import Monster
-from src.campaigns.lib.character import Character
+from src.legacy.data.lib.monster import Monster
+from src.legacy.campaigns.lib.character import Character
 from src.schemas.monster import MonsterCreate
 from src.schemas.character import CharacterCreate
 

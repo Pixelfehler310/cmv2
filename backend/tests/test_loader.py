@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from src.data.lib.loader import DataLoader
-from src.data.lib.item import Item
+from src.legacy.data.lib.loader import DataLoader
+from src.legacy.data.lib.item import Item
 
 
 @pytest.mark.asyncio

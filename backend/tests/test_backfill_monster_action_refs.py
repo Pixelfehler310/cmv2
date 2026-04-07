@@ -1,4 +1,4 @@
-from src.data.lib.monster_action_refs import normalize_monster_actions
+from src.legacy.data.lib.monster_action_refs import normalize_monster_actions
 
 
 def test_normalize_monster_actions_converts_legacy_payload_and_deduplicates() -> None:

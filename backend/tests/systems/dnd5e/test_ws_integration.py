@@ -20,7 +20,7 @@ from src.core.sessions.models import ConnectedUser, SessionContext, UserRole
 from src.core.sessions.manager import SessionManager
 
 import src.systems.dnd5e.ws_handler as ws_handler_module
-from src.campaigns.lib.campaign import Campaign
+from src.legacy.campaigns.lib.campaign import Campaign
 from src.systems.dnd5e.ws_handler import Dnd5eWsHandler
 from src.systems.dnd5e.schemas.encounter import EncounterState
 from src.systems.dnd5e.schemas.instances import ActorInstance, ConditionInstance, EffectInstance
@@ -288,6 +288,7 @@ class TestPermissions:
         events = await handler.handle(envelope, player_ctx, mgr)
         assert len(events) == 1
         assert events[0].type == "command_denied"
+        assert events[0].request_id == "req_dm_only_denied"
         assert events[0].payload["reason_code"] == "unauthorized"
 
     @pytest.mark.anyio
@@ -542,6 +543,7 @@ class TestPermissions:
 
         assert len(events) == 1
         assert events[0].type == "command_denied"
+        assert events[0].request_id == "req_delegate_start_player_denied"
         assert events[0].payload["reason_code"] == "unauthorized"
 
     @pytest.mark.anyio

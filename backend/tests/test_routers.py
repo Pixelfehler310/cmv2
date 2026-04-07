@@ -2,9 +2,9 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock
 from src.main import app
 from src.database import get_db
-from src.data.lib.item import Item
-from src.data.lib.spell import Spell
-from src.data.lib.monster import Monster
+from src.legacy.data.lib.item import Item
+from src.legacy.data.lib.spell import Spell
+from src.legacy.data.lib.monster import Monster
 
 pytestmark = pytest.mark.legacy
 

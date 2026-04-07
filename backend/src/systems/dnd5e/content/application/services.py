@@ -38,6 +38,8 @@ class ContentMutationEvent:
     replacement_target_id: str | None = None
     request_id: str | None = None
     campaign_id: str | None = None
+    catalog_revision: int | None = None
+    affected_definition_ids: list[str] | None = None
 
 
 EventPublisher = Callable[[ContentMutationEvent], Awaitable[None] | None]
@@ -46,6 +48,8 @@ UowFactory = Callable[[], CompendiumUnitOfWork]
 
 class CompendiumApplicationService:
     """Authoritative orchestration service for content definition mutations."""
+
+    _catalog_revision: int = 0
 
     def __init__(
         self,
@@ -134,6 +138,8 @@ class CompendiumApplicationService:
                 pack_id=saved.pack_id,
                 request_id=request_id,
                 campaign_id=campaign_id,
+                catalog_revision=self._next_catalog_revision(),
+                affected_definition_ids=[saved.id],
             )
         )
         return saved
@@ -205,6 +211,8 @@ class CompendiumApplicationService:
                 pack_id=saved.pack_id,
                 request_id=request_id,
                 campaign_id=campaign_id,
+                catalog_revision=self._next_catalog_revision(),
+                affected_definition_ids=[saved.id],
             )
         )
         return saved
@@ -254,6 +262,8 @@ class CompendiumApplicationService:
                 pack_id=existing.pack_id,
                 request_id=request_id,
                 campaign_id=campaign_id,
+                catalog_revision=self._next_catalog_revision(),
+                affected_definition_ids=[existing.id],
             )
         )
 
@@ -306,6 +316,8 @@ class CompendiumApplicationService:
                 pack_id=saved.pack_id,
                 request_id=request_id,
                 campaign_id=campaign_id,
+                catalog_revision=self._next_catalog_revision(),
+                affected_definition_ids=[saved.id],
             )
         )
         return saved
@@ -388,9 +400,17 @@ class CompendiumApplicationService:
                 replacement_target_id=new_definition_id,
                 request_id=request_id,
                 campaign_id=campaign_id,
+                catalog_revision=self._next_catalog_revision(),
+                affected_definition_ids=[saved.id, new_definition_id],
             )
         )
         return saved
+
+    @classmethod
+    def _next_catalog_revision(cls) -> int:
+        now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+        cls._catalog_revision = max(now_ms, cls._catalog_revision + 1)
+        return cls._catalog_revision
 
     @staticmethod
     def _deny_immutable_field_changes(

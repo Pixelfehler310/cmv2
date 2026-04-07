@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from types import SimpleNamespace
 from src.main import app
 from src.database import get_db
-from src.campaigns.lib.campaign import Campaign, CampaignMember, CampaignRole
+from src.legacy.campaigns.lib.campaign import Campaign, CampaignMember, CampaignRole
 from src.identity.models import User
 from src.identity.dependencies import get_current_active_user
 
@@ -176,9 +176,9 @@ async def test_get_campaign_context_returns_backend_context(client, override_nor
     app.dependency_overrides[get_db] = lambda: AsyncMock()
     app.dependency_overrides[get_current_active_user] = override_normal_user
     monkeypatch.setattr(
-        "src.campaigns.routers.campaigns.CampaignContextApplicationService", FakeCombatService)
+        "src.legacy.campaigns.routers.campaigns.CampaignContextApplicationService", FakeCombatService)
     monkeypatch.setattr(
-        "src.campaigns.routers.campaigns._resolve_member_or_raise", fake_resolve_member)
+        "src.legacy.campaigns.routers.campaigns._resolve_member_or_raise", fake_resolve_member)
 
     response = await client.get("/campaigns/camp1/context")
     assert response.status_code == 200
@@ -213,9 +213,9 @@ async def test_list_campaign_scenes_returns_scene_options(client, override_norma
     app.dependency_overrides[get_db] = lambda: AsyncMock()
     app.dependency_overrides[get_current_active_user] = override_normal_user
     monkeypatch.setattr(
-        "src.campaigns.routers.campaigns.CampaignContextApplicationService", FakeCombatService)
+        "src.legacy.campaigns.routers.campaigns.CampaignContextApplicationService", FakeCombatService)
     monkeypatch.setattr(
-        "src.campaigns.routers.campaigns._resolve_member_or_raise", fake_resolve_member)
+        "src.legacy.campaigns.routers.campaigns._resolve_member_or_raise", fake_resolve_member)
 
     response = await client.get("/campaigns/camp1/scenes")
     assert response.status_code == 200
@@ -250,9 +250,9 @@ async def test_list_scene_encounters_returns_encounter_options(client, override_
     app.dependency_overrides[get_db] = lambda: AsyncMock()
     app.dependency_overrides[get_current_active_user] = override_normal_user
     monkeypatch.setattr(
-        "src.campaigns.routers.campaigns.CampaignContextApplicationService", FakeCombatService)
+        "src.legacy.campaigns.routers.campaigns.CampaignContextApplicationService", FakeCombatService)
     monkeypatch.setattr(
-        "src.campaigns.routers.campaigns._resolve_member_or_raise", fake_resolve_member)
+        "src.legacy.campaigns.routers.campaigns._resolve_member_or_raise", fake_resolve_member)
 
     response = await client.get("/campaigns/camp1/scenes/scene.default/encounters")
     assert response.status_code == 200
@@ -272,7 +272,7 @@ async def test_select_campaign_context_requires_dm_role(client, override_normal_
     app.dependency_overrides[get_db] = lambda: AsyncMock()
     app.dependency_overrides[get_current_active_user] = override_normal_user
     monkeypatch.setattr(
-        "src.campaigns.routers.campaigns._resolve_member_or_raise", fake_resolve_member)
+        "src.legacy.campaigns.routers.campaigns._resolve_member_or_raise", fake_resolve_member)
 
     response = await client.post(
         "/campaigns/camp1/context/select",
@@ -308,9 +308,9 @@ async def test_select_campaign_context_updates_context_for_dm(client, override_n
     app.dependency_overrides[get_db] = lambda: AsyncMock()
     app.dependency_overrides[get_current_active_user] = override_normal_user
     monkeypatch.setattr(
-        "src.campaigns.routers.campaigns.CampaignContextApplicationService", FakeCombatService)
+        "src.legacy.campaigns.routers.campaigns.CampaignContextApplicationService", FakeCombatService)
     monkeypatch.setattr(
-        "src.campaigns.routers.campaigns._resolve_member_or_raise", fake_resolve_member)
+        "src.legacy.campaigns.routers.campaigns._resolve_member_or_raise", fake_resolve_member)
 
     response = await client.post(
         "/campaigns/camp1/context/select",

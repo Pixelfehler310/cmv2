@@ -1,6 +1,8 @@
 from __future__ import annotations
 __production_status__ = "gold"
 
+from datetime import datetime, timezone
+
 from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -133,6 +135,22 @@ class SearchIndexRepository:
 
         result = await self._db.execute(stmt)
         return result.scalar_one()
+
+    async def get_catalog_revision(self, *, pack_id: str | None = None) -> int:
+        """Return a monotonic-ish catalog revision derived from index row update time."""
+        stmt = select(func.max(SearchIndexModel.updated_at))
+        if pack_id:
+            stmt = stmt.where(SearchIndexModel.pack_id == pack_id)
+
+        result = await self._db.execute(stmt)
+        max_updated_at = result.scalar_one()
+        if max_updated_at is None:
+            return 0
+
+        if isinstance(max_updated_at, datetime):
+            return int(max_updated_at.replace(tzinfo=timezone.utc).timestamp() * 1000)
+
+        return 0
 
     async def _get_by_definition_id(
         self, definition_id: str,

@@ -6,8 +6,8 @@ from src.schemas.item import ItemResponse
 from src.schemas.item_instance import ItemInstance
 from src.schemas.effect import Effect
 from src.engine.lib.effect_engine import EffectEngine
-from src.campaigns.lib.inventory import InventoryManager
-from src.campaigns.lib.instance_factory import InstanceFactory
+from src.legacy.campaigns.lib.inventory import InventoryManager
+from src.legacy.campaigns.lib.instance_factory import InstanceFactory
 
 class TestEffectEngine:
     def test_simple_bonus_effect(self):

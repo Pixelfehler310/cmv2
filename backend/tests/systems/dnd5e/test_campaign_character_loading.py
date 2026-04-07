@@ -1,8 +1,8 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from src.database import Base
-from src.campaigns.lib.campaign import Campaign
-from src.campaigns.lib.character import Character
+from src.legacy.campaigns.lib.campaign import Campaign
+from src.legacy.campaigns.lib.character import Character
 from src.systems.dnd5e.services.combat_service import CombatService
 from src.systems.dnd5e.schemas.enums import ActorType
 

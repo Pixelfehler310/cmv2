@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from src.data.lib.loader import DataLoader
-from src.data.lib.monster import Monster
+from src.legacy.data.lib.loader import DataLoader
+from src.legacy.data.lib.monster import Monster
 
 
 def _base_monster_payload() -> dict:

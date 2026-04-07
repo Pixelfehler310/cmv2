@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.campaigns.lib.campaign import Campaign
+from src.legacy.campaigns.lib.campaign import Campaign
 from src.core.sessions.models import SessionContext, UserRole
 from src.database import Base
 from src.systems.dnd5e.lib.context_models import EncounterCatalogRecord, SceneCatalogRecord

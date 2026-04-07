@@ -264,6 +264,19 @@ async def websocket_endpoint(
                     envelope.type,
                     envelope.request_id,
                 )
+                denied_event = WsOutbound(
+                    type="command_denied",
+                    request_id=envelope.request_id,
+                    payload={
+                        "status": "denied",
+                        "reason_code": "missing_terminal_outcome",
+                        "command_type": envelope.type,
+                    },
+                    visibility=Visibility.ACTOR_OWNER,
+                    target_user_id=user_id,
+                )
+                await session_manager.send_to_user(campaign_id, user_id, denied_event)
+                continue
 
             terminal_types: list[str] = []
             for event in results:

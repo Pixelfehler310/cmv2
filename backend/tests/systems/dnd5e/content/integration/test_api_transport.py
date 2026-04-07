@@ -8,6 +8,7 @@ on the router module and verify the full request → response → error contract
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from unittest.mock import patch
 
 import pytest
 
@@ -16,17 +17,15 @@ from fastapi import FastAPI
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.database import Base
-from src.systems.dnd5e.content.api.router import router, get_compendium_service
-from src.systems.dnd5e.content.api.ws_events import ContentStreamWsHandler
-from src.systems.dnd5e.content.application.services import CompendiumApplicationService
+from src.database import Base, get_db
+from src.systems.dnd5e.content.api.router import router
+from src.systems.dnd5e.content.domain.errors import GraphCycleError
 from src.systems.dnd5e.content.infrastructure.orm import (
     CompendiumDefinitionModel,
     ContentPackModel,
     LinkedEntryModel,
     SearchIndexModel,
 )
-from src.systems.dnd5e.content.infrastructure.unit_of_work import CompendiumUnitOfWork
 
 
 _V05_TABLES = [
@@ -59,17 +58,11 @@ async def api_client():
     app = FastAPI()
     app.include_router(router)
 
-    # Override the DI to use our in-memory session
-    ws_handler = ContentStreamWsHandler()
+    async def _override_get_db():
+        async with session_factory() as session:
+            yield session
 
-    def _override_service():
-        session = session_factory()
-        return CompendiumApplicationService(
-            uow_factory=lambda: CompendiumUnitOfWork(session),
-            event_publisher=ws_handler.publish_mutation_event,
-        )
-
-    app.dependency_overrides[get_compendium_service] = _override_service
+    app.dependency_overrides[get_db] = _override_get_db
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -345,6 +338,70 @@ async def test_search_endpoint(api_client: AsyncClient):
     results = resp.json()
     assert len(results) >= 1
     assert results[0]["name"] == "Searchable Troll"
+
+
+@pytest.mark.asyncio
+async def test_search_endpoint_contract_envelope(api_client: AsyncClient):
+    """GET /search supports optional CORE-03 contract envelope fields."""
+    await api_client.post(
+        "/api/compendium/packs",
+        json={"id": "search-pack-contract", "title": "Search Pack Contract"},
+    )
+
+    now = datetime.now(timezone.utc).isoformat()
+    await api_client.post(
+        "/api/compendium/definitions",
+        json={
+            "family": "monster",
+            "id": "search-contract-mon",
+            "slug": "search-contract-troll",
+            "name": "Contract Troll",
+            "lifecycle_state": "draft",
+            "content_version": 1,
+            "schema_version": 1,
+            "pack_id": "search-pack-contract",
+            "provenance_source": "tests",
+            "provenance_updated_at": now,
+            "challenge_rating": 5.0,
+            "armor_class": 15,
+            "hit_points_formula": "8d10+40",
+            "action_operation_specs": [],
+        },
+    )
+
+    resp = await api_client.get(
+        "/api/compendium/search?q=troll&include_contract=true",
+        headers={"x-request-id": "req-search-contract"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["request_id"] == "req-search-contract"
+    assert body["status"] == "resolved"
+    assert isinstance(body["catalog_revision"], int)
+    assert body["catalog_revision"] >= 0
+    assert "search-contract-mon" in body["affected_definition_ids"]
+    assert isinstance(body["payload"], list)
+
+
+@pytest.mark.asyncio
+async def test_replacement_chain_contract_envelope_denied(api_client: AsyncClient):
+    """Contract mode returns denied envelope fields on replacement-chain errors."""
+    with patch(
+        "src.systems.dnd5e.content.application.resolution.LinkedEntryResolutionService.resolve_replacement_chain",
+        side_effect=GraphCycleError(definition_id="cycle-a", visited_path=["cycle-a", "cycle-b"]),
+    ):
+        resp = await api_client.get(
+            "/api/compendium/definitions/cycle-a/replacement-chain?include_contract=true",
+            headers={"x-request-id": "req-cycle-denied"},
+        )
+
+    assert resp.status_code == 400
+    body = resp.json()["detail"]
+    assert body["request_id"] == "req-cycle-denied"
+    assert body["status"] == "denied"
+    assert body["reason_code"] == "GRAPH_CYCLE_DETECTED"
+    assert isinstance(body["catalog_revision"], int)
+    assert body["payload"]["message"]
 
 
 # =========================================================================

@@ -3,6 +3,7 @@ __production_status__ = "gold"
 
 from datetime import datetime, timezone
 from typing import Annotated, Any
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field, ValidationError
@@ -64,6 +65,15 @@ class ErrorResponse(BaseModel):
     message: str
 
 
+class QueryContractEnvelope(BaseModel):
+    request_id: str
+    catalog_revision: int
+    status: str
+    reason_code: str | None = None
+    affected_definition_ids: list[str] = Field(default_factory=list)
+    payload: Any
+
+
 class CreatePackRequest(BaseModel):
     id: str
     title: str
@@ -112,24 +122,26 @@ def _strip_code_prefix(raw_message: str, *, code: str) -> str:
     return raw_message
 
 
-def _map_domain_exception(exc: Exception) -> HTTPException:
+def _resolve_request_id(request: Request | None) -> str:
+    if request is None:
+        return uuid4().hex
+    return request.headers.get("x-request-id") or uuid4().hex
+
+
+def _domain_exception_parts(exc: Exception) -> tuple[int, str, str]:
     if isinstance(exc, ValidationError):
-        return HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ErrorResponse(
-                error=CompendiumErrorCode.VALIDATION_FAILED.value,
-                message=str(exc),
-            ).model_dump(),
+        return (
+            status.HTTP_400_BAD_REQUEST,
+            CompendiumErrorCode.VALIDATION_FAILED.value,
+            str(exc),
         )
 
     if isinstance(exc, ContentLifecycleError):
         code = CompendiumErrorCode.INVALID_LIFECYCLE_TRANSITION.value
-        return HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=ErrorResponse(
-                error=code,
-                message=_strip_code_prefix(str(exc), code=code),
-            ).model_dump(),
+        return (
+            status.HTTP_409_CONFLICT,
+            code,
+            _strip_code_prefix(str(exc), code=code),
         )
 
     if isinstance(exc, CompendiumDomainError):
@@ -158,19 +170,48 @@ def _map_domain_exception(exc: Exception) -> HTTPException:
         else:
             status_code = status.HTTP_400_BAD_REQUEST
 
-        return HTTPException(
-            status_code=status_code,
-            detail=ErrorResponse(
-                error=code,
-                message=_strip_code_prefix(str(exc), code=code),
-            ).model_dump(),
+        return (
+            status_code,
+            code,
+            _strip_code_prefix(str(exc), code=code),
         )
 
+    return (
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+        "INTERNAL_ERROR",
+        "Unhandled compendium error.",
+    )
+
+
+def _map_query_contract_exception(
+    *,
+    exc: Exception,
+    request_id: str,
+    catalog_revision: int,
+) -> HTTPException:
+    status_code, reason_code, message = _domain_exception_parts(exc)
+    outcome_status = "error" if status_code >= 500 else "denied"
+
     return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        status_code=status_code,
+        detail=QueryContractEnvelope(
+            request_id=request_id,
+            catalog_revision=catalog_revision,
+            status=outcome_status,
+            reason_code=reason_code,
+            affected_definition_ids=[],
+            payload={"message": message},
+        ).model_dump(),
+    )
+
+
+def _map_domain_exception(exc: Exception) -> HTTPException:
+    status_code, reason_code, message = _domain_exception_parts(exc)
+    return HTTPException(
+        status_code=status_code,
         detail=ErrorResponse(
-            error="INTERNAL_ERROR",
-            message="Unhandled compendium error.",
+            error=reason_code,
+            message=message,
         ).model_dump(),
     )
 
@@ -343,14 +384,16 @@ async def supersede_definition(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/search", response_model=list[IndexDocument])
+@router.get("/search")
 async def search_definitions(
+    request: Request,
     q: str | None = Query(default=None, description="Full-text search term"),
     family: DefinitionFamily | None = Query(default=None),
     lifecycle_state: LifecycleState | None = Query(default=None),
     pack_id: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    include_contract: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
 ):
     """Search the denormalized index — does NOT query the definitions table."""
@@ -366,7 +409,18 @@ async def search_definitions(
                 limit=limit,
                 offset=offset,
             )
-            return results
+
+            if not include_contract:
+                return results
+
+            revision = await uow.search_index.get_catalog_revision(pack_id=pack_id)
+            return QueryContractEnvelope(
+                request_id=_resolve_request_id(request),
+                catalog_revision=revision,
+                status="resolved",
+                affected_definition_ids=[doc.definition_id for doc in results],
+                payload=results,
+            )
     except Exception as exc:
         raise _map_domain_exception(exc) from exc
 
@@ -374,17 +428,22 @@ async def search_definitions(
 @router.get("/definitions/{definition_id}/links")
 async def get_definition_links(
     definition_id: str,
+    request: Request,
+    include_contract: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
 ):
     """Resolve forward and reverse links for a definition."""
     try:
         resolver = LinkedEntryResolutionService()
         uow = CompendiumUnitOfWork(db)
+        revision = 0
         async with uow:
             forward_tree = await resolver.resolve_forward_links(definition_id, uow)
             reverse_links = await resolver.resolve_reverse_links(definition_id, uow)
+            if include_contract:
+                revision = await uow.search_index.get_catalog_revision()
 
-        return {
+        payload = {
             "definition_id": definition_id,
             "forward_links": [
                 {
@@ -413,6 +472,19 @@ async def get_definition_links(
             "broken_links": forward_tree.broken_links,
             "cycle_detected": forward_tree.cycle_detected,
         }
+
+        if not include_contract:
+            return payload
+
+        affected_ids = [definition_id]
+        affected_ids.extend(link.target_id for link in forward_tree.links)
+        return QueryContractEnvelope(
+            request_id=_resolve_request_id(request),
+            catalog_revision=revision,
+            status="resolved",
+            affected_definition_ids=list(dict.fromkeys(affected_ids)),
+            payload=payload,
+        )
     except Exception as exc:
         raise _map_domain_exception(exc) from exc
 
@@ -420,21 +492,43 @@ async def get_definition_links(
 @router.get("/definitions/{definition_id}/replacement-chain")
 async def get_replacement_chain(
     definition_id: str,
+    request: Request,
+    include_contract: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
 ):
     """Walk the replacement chain from a definition to its terminal node."""
     try:
         resolver = LinkedEntryResolutionService()
         uow = CompendiumUnitOfWork(db)
+        revision = 0
         async with uow:
             chain = await resolver.resolve_replacement_chain(definition_id, uow)
+            if include_contract:
+                revision = await uow.search_index.get_catalog_revision()
 
-        return {
+        payload = {
             "definition_id": definition_id,
             "chain": chain,
             "terminal_id": chain[-1] if chain else definition_id,
         }
+
+        if not include_contract:
+            return payload
+
+        return QueryContractEnvelope(
+            request_id=_resolve_request_id(request),
+            catalog_revision=revision,
+            status="resolved",
+            affected_definition_ids=chain or [definition_id],
+            payload=payload,
+        )
     except GraphCycleError as exc:
+        if include_contract:
+            raise _map_query_contract_exception(
+                exc=exc,
+                request_id=_resolve_request_id(request),
+                catalog_revision=0,
+            ) from exc
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=ErrorResponse(
@@ -443,4 +537,10 @@ async def get_replacement_chain(
             ).model_dump(),
         ) from exc
     except Exception as exc:
+        if include_contract:
+            raise _map_query_contract_exception(
+                exc=exc,
+                request_id=_resolve_request_id(request),
+                catalog_revision=0,
+            ) from exc
         raise _map_domain_exception(exc) from exc

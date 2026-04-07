@@ -22,7 +22,7 @@ from starlette.testclient import TestClient
 from src.main import app
 from src.config import settings
 from src import database
-from src.campaigns.lib.campaign import Campaign
+from src.legacy.campaigns.lib.campaign import Campaign
 from src.systems.dnd5e.services.combat_service import CombatService
 from src.systems.dnd5e.lib.context_models import SceneCatalogRecord, EncounterCatalogRecord
 from src.systems.dnd5e.schemas.encounter import EncounterState
