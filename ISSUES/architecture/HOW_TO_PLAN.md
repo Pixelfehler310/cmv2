@@ -12,6 +12,7 @@ We separate **Domain Contracts** (What it is) from **Implementations** (How it w
 > [!IMPORTANT]
 > No implementation code (Layer 2) or finalized Layer 1 Pydantic/SQL models may be written until a **DEEP conceptualization using diagrams** (Mermaid) has been created and approved.
 > Reference: [Horizontal Planning Rule](../../.agents/rules/horizontal-planning.md)
+> Approval workflow reference: [Architecture Approval Gate Procedure](APPROVAL_GATE_PROCEDURE.md)
 
 ---
 
@@ -83,6 +84,21 @@ When scoping a **Contract**, you MUST define the testing interface upfront.
   - **Edge Cases**: List problematic inputs (e.g., "Infinite loops in recursive links").
   - **Expected Results**: Clearly state the success/failure conditions.
 
+  ## 3.1. Approval Gates and High-Bar Completion (Mandatory)
+
+  Before any implementation begins, architecture artifacts must pass the staged approval procedure:
+  1. Follow [Architecture Approval Gate Procedure](APPROVAL_GATE_PROCEDURE.md) Stage 1..4.
+  2. Track module status in `ISSUES/architecture/01_contracts/APPROVAL_LOG.md`.
+  3. Score every module with `ISSUES/architecture/01_contracts/MODULE_DETAIL_SCORECARD_TEMPLATE.md`.
+  4. Do not open implementation gate unless all in-scope modules are marked `Frozen`.
+
+  ### Mandatory Quantitative Thresholds
+  1. Per-module minimum score: `85/100`.
+  2. No module below `85/100`.
+  3. At least 4 core-heavy modules at `90/100` or above.
+  4. Portfolio average across in-scope modules: `88/100` or above.
+  5. Sprint implementation may start only when thresholds and freeze status are both satisfied.
+
 ---
 
 ## 4. Issue Naming and Structure
@@ -98,6 +114,8 @@ When scoping a **Contract**, you MUST define the testing interface upfront.
 4.  **Document Deep Context**: If you encounter or design a complex system, create or update a file in `system_info/`.
 5.  **Validate against Invariants**: Ensure your implementation strictly adheres to the test plan described in the contract.
 6.  **Update the Map**: If your implementation requires a change to the contract, you MUST update the Mermaid diagrams and explanation files before proceeding.
+7.  **Record Gate Evidence**: Update `APPROVAL_LOG.md` and module scorecards with reviewer notes and approval date.
+8.  **Block Early Starts**: If module scores or freeze states are below threshold, do not begin implementation and report missing criteria explicitly.
 
 ---
 

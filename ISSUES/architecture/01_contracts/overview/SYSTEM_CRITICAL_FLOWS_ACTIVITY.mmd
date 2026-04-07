@@ -1,0 +1,17 @@
+flowchart TB
+    Start([Start Command]) --> Parse[Parse Envelope]
+    Parse --> ContextCheck{Context valid}
+    ContextCheck -- no --> DeniedA[Return denied invalid_context]
+    ContextCheck -- yes --> PolicyCheck{Membership and lifecycle pass}
+    PolicyCheck -- no --> DeniedB[Return denied policy_violation]
+    PolicyCheck -- yes --> Route[Route to module service]
+    Route --> Execute[Execute domain operation]
+    Execute --> Emit[Emit domain event]
+    Emit --> DriftCheck{Drift detected}
+    DriftCheck -- yes --> Recover[Run recovery and projection restore]
+    Recover --> Notify[Emit invalidation or recovery event]
+    DriftCheck -- no --> Notify
+    Notify --> Respond[Return terminal envelope]
+    DeniedA --> End([End])
+    DeniedB --> End
+    Respond --> End

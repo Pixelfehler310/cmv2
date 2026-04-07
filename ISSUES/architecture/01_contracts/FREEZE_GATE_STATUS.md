@@ -2,6 +2,12 @@
 
 This file is the detailed freeze-gate source of truth for Sprint 1 contract hardening.
 
+## Related Gate Artifacts
+
+1. Procedure: `ISSUES/architecture/APPROVAL_GATE_PROCEDURE.md`
+2. Module approvals: `ISSUES/architecture/01_contracts/APPROVAL_LOG.md`
+3. Module scoring template: `ISSUES/architecture/01_contracts/MODULE_DETAIL_SCORECARD_TEMPLATE.md`
+
 ## Gate Criteria
 
 1. Contract has exhaustive `Contract Invariants` section.
@@ -107,19 +113,63 @@ This file is the detailed freeze-gate source of truth for Sprint 1 contract hard
 - [x] Boundary non-overlap confirmed
 - [x] Known gaps closed
 
+### DND5E-05: Character and Sheet Schema
+
+- [x] Invariants exhaustive
+- [x] Validation directives explicit
+- [x] Mermaid present
+- [x] Test plan present (`dnd5e/test_plan/character_and_sheet_schema.md`)
+- [x] Legacy sources listed
+- [x] Canonical symbols listed
+- [x] Boundary non-overlap confirmed
+- [x] Known gaps closed
+
+## CAMPAIGN Contracts
+
+### CAM-01: Campaign Management Context
+
+- [x] Invariants exhaustive
+- [x] Validation directives explicit
+- [x] Mermaid present
+- [x] Test plan present (`campaign/test_plan/campaign_management_context.md`)
+- [x] Legacy sources listed
+- [x] Canonical symbols listed
+- [x] Boundary non-overlap confirmed
+- [x] Known gaps closed
+
 ## Sprint 1 Notes
 
 1. DND5E-01 remains an umbrella/index and is out of freeze-ready scope for this sprint.
-2. Freeze readiness is granted per contract only when all eight criteria are checked.
-3. Mermaid render pass status should be recorded here after validation is run.
+2. Freeze readiness is granted per contract only when all criteria are checked.
+3. Mermaid render pass status: validated on 2026-04-07 for DND5E-05, CAM-01, `overview/HORIZONTAL_MODULE_OVERVIEW.mmd`, and `overview/HORIZONTAL_BACKEND_NAMESPACE_OVERVIEW.mmd`.
+4. Architecture-spec bootstrap diagrams validated on 2026-04-07: `overview/MASTER_SYSTEM_CLASS_SPEC.mmd`, `overview/SYSTEM_CRITICAL_FLOWS_SEQUENCE.mmd`, `overview/SYSTEM_CRITICAL_FLOWS_ACTIVITY.mmd`, and `overview/HORIZONTAL_CONTRACT_DETAIL_OVERVIEW.mmd`.
 
 ## Current Blockers (Reopened)
 
-1. [ ] Clarity blocker: Core intent and testing interpretation needed clearer plain-language explanation for implementers and testers.
-2. [ ] Domain coverage blocker: DND5E contract set does not yet include explicit character-sheet/character entity contract module.
-3. [ ] Domain coverage blocker: Campaign management contract module is not yet defined in Layer 1.
+1. [x] Clarity blocker resolved: plain-language testability intent added to DND5E-05 and CAM-01.
+2. [x] Domain coverage blocker resolved: DND5E-05 character/sheet contract defined and hardened.
+3. [x] Domain coverage blocker resolved: CAM-01 campaign management contract defined and hardened.
 
 ## Freeze Interpretation
 
-1. Sprint 1 hardening is complete for the scoped modules listed above.
-2. Full freeze for broader content + character + campaign management scope is **not complete** until blockers are resolved or explicitly scoped out.
+1. Sprint 1 hardening is complete for CORE-01..CORE-05, DND5E-02..DND5E-05, and CAM-01.
+2. Full Layer 1 freeze is documentation-ready pending explicit owner sign-off.
+
+## Module Scoring Snapshot
+
+1. Module scorecards are populated in `ISSUES/architecture/01_contracts/scorecards/` for all 12 in-scope modules.
+2. Approval log entries are populated in `ISSUES/architecture/01_contracts/APPROVAL_LOG.md` with per-module scores and dates.
+3. Current gate metrics: no module below 85, core-heavy >=90 count is 4, portfolio average is 88.0.
+
+## Implementation Start Readiness (High-Bar)
+
+Implementation must remain blocked unless all conditions pass:
+
+1. All in-scope modules are marked `Frozen` in `APPROVAL_LOG.md`.
+2. Per-module score is at least `85/100`.
+3. No in-scope module is below `85/100`.
+4. At least 4 core-heavy modules are at least `90/100`.
+5. Portfolio average score across in-scope modules is at least `88/100`.
+6. Scope decision in `ISSUES/architecture/02_implementations/SPRINT_02_SCOPE_DECISION.md` references the exact approved module set.
+
+Current status snapshot: all six conditions are satisfied in architecture artifacts, pending explicit owner sign-off.

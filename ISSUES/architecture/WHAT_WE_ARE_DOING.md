@@ -24,6 +24,7 @@ We are currently in a **Horizontal Planning** phase. This means we are defining 
 - **D&D 5e Base Rule Schema**: Harvesting entities (Monsters, Spells, Items) from legacy prototypes and formalizing their new schemas.
 - **Action Mechanics**: Defining how "Result Piping" and "Operation Payloads" work to make the combat engine platform-agnostic.
 - **Repository Pattern Transition**: Moving from the storage-focused V05 implementation to service-oriented repository patterns.
+- **Deep Spec Package Before Coding**: Building a high-detail architecture package with master class, sequence, and activity diagrams plus per-module annex specs and score-based freeze gates.
 
 ---
 

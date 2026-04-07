@@ -77,3 +77,13 @@ Decision must be recorded before first Sprint 2 implementation ticket is moved t
 1. Owner: simon
 2. Date: 2026-04-06
 3. Notes: Option B confirmed. Campaign scope (CAM-01) is deferred for Sprint 2.
+
+## Architecture Readiness Prerequisites
+
+Before implementation starts, all of the following must be true:
+
+1. `ISSUES/architecture/01_contracts/APPROVAL_LOG.md` marks all in-scope modules as `Frozen`.
+2. Every in-scope module has a completed scorecard based on `ISSUES/architecture/01_contracts/MODULE_DETAIL_SCORECARD_TEMPLATE.md`.
+3. Module score threshold is met (`>=85` each, no exceptions).
+4. Portfolio threshold is met (`average >=88`, at least 4 core-heavy modules `>=90`).
+5. Freeze readiness checks in `ISSUES/architecture/01_contracts/FREEZE_GATE_STATUS.md` and this scope decision remain aligned.

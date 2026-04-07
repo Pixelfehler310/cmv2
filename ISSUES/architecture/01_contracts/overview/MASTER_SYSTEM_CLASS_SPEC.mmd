@@ -1,0 +1,93 @@
+classDiagram
+    class RuntimeSessionService {
+        +startSession(ctx: CampaignContext) SessionResult
+        +syncState(ctx: SessionContext) StateSyncEnvelope
+        +endSession(ctx: SessionContext) SessionResult
+    }
+
+    class ActionExecutionService {
+        +validateAction(ctx: ActionContext) ValidationResult
+        +executeAction(ctx: ActionContext) ActionOutcomeEnvelope
+        +resolveTargets(ctx: TargetingContext) TargetResolution
+    }
+
+    class ContentWriteService {
+        +createDefinition(ctx: ContentWriteContext) DefinitionResult
+        +updateDefinition(ctx: ContentWriteContext) DefinitionResult
+        +publishDefinition(ctx: ContentWriteContext) DefinitionResult
+    }
+
+    class ContentQueryService {
+        +listDefinitions(ctx: QueryContext) DefinitionListEnvelope
+        +getDefinition(ctx: QueryContext) DefinitionDetailEnvelope
+        +hydrateLinks(ctx: QueryContext) HydrationResult
+    }
+
+    class CampaignPolicyService {
+        +checkMembership(ctx: CampaignContext) PolicyDecision
+        +checkLifecycle(ctx: CampaignContext) PolicyDecision
+        +checkScope(ctx: CampaignContext) PolicyDecision
+    }
+
+    class CharacterSheetService {
+        +createCharacter(ctx: CharacterContext) CharacterResult
+        +resolveSheet(ctx: CharacterContext) SheetProjectionEnvelope
+        +invalidateSheet(ctx: CharacterContext) InvalidationEnvelope
+    }
+
+    class IdentityEntitlementService {
+        +resolveIdentity(ctx: IdentityContext) IdentityResolution
+        +checkEntitlement(ctx: EntitlementContext) PolicyDecision
+        +resolvePackAccess(ctx: EntitlementContext) AccessEnvelope
+    }
+
+    class AssetService {
+        +registerAsset(ctx: AssetContext) AssetResult
+        +linkAsset(ctx: AssetContext) AssetLinkResult
+        +archiveAsset(ctx: AssetContext) AssetResult
+    }
+
+    class EventPublisher {
+        +publishDomainEvent(ctx: EventContext) PublishResult
+        +publishDeniedEvent(ctx: EventContext) PublishResult
+        +publishProjectionEvent(ctx: EventContext) PublishResult
+    }
+
+    class RecoveryService {
+        +detectDrift(ctx: RecoveryContext) DriftResult
+        +restoreProjection(ctx: RecoveryContext) RecoveryResult
+        +replayEvents(ctx: RecoveryContext) ReplayResult
+    }
+
+    class SharedConstraintCatalog {
+        +resolveReasonCode(key: string) ReasonCode
+        +validateInvariant(key: string, value: any) InvariantResult
+        +resolveErrorTaxonomy(key: string) ErrorDescriptor
+    }
+
+    class TransportGateway {
+        +handleRestCommand(ctx: TransportContext) RestEnvelope
+        +handleWsCommand(ctx: TransportContext) WsEnvelope
+        +mapTerminalOutcome(ctx: TransportContext) TerminalEnvelope
+    }
+
+    RuntimeSessionService --> CampaignPolicyService
+    RuntimeSessionService --> EventPublisher
+    ActionExecutionService --> CampaignPolicyService
+    ActionExecutionService --> EventPublisher
+    ActionExecutionService --> SharedConstraintCatalog
+    ContentWriteService --> SharedConstraintCatalog
+    ContentWriteService --> EventPublisher
+    ContentQueryService --> SharedConstraintCatalog
+    CharacterSheetService --> ContentQueryService
+    CharacterSheetService --> EventPublisher
+    IdentityEntitlementService --> CampaignPolicyService
+    AssetService --> ContentWriteService
+    EventPublisher --> RecoveryService
+    RecoveryService --> ContentQueryService
+    TransportGateway --> RuntimeSessionService
+    TransportGateway --> ActionExecutionService
+    TransportGateway --> ContentWriteService
+    TransportGateway --> ContentQueryService
+    TransportGateway --> CharacterSheetService
+    TransportGateway --> CampaignPolicyService

@@ -1,0 +1,60 @@
+flowchart LR
+    subgraph Runtime
+        R1["startSession(ctx)"]
+        R2["syncState(ctx)"]
+        R3["endSession(ctx)"]
+    end
+
+    subgraph Actions
+        A1["validateAction(ctx)"]
+        A2["executeAction(ctx)"]
+        A3["resolveTargets(ctx)"]
+    end
+
+    subgraph ContentWrite
+        W1["createDefinition(ctx)"]
+        W2["updateDefinition(ctx)"]
+        W3["publishDefinition(ctx)"]
+    end
+
+    subgraph ContentQuery
+        Q1["listDefinitions(ctx)"]
+        Q2["getDefinition(ctx)"]
+        Q3["hydrateLinks(ctx)"]
+    end
+
+    subgraph Campaigns
+        C1["checkMembership(ctx)"]
+        C2["checkLifecycle(ctx)"]
+        C3["checkScope(ctx)"]
+    end
+
+    subgraph Sheets
+        S1["createCharacter(ctx)"]
+        S2["resolveSheet(ctx)"]
+        S3["invalidateSheet(ctx)"]
+    end
+
+    subgraph SharedConstraints
+        SC1["resolveReasonCode(key)"]
+        SC2["validateInvariant(key,value)"]
+        SC3["resolveErrorTaxonomy(key)"]
+    end
+
+    subgraph Transport
+        T1["handleRestCommand(ctx)"]
+        T2["handleWsCommand(ctx)"]
+        T3["mapTerminalOutcome(ctx)"]
+    end
+
+    T1 --> C1
+    T2 --> C1
+    C1 --> W1
+    C1 --> A1
+    C1 --> Q1
+    C1 --> S1
+    W1 --> SC2
+    A1 --> SC2
+    Q1 --> SC2
+    S2 --> Q3
+    SC1 --> T3

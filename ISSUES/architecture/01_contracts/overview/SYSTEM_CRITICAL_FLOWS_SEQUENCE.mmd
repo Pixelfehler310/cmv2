@@ -1,0 +1,28 @@
+sequenceDiagram
+    participant Client
+    participant Transport as TransportGateway
+    participant Campaign as CampaignPolicyService
+    participant Write as ContentWriteService
+    participant Query as ContentQueryService
+    participant Events as EventPublisher
+    participant Recovery as RecoveryService
+
+    Client->>Transport: command_envelope(request_id, context, payload)
+    Transport->>Campaign: checkMembership + checkLifecycle + checkScope
+    alt policy denied
+        Campaign-->>Transport: denied(reason_code)
+        Transport-->>Client: terminal_denied(request_id, reason_code)
+        Transport->>Events: publishDeniedEvent
+    else policy resolved
+        Transport->>Write: createOrUpdateOrPublish
+        Write->>Events: publishDomainEvent
+        Events->>Recovery: detectDrift
+        alt drift detected
+            Recovery->>Query: restoreProjection
+            Recovery-->>Events: recovery_outcome
+            Events-->>Client: content_invalidation_required
+        else no drift
+            Write-->>Transport: resolved(result)
+            Transport-->>Client: terminal_resolved(request_id)
+        end
+    end

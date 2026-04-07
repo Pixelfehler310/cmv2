@@ -24,22 +24,19 @@ To provide instant clear context for both human developers and AI agents during 
 - [x] Create a master migration issue for V05 -> Horizontal split.
 - [x] Split Layer 1 contracts into Core and DND5E modules with Mermaid diagrams.
 - [x] Add `test_plan/` artifacts for new contract modules.
+- [x] Harden DND5E-05 and CAM-01 with exhaustive invariants, explicit validation directives, and event/recovery behavior.
+- [x] Resolve reopened freeze blockers for plain-language testability and domain coverage.
+- [x] Establish architecture approval governance with explicit stage gates and scoring thresholds.
+- [x] Create approval tracking and module scorecard artifacts.
+- [x] Scaffold master architecture-spec diagram package and per-module annex workspace.
+- [x] Fill all 12 module annexes with near-implementation details and create per-module feature specs.
+- [x] Populate per-module scorecards and record module approval states in `01_contracts/APPROVAL_LOG.md`.
 
 ### **Next Steps**:
 
-1. Complete contract hardening pass for CORE-01..CORE-05 and DND5E-02..DND5E-04:
-   - Exhaustive contract invariants
-   - Explicit validation directives
-   - Completed event/recovery behavior definitions
-2. Track freeze progress in `ISSUES/architecture/01_contracts/FREEZE_GATE_STATUS.md`.
-3. Run Mermaid render pass and fix any syntax drift.
-4. Resolve reopened freeze blockers:
-   - Improve plain-language contract clarity for testability
-   - Define DND5E-05 character/sheet contract
-   - Define CAM-01 campaign management contract
-5. Add `[ADAPTED]` headers to legacy V05 source docs once traceability review passes.
-6. Record the Sprint 2 scope choice in `ISSUES/architecture/02_implementations/SPRINT_02_SCOPE_DECISION.md`.
-7. Start Layer 2 implementation issues only after contract freeze sign-off (or explicit compendium-only scope decision).
+1. Run final human review and explicit owner sign-off for all AI pre-freeze module approvals.
+2. Perform one final consistency sweep between module annexes and master diagrams, then revalidate Mermaid renders.
+3. Reconfirm Sprint 2 scope with the now-frozen module set and begin implementation planning execution.
 
 ---
 

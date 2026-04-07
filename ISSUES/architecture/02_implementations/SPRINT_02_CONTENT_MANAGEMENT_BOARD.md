@@ -29,6 +29,9 @@ Reference: `ISSUES/architecture/01_contracts/FREEZE_GATE_STATUS.md`
    - Character-sheet domain coverage blocker
    - Campaign-management domain coverage blocker
 2. If sprint scope is compendium-only, record explicit out-of-scope decision for DND5E-05 and CAM-01 in sprint kickoff notes.
+3. Confirm all in-scope modules are `Frozen` in `ISSUES/architecture/01_contracts/APPROVAL_LOG.md`.
+4. Confirm scorecards exist and meet thresholds from `ISSUES/architecture/01_contracts/MODULE_DETAIL_SCORECARD_TEMPLATE.md`.
+5. If any module drifts after freeze, re-open review per `ISSUES/architecture/APPROVAL_GATE_PROCEDURE.md` before implementation resumes.
 
 ## Sprint Definition of Done
 
