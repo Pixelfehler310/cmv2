@@ -1,31 +1,37 @@
 from sqlalchemy import String, Integer, JSON, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import TYPE_CHECKING
 from src.database import Base
 from src.common.mixins import UUIDMixin, TimestampMixin
 from src.legacy.data.lib.species import Species
 from src.legacy.data.lib.class_model import ClassModel
 from src.legacy.data.lib.background import Background
 
+if TYPE_CHECKING:
+    from src.legacy.campaigns.lib.campaign import Campaign
+
 
 class Character(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "characters"
 
     name: Mapped[str] = mapped_column(String, index=True)
-    player_name: Mapped[str] = mapped_column(String, nullable=True)
-    campaign_id: Mapped[str] = mapped_column(
+    player_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    player_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="active")
+    campaign_id: Mapped[str | None] = mapped_column(
         ForeignKey("campaigns.id"), nullable=True)
 
     # Core Identity
-    species_id: Mapped[str] = mapped_column(
+    species_id: Mapped[str | None] = mapped_column(
         ForeignKey("species.id"), nullable=True)
-    class_id: Mapped[str] = mapped_column(
+    class_id: Mapped[str | None] = mapped_column(
         ForeignKey("classes.id"), nullable=True)
-    background_id: Mapped[str] = mapped_column(
+    background_id: Mapped[str | None] = mapped_column(
         ForeignKey("backgrounds.id"), nullable=True)
 
     level: Mapped[int] = mapped_column(Integer, default=1)
     xp: Mapped[int] = mapped_column(Integer, default=0)
-    alignment: Mapped[str] = mapped_column(String, nullable=True)
+    alignment: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Relationships
     species: Mapped["Species"] = relationship()
@@ -58,6 +64,7 @@ class Character(Base, UUIDMixin, TimestampMixin):
         JSON, default=dict)  # {"1": 2, "2": 0}
     actions: Mapped[list] = mapped_column(
         JSON, default=list)  # Custom/Explicit Actions
+    ability_ids: Mapped[list] = mapped_column(JSON, default=list)
     effects: Mapped[list] = mapped_column(JSON, default=list)  # Active effects
 
     # Relationships

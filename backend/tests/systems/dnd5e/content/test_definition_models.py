@@ -49,6 +49,25 @@ def test_definition_record_invalid_content_version():
         )
     assert CompendiumErrorCode.VALIDATION_FAILED.value in str(exc.value)
 
+
+def test_definition_record_invalid_schema_version():
+    """Fails validation if schema_version < 1"""
+    with pytest.raises(pydantic.ValidationError) as exc:
+        LoreDefinition(
+            id="lore-1",
+            slug="the-harpers",
+            name="The Harpers",
+            lifecycle_state=LifecycleState.DRAFT,
+            content_version=1,
+            schema_version=0,
+            pack_id="pack-core",
+            provenance_source="test",
+            provenance_updated_at=datetime.utcnow(),
+            lore_type="faction",
+            rich_text_content="A scattered network of spellcasters and spies..."
+        )
+    assert CompendiumErrorCode.VALIDATION_FAILED.value in str(exc.value)
+
 def test_action_operation_spec_valid():
     """An action payload correctly discriminates into AttackRollPayload based on operation_type"""
     # Simulate a JSON dictionary parsed from DB/Frontend

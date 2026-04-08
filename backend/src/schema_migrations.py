@@ -23,6 +23,8 @@ def apply_schema_migrations(sync_conn) -> None:
 
     migrations: list[tuple[str, MigrationFn]] = [
         ("20260325_01_integrity_hardening", _migration_integrity_hardening),
+        ("20260407_02_character_contract_columns", _migration_character_contract_columns),
+        ("20260408_01_character_sheet_projection_cache", _migration_character_sheet_projection_cache),
     ]
 
     for version, migration in migrations:
@@ -116,6 +118,62 @@ def _migration_integrity_hardening(sync_conn) -> None:
             "Skipping numeric column type coercion migration for dialect=%s; ORM model types still updated.",
             dialect,
         )
+
+
+def _migration_character_contract_columns(sync_conn) -> None:
+    inspector = inspect(sync_conn)
+    table_names = set(inspector.get_table_names())
+    if "characters" not in table_names:
+        return
+
+    character_columns = {column["name"] for column in inspector.get_columns("characters")}
+
+    if "player_id" not in character_columns:
+        sync_conn.execute(text("ALTER TABLE characters ADD COLUMN player_id VARCHAR"))
+
+    if "status" not in character_columns:
+        sync_conn.execute(text("ALTER TABLE characters ADD COLUMN status VARCHAR DEFAULT 'active'"))
+    sync_conn.execute(text("UPDATE characters SET status = 'active' WHERE status IS NULL"))
+
+    if "ability_ids" not in character_columns:
+        sync_conn.execute(text("ALTER TABLE characters ADD COLUMN ability_ids JSON"))
+    sync_conn.execute(text("UPDATE characters SET ability_ids = '[]' WHERE ability_ids IS NULL"))
+
+
+def _migration_character_sheet_projection_cache(sync_conn) -> None:
+    sync_conn.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS dnd5e_character_sheet_projections (
+                character_id VARCHAR PRIMARY KEY,
+                campaign_id VARCHAR NOT NULL,
+                catalog_revision INTEGER NOT NULL DEFAULT 0,
+                sheet_revision INTEGER NOT NULL DEFAULT 0,
+                resolution_status VARCHAR NOT NULL DEFAULT 'invalidated',
+                denial_reason_code VARCHAR NULL,
+                unresolved_reference_ids JSON NOT NULL,
+                computed_fields JSON NOT NULL,
+                last_resolved_at TIMESTAMP NOT NULL,
+                CONSTRAINT ck_dnd5e_character_sheet_projections_resolution_status
+                    CHECK (resolution_status IN ('resolved','denied','invalidated')),
+                CONSTRAINT ck_dnd5e_character_sheet_projections_catalog_revision
+                    CHECK (catalog_revision >= 0),
+                CONSTRAINT ck_dnd5e_character_sheet_projections_sheet_revision
+                    CHECK (sheet_revision >= 0),
+                CONSTRAINT fk_dnd5e_character_sheet_projections_character
+                    FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
+            )
+            """
+        )
+    )
+    sync_conn.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS ix_dnd5e_character_sheet_projections_campaign_id
+            ON dnd5e_character_sheet_projections(campaign_id)
+            """
+        )
+    )
 
 
 def _dedupe_user_social_auths(sync_conn) -> None:

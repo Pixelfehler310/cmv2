@@ -30,6 +30,10 @@ class DefinitionRecord(BaseModel):
             raise ValueError(
                 f"{CompendiumErrorCode.VALIDATION_FAILED.value}: content_version must be >= 1"
             )
+        if self.schema_version < 1:
+            raise ValueError(
+                f"{CompendiumErrorCode.VALIDATION_FAILED.value}: schema_version must be >= 1"
+            )
         return self
 
 

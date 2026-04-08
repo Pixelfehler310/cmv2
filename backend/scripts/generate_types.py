@@ -1,3 +1,19 @@
+import argparse
+import difflib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+from pydantic import BaseModel
+
+# Add backend to path to allow imports
+BACKEND_DIR = Path(__file__).parent.parent
+sys.path.append(str(BACKEND_DIR))
+
 from src.schemas.context import (
     CampaignContextResponse,
     EncounterOptionResponse,
@@ -21,22 +37,6 @@ from src.systems.dnd5e.content.domain.definition_models import (
 from src.systems.dnd5e.content.domain.pack_models import ContentPackRecord
 from src.systems.dnd5e.content.domain.link_models import LinkedEntryReference, ReplacementChain
 from src.systems.dnd5e.content.domain.invariants import CompendiumErrorCode
-
-import argparse
-import difflib
-import json
-import os
-import shutil
-import subprocess
-import sys
-import tempfile
-from pathlib import Path
-
-from pydantic import BaseModel
-
-# Add backend to path to allow imports
-BACKEND_DIR = Path(__file__).parent.parent
-sys.path.append(str(BACKEND_DIR))
 
 
 OUTPUT_SCHEMA = BACKEND_DIR / "schema.json"

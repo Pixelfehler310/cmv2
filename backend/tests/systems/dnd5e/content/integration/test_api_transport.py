@@ -301,6 +301,71 @@ async def test_list_definitions_by_pack(api_client: AsyncClient):
     assert len(defs) >= 1
 
 
+@pytest.mark.asyncio
+async def test_ability_action_specs_round_trip(api_client: AsyncClient):
+    """DND5E-03 integration touch: action specs survive create/get transport."""
+    await api_client.post(
+        "/api/compendium/packs",
+        json={"id": "ability-pack", "title": "Ability Pack"},
+    )
+
+    now = datetime.now(timezone.utc).isoformat()
+    create_resp = await api_client.post(
+        "/api/compendium/definitions",
+        json={
+            "family": "ability",
+            "id": "ability-sneak-attack",
+            "slug": "sneak-attack",
+            "name": "Sneak Attack",
+            "lifecycle_state": "draft",
+            "content_version": 1,
+            "schema_version": 1,
+            "pack_id": "ability-pack",
+            "provenance_source": "tests",
+            "provenance_updated_at": now,
+            "ability_type": "feature",
+            "action_operation_specs": [
+                {
+                    "operation_id": "op-attack",
+                    "activation_cost": "action",
+                    "targeting_spec": {
+                        "type": "single",
+                        "range_feet": 5,
+                        "max_targets": 1,
+                    },
+                    "payload": {
+                        "operation_type": "attack_roll",
+                        "attack_type": "melee_weapon",
+                        "damage_instances": [
+                            {
+                                "value": "1d6",
+                                "damage_type": "piercing",
+                                "add_stat_modifier": True,
+                            }
+                        ],
+                    },
+                }
+            ],
+            "passive_effects": [
+                {
+                    "modifier_type": "flat",
+                    "target_stat": "initiative",
+                    "value": 2,
+                    "stack_group": "ability-passive",
+                }
+            ],
+        },
+    )
+    assert create_resp.status_code == 200
+
+    get_resp = await api_client.get("/api/compendium/definitions/ability-sneak-attack")
+    assert get_resp.status_code == 200
+    body = get_resp.json()
+    assert body["family"] == "ability"
+    assert body["action_operation_specs"][0]["payload"]["operation_type"] == "attack_roll"
+    assert body["passive_effects"][0]["modifier_type"] == "flat"
+
+
 # =========================================================================
 # Search Endpoint through HTTP
 # =========================================================================

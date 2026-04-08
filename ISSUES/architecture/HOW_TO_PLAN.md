@@ -93,6 +93,7 @@ When scoping a **Contract**, you MUST define the testing interface upfront.
   4. Do not open implementation gate unless all in-scope modules are marked `Frozen`.
 
   ### Mandatory Quantitative Thresholds
+
   1. Per-module minimum score: `85/100`.
   2. No module below `85/100`.
   3. At least 4 core-heavy modules at `90/100` or above.
@@ -150,3 +151,12 @@ Finished issues and superseded documentation MUST NOT be deleted. Instead, they 
 1.  **Maintain Path Context**: Move items from `ISSUES/architecture/<folder>/` to `ISSUES/archive/<folder>/`.
 2.  **No Deletions**: Historical context is essential for AI agents to understand why decisions were made.
 3.  **Cross-References**: When archiving a foundational issue, update any "Live" documents (like this one) to point to the new location in the archive.
+
+## 8. Legacy Cutover Workflow (Mandatory)
+
+Legacy prototype code is considered superseded by default for implementation work.
+
+1. Default mode is **cutover**, not compatibility.
+2. Do not add adapters, fallback paths, or dual-write/read behavior unless explicitly requested.
+3. If compatibility is explicitly requested, scope it narrowly and document removal conditions.
+4. Apply and enforce `ISSUES/architecture/LEGACY_CUTOVER_POLICY.md` during implementation planning and PR review.

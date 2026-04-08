@@ -44,25 +44,45 @@ Reference: `ISSUES/architecture/01_contracts/FREEZE_GATE_STATUS.md`
 
 ## Work Board
 
+Snapshot date: 2026-04-08
+
+## Completed
+
+- [x] `ISSUE_[IMPLEMENT]_[CM-01]_definition_write_path_and_lifecycle_enforcement.md`
+- [x] `ISSUE_[IMPLEMENT]_[CM-02]_content_list_and_detail_query_pipeline.md`
+- [x] `ISSUE_[IMPLEMENT]_[CM-03]_linked_reference_resolution_and_denial_paths.md`
+- [x] `ISSUE_[IMPLEMENT]_[CM-04]_projection_invalidation_and_recovery_loop.md`
+- [x] `ISSUE_[IMPLEMENT]_[CM-05]_session_ws_envelope_contract_mapping.md`
+
 ## In Progress
-
-- [ ] `ISSUE_[IMPLEMENT]_[CM-01]_definition_write_path_and_lifecycle_enforcement.md`
-- [ ] `ISSUE_[IMPLEMENT]_[CM-02]_content_list_and_detail_query_pipeline.md`
-
-## Ready
-
-- [ ] `ISSUE_[IMPLEMENT]_[CM-03]_linked_reference_resolution_and_denial_paths.md`
-- [ ] `ISSUE_[IMPLEMENT]_[CM-04]_projection_invalidation_and_recovery_loop.md`
-- [ ] `ISSUE_[IMPLEMENT]_[CM-05]_session_ws_envelope_contract_mapping.md`
-
-## Option B Character Track (Ready)
 
 - [ ] `ISSUE_[IMPLEMENT]_[CM-07]_character_record_write_and_ownership_validation.md`
 - [ ] `ISSUE_[IMPLEMENT]_[CM-08]_character_sheet_projection_and_reference_resolution.md`
 
+## Ready
+
+- [ ] (none)
+
+## Option B Character Track (Ready)
+
+- [ ] (moved to In Progress)
+
 ## Stretch
 
 - [ ] `ISSUE_[IMPLEMENT]_[CM-06]_action_mechanics_contract_integration_smoke.md`
+
+## Completion Matrix (Evidence-Based)
+
+| Ticket | Status | Evidence (Implementation) | Evidence (Tests) | Notes |
+| :----- | :----- | :------------------------ | :--------------- | :---- |
+| CM-01 | Complete | `backend/src/systems/dnd5e/content/application/services.py`, `backend/src/systems/dnd5e/content/policies/lifecycle_transition_policy.py` | `backend/tests/systems/dnd5e/content/test_compendium_service.py`, `backend/tests/systems/dnd5e/content/integration/test_error_case_matrix.py` | Lifecycle transitions, delete rules, supersedence, denial mapping are implemented. |
+| CM-02 | Complete | `backend/src/systems/dnd5e/content/api/router.py`, `backend/src/systems/dnd5e/content/infrastructure/search_index_repository.py` | `backend/tests/systems/dnd5e/content/integration/test_api_transport.py`, `backend/tests/systems/dnd5e/content/test_search_index.py` | Query/list/search path includes revision-bearing contract envelope support. |
+| CM-03 | Complete | `backend/src/systems/dnd5e/content/application/resolution.py`, `backend/src/systems/dnd5e/content/policies/linked_entry_integrity_policy.py` | `backend/tests/systems/dnd5e/content/test_link_resolution.py`, `backend/tests/systems/dnd5e/content/test_compendium_service.py` | Required-link validation, cycle handling, replacement-chain behavior present. |
+| CM-04 | Complete | `backend/src/systems/dnd5e/content/api/ws_events.py` | `backend/tests/systems/dnd5e/content/test_ws_events_contract.py` | Revision gap invalidation and stale-event ignore behavior implemented. |
+| CM-05 | Complete | `backend/src/systems/dnd5e/content/api/router.py`, `backend/src/systems/dnd5e/content/api/ws_events.py` | `backend/tests/systems/dnd5e/content/integration/test_api_transport.py`, `backend/tests/systems/dnd5e/content/test_ws_events_contract.py` | Request correlation, reason-code envelopes, and revision fields mapped on API/WS paths. |
+| CM-06 | Not Started | `ISSUE_[IMPLEMENT]_[CM-06]_action_mechanics_contract_integration_smoke.md` (planned only) | No dedicated implementation tests in active tree | Still stretch; starts after CM-01..CM-05 acceptance checks. |
+| CM-07 | In Progress | `backend/src/systems/dnd5e/application/character_service.py`, `backend/src/systems/dnd5e/character/router.py` | `backend/tests/systems/dnd5e/test_character_write_router.py` | Character write path, ownership validation, and denial taxonomy present but uncommitted. |
+| CM-08 | In Progress | `backend/src/systems/dnd5e/application/character_sheet_service.py`, `backend/src/systems/dnd5e/character/sheet_models.py`, `backend/src/systems/dnd5e/character/router.py` | `backend/tests/systems/dnd5e/test_character_sheet_projection_router.py` | Revision-aware sheet projection and unresolved-reference outcomes present but uncommitted. |
 
 ## Sequencing Rules
 

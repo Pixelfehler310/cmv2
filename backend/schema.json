@@ -556,6 +556,13 @@
     },
     "CharacterCreate": {
       "properties": {
+        "ability_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ability Ids",
+          "type": "array"
+        },
         "actions": {
           "items": {
             "additionalProperties": true,
@@ -669,6 +676,18 @@
           "title": "Name",
           "type": "string"
         },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
         "player_name": {
           "anyOf": [
             {
@@ -705,6 +724,11 @@
           "title": "Spells",
           "type": "array"
         },
+        "status": {
+          "default": "active",
+          "title": "Status",
+          "type": "string"
+        },
         "strength": {
           "default": 10,
           "title": "Strength",
@@ -739,6 +763,13 @@
     },
     "CharacterResponse": {
       "properties": {
+        "ability_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ability Ids",
+          "type": "array"
+        },
         "actions": {
           "items": {
             "additionalProperties": true,
@@ -878,6 +909,18 @@
           "title": "Name",
           "type": "string"
         },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
         "player_name": {
           "anyOf": [
             {
@@ -924,6 +967,11 @@
           },
           "title": "Spells",
           "type": "array"
+        },
+        "status": {
+          "default": "active",
+          "title": "Status",
+          "type": "string"
         },
         "strength": {
           "default": 10,

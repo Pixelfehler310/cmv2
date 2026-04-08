@@ -1,12 +1,3 @@
-from src.schemas.campaign import CampaignCreate
-from src.schemas.character import CharacterCreate
-from src.schemas.definitions import BackgroundBase, ClassBase, SpeciesBase
-from src.schemas.feature import FeatBase, FeatureBase
-from src.schemas.item import ItemCreate
-from src.schemas.monster import MonsterCreate
-from src.schemas.spell import SpellCreate
-from src.systems.dnd5e.schemas.contracts import ContentPack
-from src.systems.dnd5e.schemas.encounter import EncounterState
 import json
 import sys
 from pathlib import Path
@@ -17,6 +8,16 @@ from pydantic import BaseModel, ValidationError
 # Add backend root so script can import src.* modules when run from repo root.
 BACKEND_DIR = Path(__file__).parent.parent
 sys.path.append(str(BACKEND_DIR))
+
+from src.schemas.campaign import CampaignCreate
+from src.schemas.character import CharacterCreate
+from src.schemas.definitions import BackgroundBase, ClassBase, SpeciesBase
+from src.schemas.feature import FeatBase, FeatureBase
+from src.schemas.item import ItemCreate
+from src.schemas.monster import MonsterCreate
+from src.schemas.spell import SpellCreate
+from src.systems.dnd5e.schemas.contracts import ContentPack
+from src.systems.dnd5e.schemas.encounter import EncounterState
 
 
 FIXTURES_DIR = BACKEND_DIR / "data" / "fixtures"

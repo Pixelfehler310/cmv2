@@ -66,6 +66,8 @@ class CompendiumDefinitionModel(Base, UUIDMixin, TimestampMixin):
     __table_args__ = (
         CheckConstraint("content_version >= 1",
                         name="ck_dnd5e_compendium_definitions_content_version"),
+        CheckConstraint("schema_version >= 1",
+                        name="ck_dnd5e_compendium_definitions_schema_version"),
         CheckConstraint(
             "lifecycle_state IN ('draft','published','archived','superseded')",
             name="ck_dnd5e_compendium_definitions_lifecycle_state",

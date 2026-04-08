@@ -9,11 +9,14 @@ from .definitions import SpeciesResponse, ClassResponse, BackgroundResponse
 class CharacterBase(BaseModel):
     name: str
     player_name: Optional[str] = None
+    player_id: Optional[str] = None
+    status: str = "active"
     campaign_id: Optional[str] = None
 
     species_id: str
     class_id: str
     background_id: Optional[str] = None
+    ability_ids: List[str] = Field(default_factory=list)
 
     level: int = 1
     xp: int = 0

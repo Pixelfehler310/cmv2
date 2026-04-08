@@ -58,6 +58,15 @@ class ContentStreamWsHandler:
             return
 
         previous = self._last_catalog_revision_by_campaign.get(campaign_id, 0)
+        if revision < previous:
+            logger.info(
+                "Ignoring stale content projection event for campaign %s: incoming=%s, current=%s",
+                campaign_id,
+                revision,
+                previous,
+            )
+            return
+
         if revision > previous + 1 and previous > 0:
             await self.emit_invalidation_required(
                 campaign_id=campaign_id,
@@ -126,6 +135,74 @@ class ContentStreamWsHandler:
                 "affected_definition_ids": affected_definition_ids,
             },
             visibility=Visibility.ALL,
+        )
+        await self._manager.broadcast(campaign_id, outbound)
+
+    async def emit_character_sheet_projection_updated(
+        self,
+        *,
+        campaign_id: str,
+        request_id: str | None,
+        character_id: str,
+        sheet_revision: int,
+        catalog_revision: int,
+    ) -> None:
+        outbound = WsOutbound(
+            type="character_sheet_projection_updated",
+            request_id=request_id,
+            payload={
+                "character_id": character_id,
+                "campaign_id": campaign_id,
+                "sheet_revision": sheet_revision,
+                "catalog_revision": catalog_revision,
+            },
+            visibility=Visibility.ALL,
+        )
+        await self._manager.broadcast(campaign_id, outbound)
+
+    async def emit_character_sheet_references_denied(
+        self,
+        *,
+        campaign_id: str,
+        request_id: str | None,
+        character_id: str,
+        sheet_revision: int,
+        reason_code: str,
+        unresolved_reference_ids: list[str],
+    ) -> None:
+        outbound = WsOutbound(
+            type="character_sheet_references_denied",
+            request_id=request_id,
+            payload={
+                "character_id": character_id,
+                "campaign_id": campaign_id,
+                "sheet_revision": sheet_revision,
+                "reason_code": reason_code,
+                "unresolved_reference_ids": unresolved_reference_ids,
+            },
+            visibility=Visibility.DM_ONLY,
+        )
+        await self._manager.broadcast(campaign_id, outbound)
+
+    async def emit_character_sheet_invalidation_required(
+        self,
+        *,
+        campaign_id: str,
+        request_id: str | None,
+        character_id: str,
+        invalidated_at_revision: int,
+        reason_code: str,
+    ) -> None:
+        outbound = WsOutbound(
+            type="character_sheet_invalidation_required",
+            request_id=request_id,
+            payload={
+                "character_id": character_id,
+                "campaign_id": campaign_id,
+                "invalidated_at_revision": invalidated_at_revision,
+                "reason_code": reason_code,
+            },
+            visibility=Visibility.DM_ONLY,
         )
         await self._manager.broadcast(campaign_id, outbound)
 

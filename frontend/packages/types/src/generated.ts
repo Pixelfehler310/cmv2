@@ -26,6 +26,7 @@ export type DmId = string | null;
 export type Name1 = string;
 export type CampaignCreate = CampaignCreate1[];
 export type ActiveEncounterId = string | null;
+export type AbilityIds = string[];
 export type Actions = {
   [k: string]: unknown;
 }[];
@@ -77,6 +78,7 @@ export type Inventory = ItemInstance[];
 export type Level = number;
 export type MaxHp = number;
 export type Name5 = string;
+export type PlayerId = string | null;
 export type PlayerName = string | null;
 export type Description5 = string;
 export type Effects4 = EffectConfig[];
@@ -93,6 +95,7 @@ export type Speed1 = number;
 export type Spells = {
   [k: string]: unknown;
 }[];
+export type Status = string;
 export type Strength = number;
 export type TempHp = number;
 export type Wisdom = number;
@@ -106,6 +109,7 @@ export type Id6 = string;
 export type Name7 = string;
 export type Role = string | null;
 export type Campaigns = CampaignResponse[];
+export type AbilityIds1 = string[];
 export type Actions1 = {
   [k: string]: unknown;
 }[];
@@ -126,12 +130,14 @@ export type Inventory1 = ItemInstance[];
 export type Level1 = number;
 export type MaxHp1 = number;
 export type Name8 = string;
+export type PlayerId1 = string | null;
 export type PlayerName1 = string | null;
 export type SpeciesId1 = string;
 export type Speed2 = number;
 export type Spells1 = {
   [k: string]: unknown;
 }[];
+export type Status1 = string;
 export type Strength1 = number;
 export type TempHp1 = number;
 export type Wisdom1 = number;
@@ -590,6 +596,7 @@ export interface CampaignResponse {
  * via the `definition` "CharacterResponse".
  */
 export interface CharacterResponse {
+  ability_ids?: AbilityIds;
   actions?: Actions;
   alignment?: Alignment;
   armor_class?: ArmorClass;
@@ -611,12 +618,14 @@ export interface CharacterResponse {
   level?: Level;
   max_hp: MaxHp;
   name: Name5;
+  player_id?: PlayerId;
   player_name?: PlayerName;
   species?: SpeciesResponse | null;
   species_id: SpeciesId;
   speed?: Speed1;
   spell_slots?: SpellSlots;
   spells?: Spells;
+  status?: Status;
   strength?: Strength;
   temp_hp?: TempHp;
   wisdom?: Wisdom;
@@ -718,6 +727,7 @@ export interface SpellSlots {
  * via the `definition` "CharacterCreate".
  */
 export interface CharacterCreate1 {
+  ability_ids?: AbilityIds1;
   actions?: Actions1;
   alignment?: Alignment1;
   armor_class?: ArmorClass1;
@@ -736,11 +746,13 @@ export interface CharacterCreate1 {
   level?: Level1;
   max_hp: MaxHp1;
   name: Name8;
+  player_id?: PlayerId1;
   player_name?: PlayerName1;
   species_id: SpeciesId1;
   speed?: Speed2;
   spell_slots?: SpellSlots1;
   spells?: Spells1;
+  status?: Status1;
   strength?: Strength1;
   temp_hp?: TempHp1;
   wisdom?: Wisdom1;

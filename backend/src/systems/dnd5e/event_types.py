@@ -270,3 +270,28 @@ class DelegationDeniedPayload(BaseModel):
     """Payload for `delegation_denied` event — delegation request was rejected."""
     reason_code: str
     message: str
+
+
+class CharacterSheetProjectionUpdatedPayload(BaseModel):
+    """Payload for `character_sheet_projection_updated` event."""
+    character_id: str
+    campaign_id: str
+    sheet_revision: int
+    catalog_revision: int
+
+
+class CharacterSheetReferencesDeniedPayload(BaseModel):
+    """Payload for `character_sheet_references_denied` event."""
+    character_id: str
+    campaign_id: str
+    sheet_revision: int
+    reason_code: str
+    unresolved_reference_ids: List[str] = Field(default_factory=list)
+
+
+class CharacterSheetInvalidationRequiredPayload(BaseModel):
+    """Payload for `character_sheet_invalidation_required` event."""
+    character_id: str
+    campaign_id: str
+    invalidated_at_revision: int
+    reason_code: str

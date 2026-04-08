@@ -41,6 +41,15 @@ It uses a **Hybrid Architecture** with a Python Backend and React Frontend in a 
 - Prefer removing obsolete code, compatibility layers, and fallback paths over extending them.
 - Favor clear structure and direct implementations, even if breaking changes occur.
 - Use tests to validate the current direction, not to protect deprecated systems.
+- Follow `ISSUES/architecture/LEGACY_CUTOVER_POLICY.md` as the operational workflow for legacy decisions.
+
+### Legacy Cutover Enforcement (Default)
+
+- Default implementation mode is **cutover** (not compatibility).
+- Do not add adapters/shims/bridge layers/fallback paths unless the task explicitly asks for compatibility.
+- Do not introduce dual-write or dual-read paths unless explicitly requested.
+- If legacy dependencies block progress, prefer replacing or bypassing the legacy path in-scope.
+- Before coding, explicitly state: target production path, legacy path being bypassed/removed, and intentionally breaking legacy behaviors.
 
 ### Legacy Debt Capture (Guarded)
 

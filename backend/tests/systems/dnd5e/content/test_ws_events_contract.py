@@ -88,3 +88,40 @@ async def test_revision_gap_emits_invalidation_required():
     assert invalidation_events[0].payload["current_revision"] == 10
     assert invalidation_events[0].payload["target_revision"] == 13
     assert invalidation_events[0].payload["affected_definition_ids"] == ["def-2"]
+
+
+@pytest.mark.asyncio
+async def test_stale_revision_event_is_ignored():
+    manager = FakeSessionManager()
+    handler = ContentStreamWsHandler(manager=manager)  # type: ignore[arg-type]
+
+    await handler.publish_mutation_event(
+        ContentMutationEvent(
+            event_type="definition_published",
+            definition_id="def-new",
+            family="monster",
+            lifecycle_state="published",
+            content_version=2,
+            campaign_id="campaign-a",
+            catalog_revision=10,
+            affected_definition_ids=["def-new"],
+        )
+    )
+
+    before_count = len(manager.broadcasts)
+
+    await handler.publish_mutation_event(
+        ContentMutationEvent(
+            event_type="definition_updated",
+            definition_id="def-old",
+            family="monster",
+            lifecycle_state="published",
+            content_version=3,
+            campaign_id="campaign-a",
+            catalog_revision=9,
+            affected_definition_ids=["def-old"],
+        )
+    )
+
+    after_count = len(manager.broadcasts)
+    assert after_count == before_count
