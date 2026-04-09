@@ -31,6 +31,10 @@ All definitions must extend `DefinitionRecord`:
 7. `monster`
 8. `lore`
 9. `condition`
+10. `action`
+11. `faction`
+12. `region`
+13. `place`
 
 ## Family-Specific Contract Highlights
 
@@ -39,6 +43,10 @@ All definitions must extend `DefinitionRecord`:
 3. `ItemDefinition`: `item_type`, `weight`, `cost`, `action_operation_specs`
 4. `MonsterDefinition`: `challenge_rating`, `armor_class`, `hit_points_formula`, `action_operation_specs`
 5. `ConditionDefinition`: `condition_type`, `has_levels`, `modifier_specs`
+6. `ActionDefinition`: `action_type`, `activation_cost`, `action_operation_specs`
+7. `FactionDefinition`: `alignment`, `influence_tier`, `base_region_id`
+8. `RegionDefinition`: `climate`, `governing_faction_id`, `place_ids`
+9. `PlaceDefinition`: `region_id`, `place_type`, `controlling_faction_id`
 
 ## Content Pack Contract
 
@@ -94,6 +102,10 @@ classDiagram
     class ItemDefinition
     class MonsterDefinition
     class ConditionDefinition
+    class ActionDefinition
+    class FactionDefinition
+    class RegionDefinition
+    class PlaceDefinition
     class LoreDefinition
     class SpeciesDefinition
     class ClassDefinition
@@ -104,6 +116,10 @@ classDiagram
     DefinitionRecord <|-- ItemDefinition
     DefinitionRecord <|-- MonsterDefinition
     DefinitionRecord <|-- ConditionDefinition
+    DefinitionRecord <|-- ActionDefinition
+    DefinitionRecord <|-- FactionDefinition
+    DefinitionRecord <|-- RegionDefinition
+    DefinitionRecord <|-- PlaceDefinition
     DefinitionRecord <|-- LoreDefinition
     DefinitionRecord <|-- SpeciesDefinition
     DefinitionRecord <|-- ClassDefinition

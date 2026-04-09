@@ -17,13 +17,17 @@ from src.systems.dnd5e.content.application.resolution import (
 )
 from src.systems.dnd5e.content.application.services import CompendiumApplicationService
 from src.systems.dnd5e.content.domain.definition_models import (
+    ActionDefinition,
     AbilityDefinition,
     BackgroundDefinition,
     ClassDefinition,
     ConditionDefinition,
+    FactionDefinition,
     ItemDefinition,
     LoreDefinition,
     MonsterDefinition,
+    PlaceDefinition,
+    RegionDefinition,
     SpeciesDefinition,
     SpellDefinition,
 )
@@ -32,7 +36,10 @@ from src.systems.dnd5e.content.domain.errors import (
     ContentPackNotFoundError,
     GraphCycleError,
 )
-from src.systems.dnd5e.content.domain.index_models import IndexDocument
+from src.systems.dnd5e.content.domain.index_models import (
+    FAMILY_PAYLOAD_FILTER_KEYS,
+    IndexDocument,
+)
 from src.systems.dnd5e.content.domain.invariants import CompendiumErrorCode
 from src.systems.dnd5e.content.domain.pack_models import ContentPackRecord
 from src.systems.dnd5e.content.domain.primitives import DefinitionFamily, LifecycleState
@@ -55,6 +62,10 @@ DefinitionPayload = Annotated[
         | SpellDefinition
         | ItemDefinition
         | MonsterDefinition
+        | ActionDefinition
+        | FactionDefinition
+        | RegionDefinition
+        | PlaceDefinition
     ),
     Field(discriminator="family"),
 ]
@@ -99,6 +110,7 @@ class SupersedeDefinitionRequest(BaseModel):
 
 
 _content_stream_ws_handler = ContentStreamWsHandler()
+_PAYLOAD_FILTER_PREFIX = "pf_"
 
 
 def get_content_stream_handler() -> ContentStreamWsHandler:
@@ -206,6 +218,9 @@ def _map_query_contract_exception(
 
 
 def _map_domain_exception(exc: Exception) -> HTTPException:
+    if isinstance(exc, HTTPException):
+        return exc
+
     status_code, reason_code, message = _domain_exception_parts(exc)
     return HTTPException(
         status_code=status_code,
@@ -214,6 +229,53 @@ def _map_domain_exception(exc: Exception) -> HTTPException:
             message=message,
         ).model_dump(),
     )
+
+
+def _extract_payload_filters(request: Request) -> dict[str, str]:
+    payload_filters: dict[str, str] = {}
+    for key, value in request.query_params.multi_items():
+        if not key.startswith(_PAYLOAD_FILTER_PREFIX):
+            continue
+        filter_key = key[len(_PAYLOAD_FILTER_PREFIX):].strip()
+        if not filter_key:
+            continue
+        value_text = value.strip()
+        if not value_text:
+            continue
+        payload_filters[filter_key] = value_text
+    return payload_filters
+
+
+def _validate_payload_filters(
+    *,
+    family: DefinitionFamily | None,
+    payload_filters: dict[str, str],
+) -> None:
+    if not payload_filters:
+        return
+
+    if family is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                error=CompendiumErrorCode.VALIDATION_FAILED.value,
+                message="Payload filters require an explicit family query parameter.",
+            ).model_dump(),
+        )
+
+    allowed = set(FAMILY_PAYLOAD_FILTER_KEYS.get(family, ()))
+    unsupported = sorted(key for key in payload_filters if key not in allowed)
+    if unsupported:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                error=CompendiumErrorCode.VALIDATION_FAILED.value,
+                message=(
+                    f"Unsupported payload filters for family '{family.value}': "
+                    f"{', '.join(unsupported)}"
+                ),
+            ).model_dump(),
+        )
 
 
 @router.post("/packs", response_model=ContentPackRecord)
@@ -398,6 +460,10 @@ async def search_definitions(
 ):
     """Search the denormalized index — does NOT query the definitions table."""
     try:
+        payload_filters = _extract_payload_filters(request)
+        _validate_payload_filters(
+            family=family, payload_filters=payload_filters)
+
         uow = CompendiumUnitOfWork(db)
         async with uow:
             states = [lifecycle_state.value] if lifecycle_state else None
@@ -406,6 +472,7 @@ async def search_definitions(
                 family=family.value if family else None,
                 lifecycle_states=states,
                 pack_id=pack_id,
+                payload_filters=payload_filters or None,
                 limit=limit,
                 offset=offset,
             )

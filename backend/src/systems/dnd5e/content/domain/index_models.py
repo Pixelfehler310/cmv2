@@ -11,6 +11,22 @@ from .definition_models import DefinitionRecord
 from .primitives import DefinitionFamily, LifecycleState
 
 
+FAMILY_PAYLOAD_FILTER_KEYS: dict[DefinitionFamily, tuple[str, ...]] = {
+    DefinitionFamily.LORE: ("lore_type",),
+    DefinitionFamily.SPECIES: ("size", "speed"),
+    DefinitionFamily.CLASS: ("hit_die",),
+    DefinitionFamily.CONDITION: ("condition_type",),
+    DefinitionFamily.ABILITY: ("ability_type",),
+    DefinitionFamily.SPELL: ("school", "level", "casting_time"),
+    DefinitionFamily.ITEM: ("item_type",),
+    DefinitionFamily.MONSTER: ("challenge_rating", "armor_class"),
+    DefinitionFamily.ACTION: ("action_type", "activation_cost"),
+    DefinitionFamily.FACTION: ("influence_tier", "alignment"),
+    DefinitionFamily.REGION: ("climate",),
+    DefinitionFamily.PLACE: ("place_type",),
+}
+
+
 class IndexDocument(BaseModel):
     """Flat, denormalized search document — the V05 ReadModel."""
 
@@ -63,6 +79,12 @@ def build_index_document(definition: DefinitionRecord) -> IndexDocument:
     # Extract family-specific searchable fields from the model
     family_search_fields = _extract_family_search_fields(definition)
     search_parts.extend(family_search_fields)
+
+    # Add key:value payload tokens to support precise family-aware filtering.
+    family_payload_filters = _extract_family_payload_filters(definition)
+    search_parts.extend(
+        f"{key}:{value}" for key, value in family_payload_filters.items()
+    )
 
     search_blob = _normalize_text(" ".join(search_parts))
 
@@ -125,4 +147,32 @@ def _extract_family_search_fields(definition: DefinitionRecord) -> list[str]:
     if hasattr(definition, "casting_time"):
         fields.append(definition.casting_time)
 
+    if hasattr(definition, "action_type"):
+        fields.append(definition.action_type)
+
+    if hasattr(definition, "activation_cost"):
+        fields.append(definition.activation_cost)
+
+    if hasattr(definition, "influence_tier"):
+        fields.append(definition.influence_tier)
+
+    if hasattr(definition, "climate") and definition.climate:
+        fields.append(definition.climate)
+
+    if hasattr(definition, "place_type"):
+        fields.append(definition.place_type)
+
     return fields
+
+
+def _extract_family_payload_filters(definition: DefinitionRecord) -> dict[str, str]:
+    filters: dict[str, str] = {}
+    allowed_keys = FAMILY_PAYLOAD_FILTER_KEYS.get(definition.family, ())
+    for key in allowed_keys:
+        value = getattr(definition, key, None)
+        if value is None:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        filters[key] = str(value)
+    return filters

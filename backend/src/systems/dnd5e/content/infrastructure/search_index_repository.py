@@ -2,6 +2,8 @@ from __future__ import annotations
 __production_status__ = "gold"
 
 from datetime import datetime, timezone
+import re
+import unicodedata
 
 from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,6 +64,7 @@ class SearchIndexRepository:
         family: str | None = None,
         lifecycle_states: list[str] | None = None,
         pack_id: str | None = None,
+        payload_filters: dict[str, str] | None = None,
         limit: int = 20,
         offset: int = 0,
     ) -> list[IndexDocument]:
@@ -93,6 +96,12 @@ class SearchIndexRepository:
         if pack_id:
             stmt = stmt.where(SearchIndexModel.pack_id == pack_id)
 
+        if payload_filters:
+            for key, value in payload_filters.items():
+                token = self._payload_filter_token(key=key, value=value)
+                stmt = stmt.where(
+                    SearchIndexModel.search_blob.ilike(f"%{token}%"))
+
         stmt = stmt.order_by(
             SearchIndexModel.name_normalized.asc(),
             SearchIndexModel.id.asc(),  # Stable tie-breaker
@@ -109,6 +118,7 @@ class SearchIndexRepository:
         family: str | None = None,
         lifecycle_states: list[str] | None = None,
         pack_id: str | None = None,
+        payload_filters: dict[str, str] | None = None,
     ) -> int:
         """Count matching documents (for pagination metadata)."""
         stmt = select(func.count(SearchIndexModel.id))
@@ -132,6 +142,12 @@ class SearchIndexRepository:
 
         if pack_id:
             stmt = stmt.where(SearchIndexModel.pack_id == pack_id)
+
+        if payload_filters:
+            for key, value in payload_filters.items():
+                token = self._payload_filter_token(key=key, value=value)
+                stmt = stmt.where(
+                    SearchIndexModel.search_blob.ilike(f"%{token}%"))
 
         result = await self._db.execute(stmt)
         return result.scalar_one()
@@ -173,3 +189,15 @@ class SearchIndexRepository:
             search_blob=row.search_blob,
             visibility_state=row.visibility_state,
         )
+
+    @staticmethod
+    def _payload_filter_token(*, key: str, value: str) -> str:
+        normalized_key = SearchIndexRepository._normalize_fragment(key)
+        normalized_value = SearchIndexRepository._normalize_fragment(value)
+        return f"{normalized_key}:{normalized_value}"
+
+    @staticmethod
+    def _normalize_fragment(value: str) -> str:
+        nfkd = unicodedata.normalize("NFKD", value)
+        ascii_only = nfkd.encode("ascii", "ignore").decode("ascii")
+        return re.sub(r"\s+", " ", ascii_only.lower().strip())

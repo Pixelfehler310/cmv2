@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { DataTable } from "./DataTable";
 import { EntityDetailPanel } from "./EntityDetailPanel";
-import { useMonsters, useSpells, useItems, useSpecies, useClasses, useBackgrounds } from "../../hooks/useEntities";
+import { useMonsters, useSpells, useItems, useSpecies, useClasses, useBackgrounds, useCompendiumPacks } from "../../hooks/useEntities";
 import { Search, Plus, Database, GraduationCap, Users, Shield, BookOpen, Sword, Package } from "lucide-react";
 
 type TabType = "bestiary" | "items" | "spells" | "species" | "classes" | "backgrounds";
@@ -10,13 +10,26 @@ export const ContentManager = () => {
   const [activeTab, setActiveTab] = useState<TabType>("bestiary");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
+  const [selectedPackId, setSelectedPackId] = useState("");
 
-  const { data: monsters, isLoading: monstersLoading } = useMonsters();
-  const { data: spells, isLoading: spellsLoading } = useSpells();
-  const { data: items, isLoading: itemsLoading } = useItems();
-  const { data: species, isLoading: speciesLoading } = useSpecies();
-  const { data: classes, isLoading: classesLoading } = useClasses();
-  const { data: backgrounds, isLoading: backgroundsLoading } = useBackgrounds();
+  const { data: packs, isLoading: packsLoading } = useCompendiumPacks();
+
+  const activePackId = useMemo(() => {
+    if (selectedPackId) {
+      return selectedPackId;
+    }
+    if (packs && packs.length > 0) {
+      return String(packs[0].id);
+    }
+    return "";
+  }, [packs, selectedPackId]);
+
+  const { data: monsters, isLoading: monstersLoading } = useMonsters(activePackId || undefined);
+  const { data: spells, isLoading: spellsLoading } = useSpells(activePackId || undefined);
+  const { data: items, isLoading: itemsLoading } = useItems(activePackId || undefined);
+  const { data: species, isLoading: speciesLoading } = useSpecies(activePackId || undefined);
+  const { data: classes, isLoading: classesLoading } = useClasses(activePackId || undefined);
+  const { data: backgrounds, isLoading: backgroundsLoading } = useBackgrounds(activePackId || undefined);
 
   const currentData = useMemo<any[]>(() => {
     let data: any[] = [];
@@ -30,13 +43,18 @@ export const ContentManager = () => {
     if (!searchQuery) return data;
 
     const query = searchQuery.toLowerCase();
-    return data.filter((item: any) => 
-      item.name?.toLowerCase().includes(query) || 
-      item.type?.toLowerCase().includes(query)
+    return data.filter(
+      (item: any) =>
+        String(item.name || "")
+          .toLowerCase()
+          .includes(query) ||
+        String(item.type || item.family || "")
+          .toLowerCase()
+          .includes(query),
     );
   }, [activeTab, monsters, spells, items, species, classes, backgrounds, searchQuery]);
 
-  const isLoading = monstersLoading || spellsLoading || itemsLoading || speciesLoading || classesLoading || backgroundsLoading;
+  const isLoading = packsLoading || monstersLoading || spellsLoading || itemsLoading || speciesLoading || classesLoading || backgroundsLoading;
 
   return (
     <div className="w-full h-full flex flex-col bg-background">
@@ -49,13 +67,30 @@ export const ContentManager = () => {
           </h2>
           <p className="text-muted-foreground">Manage your homebrew compendium and rules elements.</p>
         </div>
-        
+
         <div className="flex items-center gap-3">
+          <div className="min-w-56">
+            <select
+              value={activePackId}
+              onChange={(event) => setSelectedPackId(event.target.value)}
+              className="w-full px-3 py-2 bg-surface-100 border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+            >
+              {packs && packs.length > 0 ? (
+                packs.map((pack: any) => (
+                  <option key={pack.id} value={pack.id}>
+                    {pack.title || pack.id}
+                  </option>
+                ))
+              ) : (
+                <option value="">No packs available</option>
+              )}
+            </select>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search entities..." 
+            <input
+              type="text"
+              placeholder="Search entities..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-4 py-2 bg-surface-100 border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all w-64"
@@ -86,20 +121,12 @@ export const ContentManager = () => {
             <p>Loading compendium data...</p>
           </div>
         ) : (
-          <DataTable
-            columns={getColumnsForTab(activeTab)}
-            data={currentData}
-            onRowClick={(item: any) => setSelectedEntity(item)}
-          />
+          <DataTable columns={getColumnsForTab(activeTab)} data={currentData} onRowClick={(item: any) => setSelectedEntity(item)} />
         )}
       </div>
 
       {/* Detail Slide-over */}
-      <EntityDetailPanel 
-        entity={selectedEntity} 
-        isOpen={!!selectedEntity} 
-        onClose={() => setSelectedEntity(null)} 
-      />
+      <EntityDetailPanel entity={selectedEntity} isOpen={!!selectedEntity} onClose={() => setSelectedEntity(null)} />
     </div>
   );
 };
@@ -140,15 +167,13 @@ const getColumnsForTab = (tab: TabType) => {
         { key: "hit_die", label: "Hit Die" },
       ];
     case "backgrounds":
-      return [
-        { key: "name", label: "Name" },
-      ];
+      return [{ key: "name", label: "Name" }];
     default:
       return [{ key: "name", label: "Name" }];
   }
 };
 
-const TabButton = ({ active, onClick, label, icon }: { active: boolean; onClick: () => void; label: string, icon: React.ReactNode }) => (
+const TabButton = ({ active, onClick, label, icon }: { active: boolean; onClick: () => void; label: string; icon: React.ReactNode }) => (
   <button
     onClick={onClick}
     className={`px-6 py-3 font-semibold text-sm rounded-t-lg transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${

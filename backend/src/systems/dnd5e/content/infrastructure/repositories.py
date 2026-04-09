@@ -7,14 +7,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..domain.definition_models import (
+    ActionDefinition,
     AbilityDefinition,
     BackgroundDefinition,
     ClassDefinition,
     ConditionDefinition,
     DefinitionRecord,
+    FactionDefinition,
     ItemDefinition,
     LoreDefinition,
     MonsterDefinition,
+    PlaceDefinition,
+    RegionDefinition,
     SpeciesDefinition,
     SpellDefinition,
 )
@@ -47,6 +51,10 @@ _DEFINITION_MODEL_BY_FAMILY = {
     DefinitionFamily.SPELL: SpellDefinition,
     DefinitionFamily.ITEM: ItemDefinition,
     DefinitionFamily.MONSTER: MonsterDefinition,
+    DefinitionFamily.ACTION: ActionDefinition,
+    DefinitionFamily.FACTION: FactionDefinition,
+    DefinitionFamily.REGION: RegionDefinition,
+    DefinitionFamily.PLACE: PlaceDefinition,
 }
 
 

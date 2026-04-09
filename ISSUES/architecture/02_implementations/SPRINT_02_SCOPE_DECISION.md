@@ -11,8 +11,15 @@ Decision must be recorded before first Sprint 2 implementation ticket is moved t
 ## Selected Option (Choose Exactly One)
 
 - [ ] Option A: Compendium-only shipping scope
-- [x] Option B: Compendium + Character scope
+- [ ] Option B: Compendium + Character scope
 - [ ] Option C: Compendium + Character + Campaign scope
+- [x] Option D: Full Compendium CRUD Expansion + Full Character Sheet (Backend + Frontend)
+
+## Decision Status
+
+1. Status: In implementation cutover.
+2. Effective date: 2026-04-10.
+3. Owner sign-off: pending confirmation in execution board updates.
 
 ## Included Layer 1 Modules by Option
 
@@ -37,6 +44,13 @@ Decision must be recorded before first Sprint 2 implementation ticket is moved t
 1. All Option B modules
 2. CAM-01 Campaign Management Context
 
+### Option D: Full Compendium CRUD Expansion + Full Character Sheet (Backend + Frontend)
+
+1. All Option B modules.
+2. DND5E-02 family expansion to include `action`, `faction`, `region`, `place`.
+3. Full-stack responsibility for compendium CRUD and search UX (backend and frontend).
+4. Full-stack responsibility for character write and character-sheet projection UX.
+
 ## Explicit Out-of-Scope by Option
 
 ### Option A: Compendium-only shipping scope
@@ -51,6 +65,11 @@ Decision must be recorded before first Sprint 2 implementation ticket is moved t
 ### Option C: Compendium + Character + Campaign scope
 
 1. No intentional exclusions from current known Layer 1 modules.
+
+### Option D: Full Compendium CRUD Expansion + Full Character Sheet (Backend + Frontend)
+
+1. CAM-01 deep campaign policy expansion remains out of scope unless needed for ownership-safe CRUD visibility.
+2. Search ranking science features (semantic ranking/synonyms) remain out of scope in Sprint 2.
 
 ## Sprint 2 Impact
 
@@ -72,11 +91,19 @@ Decision must be recorded before first Sprint 2 implementation ticket is moved t
 2. Include: character-focused implementation tickets derived from DND5E-05
 3. Include: campaign-context implementation tickets derived from CAM-01
 
+### Option D: Include / Defer
+
+1. Include: CM-01, CM-02, CM-03, CM-04, CM-05.
+2. Include: CM-07 and CM-08 with production frontend integration requirements.
+3. Include: compendium family expansion work for `action`, `faction`, `region`, and `place`.
+4. Include: practical advanced search scope (text + lifecycle + family + pack + family-aware payload filters + deterministic sorting/pagination).
+5. Defer: CAM-01 full campaign policy expansion unless directly required to unblock CRUD ownership semantics.
+
 ## Sign-off
 
 1. Owner: simon
-2. Date: 2026-04-06
-3. Notes: Option B confirmed. Campaign scope (CAM-01) is deferred for Sprint 2.
+2. Date: 2026-04-10
+3. Notes: Option D cutover started. Prior Option B is superseded for Sprint 2 execution.
 
 ## Architecture Readiness Prerequisites
 

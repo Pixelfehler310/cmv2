@@ -8,32 +8,32 @@ Tests the denormalized search index (CQRS ReadModel):
 - Search uses index table only (not definitions table)
 """
 
-from datetime import datetime, timezone
-
-import pytest
-
-pytestmark = [pytest.mark.v05, pytest.mark.gold]
-from sqlalchemy import event
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
-from src.database import Base
-from src.systems.dnd5e.content.application.services import (
-    CompendiumApplicationService,
-    ContentMutationEvent,
-)
-from src.systems.dnd5e.content.domain.definition_models import (
-    MonsterDefinition,
-    SpellDefinition,
-)
-from src.systems.dnd5e.content.domain.pack_models import ContentPackRecord
-from src.systems.dnd5e.content.domain.primitives import DefinitionFamily, LifecycleState
+from src.systems.dnd5e.content.infrastructure.unit_of_work import CompendiumUnitOfWork
 from src.systems.dnd5e.content.infrastructure.orm import (
     CompendiumDefinitionModel,
     ContentPackModel,
     LinkedEntryModel,
     SearchIndexModel,
 )
-from src.systems.dnd5e.content.infrastructure.unit_of_work import CompendiumUnitOfWork
+from src.systems.dnd5e.content.domain.primitives import DefinitionFamily, LifecycleState
+from src.systems.dnd5e.content.domain.pack_models import ContentPackRecord
+from src.systems.dnd5e.content.domain.definition_models import (
+    ActionDefinition,
+    MonsterDefinition,
+    SpellDefinition,
+)
+from src.systems.dnd5e.content.application.services import (
+    CompendiumApplicationService,
+    ContentMutationEvent,
+)
+from src.database import Base
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy import event
+from datetime import datetime, timezone
+
+import pytest
+
+pytestmark = [pytest.mark.v05, pytest.mark.gold]
 
 
 @pytest.fixture
@@ -48,7 +48,8 @@ async def db_session():
 
     def _create_tables(sync_conn):
         Base.metadata.tables[ContentPackModel.__tablename__].create(sync_conn)
-        Base.metadata.tables[CompendiumDefinitionModel.__tablename__].create(sync_conn)
+        Base.metadata.tables[CompendiumDefinitionModel.__tablename__].create(
+            sync_conn)
         Base.metadata.tables[SearchIndexModel.__tablename__].create(sync_conn)
         Base.metadata.tables[LinkedEntryModel.__tablename__].create(sync_conn)
 
@@ -124,6 +125,32 @@ def _build_spell(
     )
 
 
+def _build_action(
+    *,
+    definition_id: str,
+    pack_id: str,
+    slug: str,
+    name: str,
+    action_type: str,
+    activation_cost: str,
+) -> ActionDefinition:
+    return ActionDefinition(
+        id=definition_id,
+        slug=slug,
+        name=name,
+        lifecycle_state=LifecycleState.DRAFT,
+        content_version=1,
+        schema_version=1,
+        pack_id=pack_id,
+        provenance_source="tests",
+        provenance_author="test-suite",
+        provenance_updated_at=datetime.now(timezone.utc),
+        action_type=action_type,
+        activation_cost=activation_cost,
+        action_operation_specs=[],
+    )
+
+
 def _build_service(db_session, emitted: list[ContentMutationEvent]) -> CompendiumApplicationService:
     def _publish(event_payload: ContentMutationEvent) -> None:
         emitted.append(event_payload)
@@ -142,7 +169,8 @@ async def test_search_by_name_partial_match(db_session):
     service = _build_service(db_session, emitted)
 
     await service.create_definition(
-        _build_spell(definition_id="spell-1", pack_id="pack-1", slug="fireball", name="Fireball")
+        _build_spell(definition_id="spell-1", pack_id="pack-1",
+                     slug="fireball", name="Fireball")
     )
 
     uow = CompendiumUnitOfWork(db_session)
@@ -162,10 +190,12 @@ async def test_search_filters_by_family(db_session):
     service = _build_service(db_session, emitted)
 
     await service.create_definition(
-        _build_spell(definition_id="spell-1", pack_id="pack-1", slug="fireball", name="Fireball")
+        _build_spell(definition_id="spell-1", pack_id="pack-1",
+                     slug="fireball", name="Fireball")
     )
     await service.create_definition(
-        _build_monster(definition_id="mon-1", pack_id="pack-1", slug="fire-elemental", name="Fire Elemental")
+        _build_monster(definition_id="mon-1", pack_id="pack-1",
+                       slug="fire-elemental", name="Fire Elemental")
     )
 
     uow = CompendiumUnitOfWork(db_session)
@@ -187,7 +217,8 @@ async def test_search_index_updated_on_create(db_session):
     service = _build_service(db_session, emitted)
 
     await service.create_definition(
-        _build_monster(definition_id="mon-1", pack_id="pack-1", slug="goblin", name="Goblin")
+        _build_monster(definition_id="mon-1", pack_id="pack-1",
+                       slug="goblin", name="Goblin")
     )
 
     uow = CompendiumUnitOfWork(db_session)
@@ -206,7 +237,8 @@ async def test_search_index_updated_on_delete(db_session):
     service = _build_service(db_session, emitted)
 
     created = await service.create_definition(
-        _build_monster(definition_id="mon-del", pack_id="pack-1", slug="goblin-del", name="Goblin Delete")
+        _build_monster(definition_id="mon-del", pack_id="pack-1",
+                       slug="goblin-del", name="Goblin Delete")
     )
 
     # Verify it's in the index
@@ -236,7 +268,8 @@ async def test_search_index_updated_on_name_change(db_session):
     service = _build_service(db_session, emitted)
 
     created = await service.create_definition(
-        _build_monster(definition_id="mon-rename", pack_id="pack-1", slug="goblin-rename", name="Goblin")
+        _build_monster(definition_id="mon-rename", pack_id="pack-1",
+                       slug="goblin-rename", name="Goblin")
     )
 
     # Update name
@@ -269,7 +302,8 @@ async def test_search_returns_empty_for_no_matches(db_session):
     service = _build_service(db_session, emitted)
 
     await service.create_definition(
-        _build_monster(definition_id="mon-1", pack_id="pack-1", slug="goblin", name="Goblin")
+        _build_monster(definition_id="mon-1", pack_id="pack-1",
+                       slug="goblin", name="Goblin")
     )
 
     uow = CompendiumUnitOfWork(db_session)
@@ -277,3 +311,79 @@ async def test_search_returns_empty_for_no_matches(db_session):
         results = await uow.search_index.search(query_text="dragon")
 
     assert len(results) == 0
+
+
+@pytest.mark.asyncio
+async def test_search_filters_by_family_payload_tokens(db_session):
+    """Family-aware payload filters match key:value tokens in the read model."""
+    await _seed_pack(db_session)
+    emitted: list[ContentMutationEvent] = []
+    service = _build_service(db_session, emitted)
+
+    await service.create_definition(
+        _build_action(
+            definition_id="action-parry",
+            pack_id="pack-1",
+            slug="parry",
+            name="Parry",
+            action_type="reaction",
+            activation_cost="reaction",
+        )
+    )
+    await service.create_definition(
+        _build_action(
+            definition_id="action-rally",
+            pack_id="pack-1",
+            slug="rally",
+            name="Rally",
+            action_type="action",
+            activation_cost="action",
+        )
+    )
+
+    uow = CompendiumUnitOfWork(db_session)
+    async with uow:
+        results = await uow.search_index.search(
+            family=DefinitionFamily.ACTION.value,
+            payload_filters={"action_type": "reaction"},
+        )
+
+    assert len(results) == 1
+    assert results[0].definition_id == "action-parry"
+
+
+@pytest.mark.asyncio
+async def test_search_deterministic_order_with_offset_limit(db_session):
+    """Ordering is stable and supports deterministic pagination slices."""
+    await _seed_pack(db_session)
+    emitted: list[ContentMutationEvent] = []
+    service = _build_service(db_session, emitted)
+
+    await service.create_definition(
+        _build_monster(definition_id="mon-c", pack_id="pack-1",
+                       slug="c", name="Cinder Ogre")
+    )
+    await service.create_definition(
+        _build_monster(definition_id="mon-a", pack_id="pack-1",
+                       slug="a", name="Ash Sprite")
+    )
+    await service.create_definition(
+        _build_monster(definition_id="mon-b", pack_id="pack-1",
+                       slug="b", name="Bramble Troll")
+    )
+
+    uow = CompendiumUnitOfWork(db_session)
+    async with uow:
+        page_one = await uow.search_index.search(
+            family=DefinitionFamily.MONSTER.value,
+            limit=2,
+            offset=0,
+        )
+        page_two = await uow.search_index.search(
+            family=DefinitionFamily.MONSTER.value,
+            limit=2,
+            offset=2,
+        )
+
+    ordered_names = [doc.name for doc in page_one + page_two]
+    assert ordered_names == ["Ash Sprite", "Bramble Troll", "Cinder Ogre"]

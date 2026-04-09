@@ -50,7 +50,8 @@ async def api_client():
     async with engine.begin() as conn:
         for table_name in _V05_TABLES:
             await conn.run_sync(
-                lambda sync_conn, tn=table_name: Base.metadata.tables[tn].create(sync_conn)
+                lambda sync_conn, tn=table_name: Base.metadata.tables[tn].create(
+                    sync_conn)
             )
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
@@ -226,7 +227,8 @@ async def test_definition_update_and_publish(api_client: AsyncClient):
         },
     )
     assert stale_resp.status_code == 409
-    assert "INVALID_LIFECYCLE_TRANSITION" in stale_resp.json()["detail"]["error"]
+    assert "INVALID_LIFECYCLE_TRANSITION" in stale_resp.json()[
+        "detail"]["error"]
 
 
 @pytest.mark.asyncio
@@ -366,6 +368,91 @@ async def test_ability_action_specs_round_trip(api_client: AsyncClient):
     assert body["passive_effects"][0]["modifier_type"] == "flat"
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("family", "definition_id", "slug", "extra_fields"),
+    [
+        (
+            "action",
+            "action-rallying-cry",
+            "rallying-cry",
+            {
+                "action_type": "action",
+                "activation_cost": "action",
+                "action_operation_specs": [],
+            },
+        ),
+        (
+            "faction",
+            "faction-ember-guild",
+            "ember-guild",
+            {
+                "alignment": "neutral",
+                "influence_tier": "regional",
+                "base_region_id": None,
+            },
+        ),
+        (
+            "region",
+            "region-ashen-vale",
+            "ashen-vale",
+            {
+                "climate": "temperate",
+                "governing_faction_id": "faction-ember-guild",
+                "place_ids": [],
+            },
+        ),
+        (
+            "place",
+            "place-ironwatch",
+            "ironwatch",
+            {
+                "region_id": "region-ashen-vale",
+                "place_type": "settlement",
+                "controlling_faction_id": "faction-ember-guild",
+            },
+        ),
+    ],
+)
+async def test_extended_family_create_and_get(
+    api_client: AsyncClient,
+    family: str,
+    definition_id: str,
+    slug: str,
+    extra_fields: dict,
+):
+    """Expanded family surface supports create/get via unified compendium endpoints."""
+    await api_client.post(
+        "/api/compendium/packs",
+        json={"id": "extended-family-pack", "title": "Extended Family Pack"},
+    )
+
+    now = datetime.now(timezone.utc).isoformat()
+    payload = {
+        "family": family,
+        "id": definition_id,
+        "slug": slug,
+        "name": f"{family}-name",
+        "lifecycle_state": "draft",
+        "content_version": 1,
+        "schema_version": 1,
+        "pack_id": "extended-family-pack",
+        "provenance_source": "tests",
+        "provenance_updated_at": now,
+        **extra_fields,
+    }
+
+    create_resp = await api_client.post("/api/compendium/definitions", json=payload)
+    assert create_resp.status_code == 200
+    assert create_resp.json()["family"] == family
+
+    get_resp = await api_client.get(f"/api/compendium/definitions/{definition_id}")
+    assert get_resp.status_code == 200
+    body = get_resp.json()
+    assert body["family"] == family
+    assert body["slug"] == slug
+
+
 # =========================================================================
 # Search Endpoint through HTTP
 # =========================================================================
@@ -449,11 +536,89 @@ async def test_search_endpoint_contract_envelope(api_client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_search_endpoint_supports_family_payload_filters(api_client: AsyncClient):
+    """CM-11: endpoint supports family-scoped payload filters via pf_* query params."""
+    await api_client.post(
+        "/api/compendium/packs",
+        json={"id": "search-payload-pack", "title": "Search Payload Pack"},
+    )
+
+    now = datetime.now(timezone.utc).isoformat()
+    await api_client.post(
+        "/api/compendium/definitions",
+        json={
+            "family": "action",
+            "id": "search-action-reaction",
+            "slug": "parry",
+            "name": "Parry",
+            "lifecycle_state": "draft",
+            "content_version": 1,
+            "schema_version": 1,
+            "pack_id": "search-payload-pack",
+            "provenance_source": "tests",
+            "provenance_updated_at": now,
+            "action_type": "reaction",
+            "activation_cost": "reaction",
+            "action_operation_specs": [],
+        },
+    )
+    await api_client.post(
+        "/api/compendium/definitions",
+        json={
+            "family": "action",
+            "id": "search-action-action",
+            "slug": "rally",
+            "name": "Rally",
+            "lifecycle_state": "draft",
+            "content_version": 1,
+            "schema_version": 1,
+            "pack_id": "search-payload-pack",
+            "provenance_source": "tests",
+            "provenance_updated_at": now,
+            "action_type": "action",
+            "activation_cost": "action",
+            "action_operation_specs": [],
+        },
+    )
+
+    resp = await api_client.get(
+        "/api/compendium/search?family=action&pf_action_type=reaction"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 1
+    assert body[0]["definition_id"] == "search-action-reaction"
+
+
+@pytest.mark.asyncio
+async def test_search_endpoint_payload_filter_requires_family(api_client: AsyncClient):
+    """CM-11 contract: payload filters are denied when family is omitted."""
+    resp = await api_client.get("/api/compendium/search?pf_action_type=action")
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert detail["error"] == "VALIDATION_FAILED"
+    assert "require an explicit family" in detail["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_search_endpoint_denies_unsupported_payload_filter(api_client: AsyncClient):
+    """CM-11 contract: unsupported family/filter combinations are denied."""
+    resp = await api_client.get(
+        "/api/compendium/search?family=spell&pf_action_type=action"
+    )
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert detail["error"] == "VALIDATION_FAILED"
+    assert "unsupported payload filters" in detail["message"].lower()
+
+
+@pytest.mark.asyncio
 async def test_replacement_chain_contract_envelope_denied(api_client: AsyncClient):
     """Contract mode returns denied envelope fields on replacement-chain errors."""
     with patch(
         "src.systems.dnd5e.content.application.resolution.LinkedEntryResolutionService.resolve_replacement_chain",
-        side_effect=GraphCycleError(definition_id="cycle-a", visited_path=["cycle-a", "cycle-b"]),
+        side_effect=GraphCycleError(
+            definition_id="cycle-a", visited_path=["cycle-a", "cycle-b"]),
     ):
         resp = await api_client.get(
             "/api/compendium/definitions/cycle-a/replacement-chain?include_contract=true",

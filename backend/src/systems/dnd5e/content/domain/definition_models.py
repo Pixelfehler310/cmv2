@@ -4,12 +4,13 @@ from typing import Optional, List, Literal
 from pydantic import BaseModel, Field, model_validator
 
 from .primitives import (
-    DefinitionFamily, 
-    LifecycleState, 
-    ModifierSpec, 
+    DefinitionFamily,
+    LifecycleState,
+    ModifierSpec,
     ActionOperationSpec
 )
 from .invariants import CompendiumErrorCode
+
 
 class DefinitionRecord(BaseModel):
     id: str
@@ -44,14 +45,17 @@ class LoreDefinition(DefinitionRecord):
     lore_type: Literal["faction", "region", "place", "deity"]
     rich_text_content: str
 
+
 class SpeciesDefinition(DefinitionRecord):
     family: Literal[DefinitionFamily.SPECIES] = DefinitionFamily.SPECIES
     speed: int
     size: str
 
+
 class BackgroundDefinition(DefinitionRecord):
     family: Literal[DefinitionFamily.BACKGROUND] = DefinitionFamily.BACKGROUND
     skill_proficiencies: List[str]
+
 
 class ClassDefinition(DefinitionRecord):
     family: Literal[DefinitionFamily.CLASS] = DefinitionFamily.CLASS
@@ -67,11 +71,42 @@ class ConditionDefinition(DefinitionRecord):
     has_levels: bool
     modifier_specs: List[ModifierSpec]
 
+
+class ActionDefinition(DefinitionRecord):
+    family: Literal[DefinitionFamily.ACTION] = DefinitionFamily.ACTION
+    action_type: Literal["action", "bonus_action", "reaction", "passive"]
+    activation_cost: Literal["action", "bonus_action", "reaction", "free"]
+    action_operation_specs: List[ActionOperationSpec]
+
+
+class FactionDefinition(DefinitionRecord):
+    family: Literal[DefinitionFamily.FACTION] = DefinitionFamily.FACTION
+    alignment: str | None = None
+    influence_tier: Literal["local", "regional", "continental", "global"]
+    base_region_id: str | None = None
+
+
+class RegionDefinition(DefinitionRecord):
+    family: Literal[DefinitionFamily.REGION] = DefinitionFamily.REGION
+    climate: str | None = None
+    governing_faction_id: str | None = None
+    place_ids: List[str] = Field(default_factory=list)
+
+
+class PlaceDefinition(DefinitionRecord):
+    family: Literal[DefinitionFamily.PLACE] = DefinitionFamily.PLACE
+    region_id: str | None = None
+    place_type: Literal["settlement", "dungeon",
+                        "landmark", "wilderness", "other"]
+    controlling_faction_id: str | None = None
+
+
 class AbilityDefinition(DefinitionRecord):
     family: Literal[DefinitionFamily.ABILITY] = DefinitionFamily.ABILITY
     ability_type: Literal["feature", "feat"]
     action_operation_specs: List[ActionOperationSpec]
     passive_effects: List[ModifierSpec]
+
 
 class SpellDefinition(DefinitionRecord):
     family: Literal[DefinitionFamily.SPELL] = DefinitionFamily.SPELL
@@ -80,12 +115,14 @@ class SpellDefinition(DefinitionRecord):
     casting_time: str
     action_operation_specs: List[ActionOperationSpec]
 
+
 class ItemDefinition(DefinitionRecord):
     family: Literal[DefinitionFamily.ITEM] = DefinitionFamily.ITEM
     item_type: Literal["weapon", "armor", "gear", "consumable"]
     weight: float
     cost: int
     action_operation_specs: List[ActionOperationSpec]
+
 
 class MonsterDefinition(DefinitionRecord):
     family: Literal[DefinitionFamily.MONSTER] = DefinitionFamily.MONSTER

@@ -21,13 +21,15 @@ import pytest
 def test_definition_family_enum_matches_diagram():
     """
     V05_business_and_content_entities_class_diagram defines these families:
-    class, species, background, ability, spell, item, monster, lore, condition.
+    class, species, background, ability, spell, item, monster, lore, condition,
+    action, faction, region, place.
     """
     from src.systems.dnd5e.content.domain.primitives import DefinitionFamily
 
     expected_families = {
         "class", "species", "background", "ability",
         "spell", "item", "monster", "lore", "condition",
+        "action", "faction", "region", "place",
     }
     actual_families = {member.value for member in DefinitionFamily}
 
@@ -61,6 +63,10 @@ def test_all_definition_subclasses_exist():
         "MonsterDefinition",
         "LoreDefinition",
         "ConditionDefinition",
+        "ActionDefinition",
+        "FactionDefinition",
+        "RegionDefinition",
+        "PlaceDefinition",
     ]
 
     for cls_name in expected_classes:
