@@ -44,7 +44,12 @@ Reference: `ISSUES/architecture/01_contracts/FREEZE_GATE_STATUS.md`
 
 ## Work Board
 
-Snapshot date: 2026-04-08
+Snapshot date: 2026-04-09
+
+## Execution Control Artifacts
+
+1. Grand scope + next-step control: `ISSUES/architecture/02_implementations/SPRINT_02_EXECUTION_CONTROL_TOWER.md`
+2. Per-ticket endpoint/frontend verification procedures: `ISSUES/architecture/02_implementations/SPRINT_02_MANUAL_VERIFICATION_RUNBOOK.md`
 
 ## Completed
 
@@ -73,16 +78,16 @@ Snapshot date: 2026-04-08
 
 ## Completion Matrix (Evidence-Based)
 
-| Ticket | Status | Evidence (Implementation) | Evidence (Tests) | Notes |
-| :----- | :----- | :------------------------ | :--------------- | :---- |
-| CM-01 | Complete | `backend/src/systems/dnd5e/content/application/services.py`, `backend/src/systems/dnd5e/content/policies/lifecycle_transition_policy.py` | `backend/tests/systems/dnd5e/content/test_compendium_service.py`, `backend/tests/systems/dnd5e/content/integration/test_error_case_matrix.py` | Lifecycle transitions, delete rules, supersedence, denial mapping are implemented. |
-| CM-02 | Complete | `backend/src/systems/dnd5e/content/api/router.py`, `backend/src/systems/dnd5e/content/infrastructure/search_index_repository.py` | `backend/tests/systems/dnd5e/content/integration/test_api_transport.py`, `backend/tests/systems/dnd5e/content/test_search_index.py` | Query/list/search path includes revision-bearing contract envelope support. |
-| CM-03 | Complete | `backend/src/systems/dnd5e/content/application/resolution.py`, `backend/src/systems/dnd5e/content/policies/linked_entry_integrity_policy.py` | `backend/tests/systems/dnd5e/content/test_link_resolution.py`, `backend/tests/systems/dnd5e/content/test_compendium_service.py` | Required-link validation, cycle handling, replacement-chain behavior present. |
-| CM-04 | Complete | `backend/src/systems/dnd5e/content/api/ws_events.py` | `backend/tests/systems/dnd5e/content/test_ws_events_contract.py` | Revision gap invalidation and stale-event ignore behavior implemented. |
-| CM-05 | Complete | `backend/src/systems/dnd5e/content/api/router.py`, `backend/src/systems/dnd5e/content/api/ws_events.py` | `backend/tests/systems/dnd5e/content/integration/test_api_transport.py`, `backend/tests/systems/dnd5e/content/test_ws_events_contract.py` | Request correlation, reason-code envelopes, and revision fields mapped on API/WS paths. |
-| CM-06 | Not Started | `ISSUE_[IMPLEMENT]_[CM-06]_action_mechanics_contract_integration_smoke.md` (planned only) | No dedicated implementation tests in active tree | Still stretch; starts after CM-01..CM-05 acceptance checks. |
-| CM-07 | In Progress | `backend/src/systems/dnd5e/application/character_service.py`, `backend/src/systems/dnd5e/character/router.py` | `backend/tests/systems/dnd5e/test_character_write_router.py` | Character write path, ownership validation, and denial taxonomy present but uncommitted. |
-| CM-08 | In Progress | `backend/src/systems/dnd5e/application/character_sheet_service.py`, `backend/src/systems/dnd5e/character/sheet_models.py`, `backend/src/systems/dnd5e/character/router.py` | `backend/tests/systems/dnd5e/test_character_sheet_projection_router.py` | Revision-aware sheet projection and unresolved-reference outcomes present but uncommitted. |
+| Ticket | Status      | Evidence (Implementation)                                                                                                                                                  | Evidence (Tests)                                                                                                                              | Notes                                                                                                                                                             |
+| :----- | :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CM-01  | Complete    | `backend/src/systems/dnd5e/content/application/services.py`, `backend/src/systems/dnd5e/content/policies/lifecycle_transition_policy.py`                                   | `backend/tests/systems/dnd5e/content/test_compendium_service.py`, `backend/tests/systems/dnd5e/content/integration/test_error_case_matrix.py` | Lifecycle transitions, delete rules, supersedence, denial mapping are implemented.                                                                                |
+| CM-02  | Complete    | `backend/src/systems/dnd5e/content/api/router.py`, `backend/src/systems/dnd5e/content/infrastructure/search_index_repository.py`                                           | `backend/tests/systems/dnd5e/content/integration/test_api_transport.py`, `backend/tests/systems/dnd5e/content/test_search_index.py`           | Query/list/search path includes revision-bearing contract envelope support.                                                                                       |
+| CM-03  | Complete    | `backend/src/systems/dnd5e/content/application/resolution.py`, `backend/src/systems/dnd5e/content/policies/linked_entry_integrity_policy.py`                               | `backend/tests/systems/dnd5e/content/test_link_resolution.py`, `backend/tests/systems/dnd5e/content/test_compendium_service.py`               | Required-link validation, cycle handling, replacement-chain behavior present.                                                                                     |
+| CM-04  | Complete    | `backend/src/systems/dnd5e/content/api/ws_events.py`                                                                                                                       | `backend/tests/systems/dnd5e/content/test_ws_events_contract.py`                                                                              | Revision gap invalidation and stale-event ignore behavior implemented.                                                                                            |
+| CM-05  | Complete    | `backend/src/systems/dnd5e/content/api/router.py`, `backend/src/systems/dnd5e/content/api/ws_events.py`                                                                    | `backend/tests/systems/dnd5e/content/integration/test_api_transport.py`, `backend/tests/systems/dnd5e/content/test_ws_events_contract.py`     | Request correlation, reason-code envelopes, and revision fields mapped on API/WS paths.                                                                           |
+| CM-06  | Not Started | `ISSUE_[IMPLEMENT]_[CM-06]_action_mechanics_contract_integration_smoke.md` (planned only)                                                                                  | No dedicated implementation tests in active tree                                                                                              | Still stretch; starts after CM-01..CM-05 acceptance checks.                                                                                                       |
+| CM-07  | In Progress | `backend/src/systems/dnd5e/application/character_service.py`, `backend/src/systems/dnd5e/character/router.py`                                                              | `backend/tests/systems/dnd5e/test_character_write_router.py`                                                                                  | Character write path, ownership validation, and denial taxonomy landed in commit `ffe5812`; verification evidence recording is pending.                           |
+| CM-08  | Verified    | `backend/src/systems/dnd5e/application/character_sheet_service.py`, `backend/src/systems/dnd5e/character/sheet_models.py`, `backend/src/systems/dnd5e/character/router.py` | `backend/tests/systems/dnd5e/test_character_sheet_projection_router.py` (12/12 tests passed 2026-04-09)                                       | Revision-aware sheet projection and unresolved-reference outcomes verified. All contract shape, determinism, denial, revision-gap, and event-emission tests pass. |
 
 ## Sequencing Rules
 
@@ -111,6 +116,7 @@ flowchart LR
 1. `docker compose --profile test run --rm backend-test`
 2. `python backend/scripts/generate_types.py --check`
 3. `python backend/scripts/validate_fixture_json.py`
+4. Targeted verification by ticket: use `SPRINT_02_MANUAL_VERIFICATION_RUNBOOK.md`
 
 ## Risks
 

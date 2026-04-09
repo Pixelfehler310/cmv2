@@ -33,14 +33,19 @@ async def _build_client_with_seeded_db() -> tuple[AsyncClient, async_sessionmake
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async with session_factory() as session:
-        owner = User(id="user-owner", username="owner", is_active=True, is_superuser=False)
-        outsider = User(id="user-outsider", username="outsider", is_active=True, is_superuser=False)
+        owner = User(id="user-owner", username="owner",
+                     is_active=True, is_superuser=False)
+        outsider = User(id="user-outsider", username="outsider",
+                        is_active=True, is_superuser=False)
         campaign = Campaign(id="camp-1", name="Test Campaign")
         second_campaign = Campaign(id="camp-2", name="Second Test Campaign")
-        member = CampaignMember(campaign_id="camp-1", user_id="user-owner", role="PLAYER")
-        second_member = CampaignMember(campaign_id="camp-2", user_id="user-owner", role="PLAYER")
+        member = CampaignMember(campaign_id="camp-1",
+                                user_id="user-owner", role="PLAYER")
+        second_member = CampaignMember(
+            campaign_id="camp-2", user_id="user-owner", role="PLAYER")
         species = Species(id="species-1", name="Human", description="Human")
-        char_class = ClassModel(id="class-1", name="Fighter", description="Fighter", hit_die="1d10")
+        char_class = ClassModel(
+            id="class-1", name="Fighter", description="Fighter", hit_die="1d10")
 
         session.add_all(
             [
@@ -74,7 +79,8 @@ async def _build_client_with_seeded_db() -> tuple[AsyncClient, async_sessionmake
     app.dependency_overrides[get_db] = _override_get_db
     app.dependency_overrides[get_current_active_user] = _override_current_user
 
-    client = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+    client = AsyncClient(transport=ASGITransport(
+        app=app), base_url="http://test")
     return client, session_factory, app, engine
 
 
@@ -149,6 +155,23 @@ async def test_create_character_resolved_envelope():
         assert body["reason_code"] is None
         assert body["payload"]["player_id"] == "user-owner"
         assert body["payload"]["status"] == "active"
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_create_character_generates_request_id_when_missing_header():
+    client, _, _, engine = await _build_client_with_seeded_db()
+    try:
+        response = await client.post(
+            "/api/characters",
+            json=_payload(),
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == "resolved"
+        assert isinstance(body["request_id"], str)
+        assert body["request_id"]
     finally:
         await client.aclose()
         await engine.dispose()
@@ -270,6 +293,60 @@ async def test_update_character_happy_path():
             assert persisted is not None
             assert persisted.name == "Aelar Updated"
             assert persisted.level == 2
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_update_character_denied_when_character_not_found():
+    client, _, _, engine = await _build_client_with_seeded_db()
+    try:
+        response = await client.put("/api/characters/missing-character", json=_payload())
+        _assert_denied(
+            response,
+            status_code=404,
+            reason_code="CHARACTER_NOT_FOUND",
+        )
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_update_character_denied_on_player_ownership_violation():
+    client, _, app, engine = await _build_client_with_seeded_db()
+    try:
+        create_response = await client.post("/api/characters", json=_payload())
+        assert create_response.status_code == 200
+        character_id = create_response.json()["payload"]["id"]
+
+        app.state.current_user_id = "user-outsider"
+        response = await client.put(f"/api/characters/{character_id}", json=_payload())
+        _assert_denied(
+            response,
+            status_code=403,
+            reason_code="PLAYER_OWNERSHIP_VIOLATION",
+        )
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_update_character_denied_on_unresolved_required_reference():
+    client, _, _, engine = await _build_client_with_seeded_db()
+    try:
+        create_response = await client.post("/api/characters", json=_payload())
+        assert create_response.status_code == 200
+        character_id = create_response.json()["payload"]["id"]
+
+        bad_payload = _payload()
+        bad_payload["class_id"] = "missing-class"
+        response = await client.put(f"/api/characters/{character_id}", json=bad_payload)
+        _assert_denied(
+            response,
+            status_code=400,
+            reason_code="UNRESOLVED_CLASS_DEFINITION",
+            unresolved_reference_ids=["missing-class"],
+        )
     finally:
         await client.aclose()
         await engine.dispose()

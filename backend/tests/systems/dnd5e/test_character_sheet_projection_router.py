@@ -13,7 +13,7 @@ from src.legacy.campaigns.lib.campaign import Campaign, CampaignMember
 from src.legacy.campaigns.lib.character import Character
 from src.legacy.data.lib.class_model import ClassModel
 from src.legacy.data.lib.species import Species
-from src.systems.dnd5e.character.router import router
+from src.systems.dnd5e.character.router import get_character_stream_handler, router
 
 pytestmark = pytest.mark.asyncio
 
@@ -27,11 +27,14 @@ async def _build_client_with_seeded_db() -> tuple[AsyncClient, async_sessionmake
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async with session_factory() as session:
-        owner = User(id="user-owner", username="owner", is_active=True, is_superuser=False)
+        owner = User(id="user-owner", username="owner",
+                     is_active=True, is_superuser=False)
         campaign = Campaign(id="camp-1", name="Test Campaign")
-        member = CampaignMember(campaign_id="camp-1", user_id="user-owner", role="PLAYER")
+        member = CampaignMember(campaign_id="camp-1",
+                                user_id="user-owner", role="PLAYER")
         species = Species(id="species-1", name="Human", description="Human")
-        char_class = ClassModel(id="class-1", name="Fighter", description="Fighter", hit_die="1d10")
+        char_class = ClassModel(
+            id="class-1", name="Fighter", description="Fighter", hit_die="1d10")
 
         session.add_all([owner, campaign, member, species, char_class])
         await session.commit()
@@ -51,7 +54,8 @@ async def _build_client_with_seeded_db() -> tuple[AsyncClient, async_sessionmake
     app.dependency_overrides[get_db] = _override_get_db
     app.dependency_overrides[get_current_active_user] = _override_current_user
 
-    client = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+    client = AsyncClient(transport=ASGITransport(
+        app=app), base_url="http://test")
     return client, session_factory, app, engine
 
 
@@ -90,6 +94,72 @@ def _payload() -> dict:
     }
 
 
+class StubCharacterSheetWsHandler:
+    def __init__(self):
+        self.projection_updated_events: list[dict] = []
+        self.references_denied_events: list[dict] = []
+        self.invalidation_required_events: list[dict] = []
+
+    async def emit_character_sheet_projection_updated(
+        self,
+        *,
+        campaign_id: str,
+        request_id: str | None,
+        character_id: str,
+        sheet_revision: int,
+        catalog_revision: int,
+    ) -> None:
+        self.projection_updated_events.append(
+            {
+                "campaign_id": campaign_id,
+                "request_id": request_id,
+                "character_id": character_id,
+                "sheet_revision": sheet_revision,
+                "catalog_revision": catalog_revision,
+            }
+        )
+
+    async def emit_character_sheet_references_denied(
+        self,
+        *,
+        campaign_id: str,
+        request_id: str | None,
+        character_id: str,
+        sheet_revision: int,
+        reason_code: str,
+        unresolved_reference_ids: list[str],
+    ) -> None:
+        self.references_denied_events.append(
+            {
+                "campaign_id": campaign_id,
+                "request_id": request_id,
+                "character_id": character_id,
+                "sheet_revision": sheet_revision,
+                "reason_code": reason_code,
+                "unresolved_reference_ids": unresolved_reference_ids,
+            }
+        )
+
+    async def emit_character_sheet_invalidation_required(
+        self,
+        *,
+        campaign_id: str,
+        request_id: str | None,
+        character_id: str,
+        invalidated_at_revision: int,
+        reason_code: str,
+    ) -> None:
+        self.invalidation_required_events.append(
+            {
+                "campaign_id": campaign_id,
+                "request_id": request_id,
+                "character_id": character_id,
+                "invalidated_at_revision": invalidated_at_revision,
+                "reason_code": reason_code,
+            }
+        )
+
+
 async def _create_character(client: AsyncClient) -> str:
     response = await client.post("/api/characters", json=_payload())
     assert response.status_code == 200
@@ -121,6 +191,64 @@ async def test_character_sheet_projection_resolved_contract_shape():
         assert projection["computed_fields"]["class_id"] == "class-1"
         assert projection["computed_fields"]["species_id"] == "species-1"
         assert projection["last_resolved_at"]
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_character_sheet_projection_generates_request_id_when_missing_header():
+    client, _, _, engine = await _build_client_with_seeded_db()
+    try:
+        character_id = await _create_character(client)
+
+        response = await client.get(
+            f"/api/characters/{character_id}/sheet",
+            params={"catalog_revision": 1},
+        )
+        assert response.status_code == 200
+
+        body = response.json()
+        assert body["status"] == "resolved"
+        assert isinstance(body["request_id"], str)
+        assert body["request_id"]
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_character_sheet_projection_denied_for_missing_character():
+    client, _, _, engine = await _build_client_with_seeded_db()
+    try:
+        response = await client.get(
+            "/api/characters/missing-character/sheet",
+            params={"catalog_revision": 1},
+            headers={"x-request-id": "req-sheet-missing-character"},
+        )
+        assert response.status_code == 404
+
+        body = response.json()
+        assert body["request_id"] == "req-sheet-missing-character"
+        assert body["status"] == "denied"
+        assert body["reason_code"] == "CHARACTER_NOT_FOUND"
+        assert body["payload"]["unresolved_reference_ids"] == []
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_character_sheet_projection_rejects_negative_catalog_revision():
+    client, _, _, engine = await _build_client_with_seeded_db()
+    try:
+        character_id = await _create_character(client)
+
+        response = await client.get(
+            f"/api/characters/{character_id}/sheet",
+            params={"catalog_revision": -1},
+        )
+        assert response.status_code == 422
+
+        body = response.json()
+        assert body["detail"][0]["loc"] == ["query", "catalog_revision"]
     finally:
         await client.aclose()
         await engine.dispose()
@@ -248,7 +376,104 @@ async def test_character_sheet_projection_denied_for_unresolved_ability_referenc
         assert body["status"] == "denied"
         assert body["reason_code"] == "UNRESOLVED_ABILITY_DEFINITION"
         assert body["payload"]["resolution_status"] == "denied"
-        assert body["payload"]["unresolved_reference_ids"] == ["missing-ability"]
+        assert body["payload"]["unresolved_reference_ids"] == [
+            "missing-ability"]
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_character_sheet_projection_emits_projection_updated_event_on_resolved_status():
+    client, _, app, engine = await _build_client_with_seeded_db()
+    ws_stub = StubCharacterSheetWsHandler()
+    app.dependency_overrides[get_character_stream_handler] = lambda: ws_stub
+    try:
+        character_id = await _create_character(client)
+
+        response = await client.get(
+            f"/api/characters/{character_id}/sheet",
+            params={"catalog_revision": 1},
+            headers={"x-request-id": "req-sheet-ws-resolved"},
+        )
+        assert response.status_code == 200
+
+        assert len(ws_stub.projection_updated_events) == 1
+        event = ws_stub.projection_updated_events[0]
+        assert event["request_id"] == "req-sheet-ws-resolved"
+        assert event["character_id"] == character_id
+        assert event["catalog_revision"] == 1
+        assert event["campaign_id"] == "camp-1"
+        assert len(ws_stub.references_denied_events) == 0
+        assert len(ws_stub.invalidation_required_events) == 0
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_character_sheet_projection_emits_references_denied_event_on_denied_status():
+    client, session_factory, app, engine = await _build_client_with_seeded_db()
+    ws_stub = StubCharacterSheetWsHandler()
+    app.dependency_overrides[get_character_stream_handler] = lambda: ws_stub
+    try:
+        character_id = await _create_character(client)
+
+        async with session_factory() as session:
+            cls = await session.get(ClassModel, "class-1")
+            assert cls is not None
+            await session.delete(cls)
+            await session.commit()
+
+        response = await client.get(
+            f"/api/characters/{character_id}/sheet",
+            params={"catalog_revision": 1},
+            headers={"x-request-id": "req-sheet-ws-denied"},
+        )
+        assert response.status_code == 400
+
+        assert len(ws_stub.references_denied_events) == 1
+        event = ws_stub.references_denied_events[0]
+        assert event["request_id"] == "req-sheet-ws-denied"
+        assert event["character_id"] == character_id
+        assert event["reason_code"] == "UNRESOLVED_CLASS_DEFINITION"
+        assert event["unresolved_reference_ids"] == ["class-1"]
+        assert event["campaign_id"] == "camp-1"
+        assert len(ws_stub.projection_updated_events) == 0
+        assert len(ws_stub.invalidation_required_events) == 0
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_character_sheet_projection_emits_invalidation_event_on_invalidated_status():
+    client, _, app, engine = await _build_client_with_seeded_db()
+    ws_stub = StubCharacterSheetWsHandler()
+    app.dependency_overrides[get_character_stream_handler] = lambda: ws_stub
+    try:
+        character_id = await _create_character(client)
+
+        first = await client.get(
+            f"/api/characters/{character_id}/sheet",
+            params={"catalog_revision": 1},
+            headers={"x-request-id": "req-sheet-ws-first"},
+        )
+        assert first.status_code == 200
+
+        gap = await client.get(
+            f"/api/characters/{character_id}/sheet",
+            params={"catalog_revision": 4},
+            headers={"x-request-id": "req-sheet-ws-invalidated"},
+        )
+        assert gap.status_code == 409
+
+        assert len(ws_stub.projection_updated_events) == 1
+        assert len(ws_stub.references_denied_events) == 0
+        assert len(ws_stub.invalidation_required_events) == 1
+        event = ws_stub.invalidation_required_events[0]
+        assert event["request_id"] == "req-sheet-ws-invalidated"
+        assert event["character_id"] == character_id
+        assert event["invalidated_at_revision"] == 1
+        assert event["reason_code"] == "CATALOG_REVISION_MISMATCH"
+        assert event["campaign_id"] == "camp-1"
     finally:
         await client.aclose()
         await engine.dispose()

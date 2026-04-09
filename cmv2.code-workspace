@@ -10,5 +10,6 @@
   ],
   "settings": {
     "liveServer.settings.multiRootWorkspaceName": "cmv2",
+    "python.terminal.useEnvFile": true,
   },
 }

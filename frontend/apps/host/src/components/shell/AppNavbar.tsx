@@ -2,6 +2,7 @@ import { Bell, User, Settings, LogOut } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@rpg/ui";
 import { IConnectionState, UserProfile } from "@rpg/bridge";
+import { config } from "../../config";
 
 interface AppNavbarProps {
   user: UserProfile | null;
@@ -11,7 +12,7 @@ interface AppNavbarProps {
 
 export const AppNavbar = ({ user, connection, onLogout }: AppNavbarProps) => {
   return (
-    <nav className="h-14 border-b border-border bg-surface-100 backdrop-blur supports-[backdrop-filter]:bg-surface-100/90 px-4 flex items-center justify-between shadow-sm">
+    <nav className="h-14 border-b border-border bg-surface-100 backdrop-blur supports-backdrop-filter:bg-surface-100/90 px-4 flex items-center justify-between shadow-sm">
       {/* Left: Logo */}
       <div className="flex items-center gap-2 font-heading text-xl cursor-pointer hover:scale-105 transition-transform">
         <div className="w-8 h-8 rounded-lg outline-none gradient-vtt flex items-center justify-center shadow-sm">
@@ -28,6 +29,11 @@ export const AppNavbar = ({ user, connection, onLogout }: AppNavbarProps) => {
         <NavLink to="/content" className={({ isActive }) => cn("text-sm font-bold transition-colors", isActive ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
           Content Manager
         </NavLink>
+        {config.debugPageEnabled ? (
+          <NavLink to="/debug" className={({ isActive }) => cn("text-sm font-bold transition-colors", isActive ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
+            Debug
+          </NavLink>
+        ) : null}
       </div>
 
       {/* Right: Status & User */}

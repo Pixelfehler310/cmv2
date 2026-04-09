@@ -7,6 +7,7 @@ import { SessionRoute } from "./routes/SessionRoute";
 import { StageRoute } from "./routes/StageRoute";
 import { ContentRoute } from "./routes/ContentRoute";
 import { StoryGraphRoute } from "./routes/StoryGraphRoute";
+import { DebugRoute } from "./routes/DebugRoute";
 import { WorkspaceLayout } from "./components/shell/WorkspaceLayout";
 import { AuthService } from "./lib/auth";
 import { WsClient } from "@rpg/bridge";
@@ -42,6 +43,7 @@ function App() {
             <Route element={<WorkspaceLayout auth={authService} ws={wsManager} />}>
               <Route path="/campaigns" element={<CampaignSelectorRoute />} />
               <Route path="/content" element={<ContentRoute />} />
+              <Route path="/debug" element={<DebugRoute />} />
               <Route path="/campaigns/:id/story" element={<StoryGraphRoute />} />
               <Route path="/session/:id" element={<SessionRoute auth={authService} ws={wsManager} queryClient={queryClient} />} />
             </Route>

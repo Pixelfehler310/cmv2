@@ -60,6 +60,7 @@ services:
     restart: always
     environment:
       - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://backend:8000}
+      - VITE_DEBUG_PAGE_ENABLED=false
     # Kein Volume-Mount in Produktion
     volumes: []
     deploy:

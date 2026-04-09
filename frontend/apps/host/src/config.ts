@@ -5,6 +5,7 @@ export const config = {
   useMocks: (import.meta as any).env.VITE_USE_MOCKS === "true",
   apiUrl: (import.meta as any).env.VITE_API_URL || "/api",
   wsUrl: (import.meta as any).env.VITE_WS_URL || `${wsProtocol}//${host}/ws`,
+  debugPageEnabled: (import.meta as any).env.VITE_DEBUG_PAGE_ENABLED === "true",
   frontendTesting: {
     playerActionLab: (import.meta as any).env.VITE_FRONTEND_TESTING_PLAYER_ACTION_LAB === "true",
     dmProxyDock: (import.meta as any).env.VITE_FRONTEND_TESTING_DM_PROXY_DOCK === "true",
