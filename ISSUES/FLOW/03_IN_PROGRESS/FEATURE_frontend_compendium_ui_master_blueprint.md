@@ -7,6 +7,7 @@ Parent Legacy Ticket: `ISSUE_frontend_compendium_ui_vertical.md`
 ## Mission
 
 Deliver a production-ready CRUD UI for compendium definitions (items, spells, monsters, actions) against the unified backend endpoint:
+
 - `/api/compendium/definitions`
 
 The blueprint turns one large issue into a manageable parent feature with tracked slices and subfeatures.
@@ -25,6 +26,7 @@ The blueprint turns one large issue into a manageable parent feature with tracke
 Goal: Stabilize form lifecycle and cross-form utilities.
 
 Checklist:
+
 - [ ] Implement `useCompendiumDraft` local draft persistence and restore.
 - [ ] Implement dirty-state navigation guard for unsaved edits.
 - [ ] Build `CompendiumAutocomplete` with family filter support.
@@ -35,6 +37,7 @@ Checklist:
 Goal: Build reusable editor primitives used by all family forms.
 
 Checklist:
+
 - [ ] Build `DefinitionHeader` (id, title, slug, pack fields).
 - [ ] Build reusable attributes/vitals/speed editor atoms.
 - [ ] Build `OperationSpecBranch` tree editor for nested operation payloads.
@@ -45,6 +48,7 @@ Checklist:
 Goal: Ship primary family editors with advanced action editing path.
 
 Checklist:
+
 - [ ] Build `MonsterEditor` using shared atoms.
 - [ ] Build `SpellEditor` using shared atoms.
 - [ ] Integrate `ActionSidePanel` (wide drawer layout) for operation editing.
@@ -55,6 +59,7 @@ Checklist:
 Goal: Improve authoring quality and throughput without changing core contracts.
 
 Checklist:
+
 - [ ] Add field-level visual error mapping from backend validation details.
 - [ ] Implement action template clone flow (clean clone default).
 - [ ] Add last-saved state and stay-in-editor loop.
@@ -78,11 +83,13 @@ Checklist:
 ## Dependency Notes
 
 Primary backend dependencies:
+
 - Unified compendium definitions endpoint availability.
 - Stable `family` discriminator behavior.
 - Stable validation error schema from backend.
 
 Primary architecture references for later batch work:
+
 - `ISSUES/architecture/04_module_specifications/02_content_write.md`
 - `ISSUES/architecture/04_module_specifications/03_content_query.md`
 - `ISSUES/architecture/04_module_specifications/05_sheets.md`
