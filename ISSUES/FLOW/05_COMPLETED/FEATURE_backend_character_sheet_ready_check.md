@@ -82,16 +82,6 @@ Checklist:
 
 ## Dependency Notes
 
-Primary dependency diagram artifact:
-
-- `ISSUES/FLOW/03_IN_PROGRESS/DIAGRAM_compendium_entity_dependency_tree.md`
-
-Key dependency conclusions from the updated diagram:
-
-- `ActionDefinition` is treated as the template container; `ActionOperationSpec` remains the value-object execution primitive.
-- Character and sheet projection dependencies are in scope for downstream editor/view planning.
-- Runtime instancing (monster and actor inventory via item instances) is included as a follow-on dependency layer.
-
 Primary backend dependencies:
 
 - Unified compendium definitions endpoint availability.

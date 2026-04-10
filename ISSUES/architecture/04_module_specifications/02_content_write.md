@@ -7,13 +7,17 @@ Definition create/update/publish lifecycle and reference-safe mutation boundarie
 ## Primary Classes
 
 1. `DefinitionRecord` as base compendium definition model.
-2. `LoreDefinition`, `SpeciesDefinition`, `ClassDefinition`, `ConditionDefinition` as family-specific models.
-3. `ContentPackRecord` for pack grouping, lifecycle, and compatibility scope.
-4. `LinkedEntryReference` for directional dependency edges.
-5. `CompendiumApplicationService` for write-path orchestration.
-6. `CompendiumUnitOfWork` for transactional boundaries.
-7. `LifecycleTransitionPolicy` for legal state transition enforcement.
-8. `LinkedEntryIntegrityPolicy` for link target and chain validation.
+   - Includes `license_id` (Reference to License object).
+   - Includes `provenance_author` and `provenance_source` (Publisher).
+2. `LicenseRecord` for legal attribution and usage terms.
+   - Fields: `id`, `name`, `version`, `text_url`, `is_open`.
+3. `LoreDefinition`, `SpeciesDefinition`, `ClassDefinition`, `ConditionDefinition` as family-specific models.
+4. `ContentPackRecord` for pack grouping, lifecycle, and compatibility scope.
+5. `LinkedEntryReference` for directional dependency edges.
+6. `CompendiumApplicationService` for write-path orchestration.
+7. `CompendiumUnitOfWork` for transactional boundaries.
+8. `LifecycleTransitionPolicy` for legal state transition enforcement.
+9. `LinkedEntryIntegrityPolicy` for link target and chain validation.
 
 ## Externally Callable Methods (20+)
 

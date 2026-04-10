@@ -7,11 +7,12 @@ Shared invariants, error taxonomy, reason-code registry, and cross-module contra
 ## Primary Classes
 
 1. `ReasonCodeRegistry` for canonical denial code lookup.
-2. `ErrorEnvelope` for standardized terminal error payloads.
-3. `PolicyDecision` for allow-deny-pending outcomes.
-4. `ContextEnvelope` for typed cross-module context wrapping.
-5. `InvariantCatalog` for registered invariant validators.
-6. `ConstraintTaxonomy` for reason class and severity mapping.
+2. `LicenseRegistry` for managing official and homebrew license objects.
+3. `ErrorEnvelope` for standardized terminal error payloads.
+4. `PolicyDecision` for allow-deny-pending outcomes.
+5. `ContextEnvelope` for typed cross-module context wrapping.
+6. `InvariantCatalog` for registered invariant validators.
+7. `ConstraintTaxonomy` for reason class and severity mapping.
 
 ## Externally Callable Methods (10+)
 
