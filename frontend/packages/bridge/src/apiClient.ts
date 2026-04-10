@@ -40,6 +40,11 @@ export interface CharacterSheetParams {
   catalog_revision: number;
 }
 
+export interface CharacterListParams {
+  campaign_id: string;
+  player_id: string;
+}
+
 export interface CharacterCommandEnvelope<TPayload = unknown> {
   request_id: string;
   status: string;
@@ -209,6 +214,14 @@ class ApiClient {
   };
 
   public characters = {
+    list: (params: CharacterListParams) => {
+      const query = this.buildQuery({
+        campaign_id: params.campaign_id,
+        player_id: params.player_id,
+      });
+      return this.fetchJson<CharacterCommandEnvelope<Record<string, unknown>[]>>(`/characters?${query}`);
+    },
+
     create: (payload: Record<string, unknown>) =>
       this.fetchJson<CharacterCommandEnvelope>("/characters", {
         method: "POST",

@@ -84,13 +84,19 @@ async def _build_client_with_seeded_db() -> tuple[AsyncClient, async_sessionmake
     return client, session_factory, app, engine
 
 
-def _payload(*, player_id: str = "user-owner", name: str = "Aelar", level: int = 1) -> dict:
+def _payload(
+    *,
+    player_id: str = "user-owner",
+    campaign_id: str = "camp-1",
+    name: str = "Aelar",
+    level: int = 1,
+) -> dict:
     return {
         "name": name,
         "player_name": "Owner",
         "player_id": player_id,
         "status": "active",
-        "campaign_id": "camp-1",
+        "campaign_id": campaign_id,
         "species_id": "species-1",
         "class_id": "class-1",
         "background_id": None,
@@ -263,6 +269,92 @@ async def test_create_character_denied_when_user_not_campaign_member():
         bad_payload = _payload()
         bad_payload["campaign_id"] = "missing-campaign"
         response = await client.post("/api/characters", json=bad_payload)
+        _assert_denied(
+            response,
+            status_code=403,
+            reason_code="CAMPAIGN_MEMBERSHIP_REQUIRED",
+        )
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_list_characters_resolved_envelope():
+    client, _, _, engine = await _build_client_with_seeded_db()
+    try:
+        first_create = await client.post(
+            "/api/characters",
+            json=_payload(name="First Character"),
+        )
+        assert first_create.status_code == 200
+        first_id = first_create.json()["payload"]["id"]
+
+        second_create = await client.post(
+            "/api/characters",
+            json=_payload(name="Second Character"),
+        )
+        assert second_create.status_code == 200
+        second_id = second_create.json()["payload"]["id"]
+
+        other_campaign_create = await client.post(
+            "/api/characters",
+            json=_payload(name="Camp2 Character", campaign_id="camp-2"),
+        )
+        assert other_campaign_create.status_code == 200
+
+        response = await client.get(
+            "/api/characters",
+            params={"campaign_id": "camp-1", "player_id": "user-owner"},
+            headers={"x-request-id": "req-list-1"},
+        )
+        assert response.status_code == 200
+        body = response.json()
+
+        assert body["request_id"] == "req-list-1"
+        assert body["status"] == "resolved"
+        assert body["reason_code"] is None
+
+        rows = body["payload"]
+        assert isinstance(rows, list)
+        assert len(
+            rows) == 2, f"Expected 2 characters in camp-1, got {len(rows)}"
+        # Characters are ordered by ID lexicographically
+        returned_ids = [row["id"] for row in rows]
+        expected_ids = sorted([first_id, second_id])
+        assert returned_ids == expected_ids, f"Expected IDs {expected_ids}, got {returned_ids}"
+        assert all(row["campaign_id"] == "camp-1" for row in rows)
+        assert all(row["player_id"] == "user-owner" for row in rows)
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_list_characters_denied_on_player_ownership_violation():
+    client, _, app, engine = await _build_client_with_seeded_db()
+    try:
+        app.state.current_user_id = "user-outsider"
+        response = await client.get(
+            "/api/characters",
+            params={"campaign_id": "camp-1", "player_id": "user-owner"},
+        )
+        _assert_denied(
+            response,
+            status_code=403,
+            reason_code="PLAYER_OWNERSHIP_VIOLATION",
+        )
+    finally:
+        await client.aclose()
+        await engine.dispose()
+
+
+async def test_list_characters_denied_when_missing_campaign_membership():
+    client, _, _, engine = await _build_client_with_seeded_db()
+    try:
+        response = await client.get(
+            "/api/characters",
+            params={"campaign_id": "missing-campaign",
+                    "player_id": "user-owner"},
+        )
         _assert_denied(
             response,
             status_code=403,

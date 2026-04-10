@@ -96,6 +96,45 @@ async def create_character(
         )
 
 
+@router.get("")
+async def list_characters(
+    request: Request,
+    campaign_id: str = Query(default=""),
+    player_id: str = Query(default=""),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    request_id = _resolve_request_id(request)
+    service = CharacterWriteApplicationService(db)
+
+    try:
+        characters = await service.list_characters(
+            campaign_id=campaign_id,
+            player_id=player_id,
+            current_user=current_user,
+        )
+        return CharacterCommandEnvelope(
+            request_id=request_id,
+            status="resolved",
+            payload=[character.model_dump(mode="json")
+                     for character in characters],
+        )
+    except CharacterWriteDenied as exc:
+        envelope = CharacterCommandEnvelope(
+            request_id=request_id,
+            status="denied",
+            reason_code=exc.code,
+            payload={
+                "message": exc.message,
+                "unresolved_reference_ids": exc.unresolved_reference_ids,
+            },
+        )
+        return JSONResponse(
+            status_code=_status_code_for_reason(exc.code),
+            content=envelope.model_dump(mode="json"),
+        )
+
+
 @router.put("/{character_id}")
 async def update_character(
     character_id: str,

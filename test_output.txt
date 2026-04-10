@@ -1,0 +1,471 @@
+ Container cmv2-redis-1  Running
+ Container cmv2-db-1  Running
+Fixture JSON validation failed: 2 error(s), 179 file(s) validated.
+ - data/fixtures/monsters/027_command_deck_test_warlord.json: 147 validation errors for MonsterCreate
+actions.0.action_id
+  Field required [type=missing, input_value={'id': 'a1_warblade', 'na... + 5) slashing damage.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.0.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a1_warblade', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.0.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Warblade Strike', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.0.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='melee_weapon', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.0.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='action', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.0.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'action': 1}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.0.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'single', 'range_ft': 5}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.0.roll_preview
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'to_hit': '+9', 'damage'...amage_type': 'slashing'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.0.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Melee Weapon Attack: +9 ...8 + 5) slashing damage.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.1.action_id
+  Field required [type=missing, input_value={'id': 'a2_hooked_glaive'...peed reduced by 10 ft.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.1.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a2_hooked_glaive', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.1.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Hooked Glaive', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.1.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='melee_weapon', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.1.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='action', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.1.tags
+  Extra inputs are not permitted [type=extra_forbidden, input_value=['control'], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.1.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'action': 1}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.1.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'single', 'range_ft': 10}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.1.roll_preview
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'to_hit': '+8', 'damage'...amage_type': 'slashing'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.1.on_hit_effects
+  Extra inputs are not permitted [type=extra_forbidden, input_value=['target_speed_reduced_10...t_of_warlord_next_turn'], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.1.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Melee Weapon Attack: +8 ...speed reduced by 10 ft.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.2.action_id
+  Field required [type=missing, input_value={'id': 'a3_tactical_cross... + 4) piercing damage.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.2.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a3_tactical_crossbow', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.2.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Tactical Crossbow', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.2.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='ranged_weapon', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.2.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='action', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.2.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'action': 1}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.2.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'single', 'range...0, 'long_range_ft': 320}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.2.roll_preview
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'to_hit': '+8', 'damage'...amage_type': 'piercing'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.2.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Ranged Weapon Attack: +8...0 + 4) piercing damage.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.3.action_id
+  Field required [type=missing, input_value={'id': 'a4_smoke_bomb', '... point within 20 feet.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.3.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a4_smoke_bomb', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.3.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Smoke Bomb', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.3.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='utility', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.3.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='bonus_action', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.3.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'bonus_action': 1}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.3.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'area', 'range_f...ere', 'aoe_size_ft': 10}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.3.limited_use
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'uses_max': 2, 'reset_on': 'short_rest'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.3.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Creates a 10-foot-radius...a point within 20 feet.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.4.action_id
+  Field required [type=missing, input_value={'id': 'a5_parry', 'name'...ack that would hit it.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.4.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a5_parry', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.4.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Parry', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.4.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='utility', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.4.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='reaction', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.4.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'reaction': 1}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.4.trigger
+  Extra inputs are not permitted [type=extra_forbidden, input_value='hit_by_melee_attack', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.4.roll_preview
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'damage_reduction': '1d8+4'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.4.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Reaction: The warlord ad...tack that would hit it.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.5.action_id
+  Field required [type=missing, input_value={'id': 'a6_reposition', '...rom one marked target.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.5.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a6_reposition', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.5.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Reposition', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.5.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='utility', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.5.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='free', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.5.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'movement_ft': 15}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.5.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'self'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.5.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Move up to 15 feet witho...from one marked target.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.6.action_id
+  Field required [type=missing, input_value={'id': 'a7_commanding_sho...e 10 feet immediately.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.6.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a7_commanding_shout', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.6.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Commanding Shout', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.6.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='utility', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.6.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='bonus_action', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.6.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'bonus_action': 1}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.6.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'multi', 'range_ft': 30}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.6.limited_use
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'uses_max': 3, 'reset_on': 'long_rest'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.6.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Up to two allied creatur...ve 10 feet immediately.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.7.action_id
+  Field required [type=missing, input_value={'id': 'a8_breaker_burst'...e, or half on success.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.7.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a8_breaker_burst', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.7.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Breaker Burst', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.7.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='save_effect', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.7.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='action', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.7.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'action': 1}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.7.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'area', 'range_f...ere', 'aoe_size_ft': 15}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.7.save
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'ability': 'dexterity', 'dc': 16}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.7.roll_preview
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'damage': '4d8', 'damage_type': 'thunder'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.7.recharge
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'label': 'Recharge 5-6'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.7.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Each creature in a 15-fo...ve, or half on success.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.8.action_id
+  Field required [type=missing, input_value={'id': 'a9_dread_banner',...sists (concentration).'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.8.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a9_dread_banner', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.8.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Dread Banner', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.8.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='utility', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.8.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='action', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.8.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'action': 1}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.8.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'area', 'range_f...ere', 'aoe_size_ft': 20}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.8.concentration
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'required': True, 'duration_rounds': 10}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.8.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Enemies within 20 feet h...rsists (concentration).', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.9.action_id
+  Field required [type=missing, input_value={'id': 'a10_mark_prey', '...re before end of turn.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.9.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a10_mark_prey', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.9.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Mark Prey', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.9.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='utility', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.9.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='bonus_action', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.9.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'bonus_action': 1}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.9.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'single', 'range_ft': 60}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.9.effect_preview
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'effects': ['next_warlor..._target_has_advantage']}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.9.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Mark one creature within...ure before end of turn.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.10.action_id
+  Field required [type=missing, input_value={'id': 'a11_guarded_step'...one triggering attack.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.10.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a11_guarded_step', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.10.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Guarded Step', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.10.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='utility', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.10.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='reaction', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.10.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'reaction': 1, 'movement_ft': 10}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.10.trigger
+  Extra inputs are not permitted [type=extra_forbidden, input_value='enemy_enters_reach', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.10.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Reaction: move up to 10 ... one triggering attack.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.11.action_id
+  Field required [type=missing, input_value={'id': 'a12_rally', 'name...s 1d10 + 4 hit points.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.11.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a12_rally', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.11.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Rally', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.11.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='healing', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.11.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='bonus_action', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.11.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'bonus_action': 1}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.11.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'single', 'range_ft': 30}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.11.roll_preview
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'healing': '1d10+4'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.11.limited_use
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'uses_max': 3, 'reset_on': 'short_rest'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.11.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='One ally within 30 feet ...ns 1d10 + 4 hit points.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.12.action_id
+  Field required [type=missing, input_value={'id': 'a13_pinning_shot'... end of its next turn.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.12.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a13_pinning_shot', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.12.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Pinning Shot', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.12.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='ranged_weapon', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.12.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='action', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.12.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'action': 1}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.12.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'single', 'range...0, 'long_range_ft': 480}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.12.roll_preview
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'to_hit': '+8', 'damage'...amage_type': 'piercing'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.12.save
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'ability': 'strength', 'dc': 15}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.12.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Ranged Weapon Attack: +8...l end of its next turn.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.13.action_id
+  Field required [type=missing, input_value={'id': 'a14_whirl_cut', '...Dex save 15 for half).'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.13.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a14_whirl_cut', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.13.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Whirl Cut', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.13.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='melee_weapon', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.13.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='action', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.13.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'action': 1, 'movement_ft': 10}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.13.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'area', 'aoe_sha...here', 'aoe_size_ft': 5}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.13.roll_preview
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'damage': '2d8+5', 'damage_type': 'slashing'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.13.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Move up to 10 feet, then...(Dex save 15 for half).', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.14.action_id
+  Field required [type=missing, input_value={'id': 'a15_battlefield_s...d of the current turn.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.14.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a15_battlefield_scan', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.14.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Battlefield Scan', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.14.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='utility', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.14.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='free', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.14.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'action': 0}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.14.targeting
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'mode': 'self'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.14.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Reveal hidden enemies wi...nd of the current turn.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.15.action_id
+  Field required [type=missing, input_value={'id': 'a16_exploit_openi...d with a melee attack.'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+actions.15.id
+  Extra inputs are not permitted [type=extra_forbidden, input_value='a16_exploit_opening', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.15.name
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Exploit Opening', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.15.action_type
+  Extra inputs are not permitted [type=extra_forbidden, input_value='melee_weapon', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.15.deck_category
+  Extra inputs are not permitted [type=extra_forbidden, input_value='reaction', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.15.cost
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'reaction': 1}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.15.trigger
+  Extra inputs are not permitted [type=extra_forbidden, input_value='enemy_miss_within_reach', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.15.roll_preview
+  Extra inputs are not permitted [type=extra_forbidden, input_value={'to_hit': '+9', 'damage'...amage_type': 'slashing'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+actions.15.description
+  Extra inputs are not permitted [type=extra_forbidden, input_value='Reaction: make one Warbl...rd with a melee attack.', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+ - data/fixtures/encounters/11_command_deck_actions.json: 8 validation errors for EncounterState
+combatants.0.resources.counters.second_wind.name
+  Field required [type=missing, input_value={'current': 1, 'max': 1, 'reset_on': 'short_rest'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+combatants.0.resources.counters.second_wind.resets_on
+  Field required [type=missing, input_value={'current': 1, 'max': 1, 'reset_on': 'short_rest'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+combatants.2.resources.counters.legendary_actions.name
+  Field required [type=missing, input_value={'current': 2, 'max': 3, 'reset_on': 'round'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+combatants.2.resources.counters.legendary_actions.resets_on
+  Field required [type=missing, input_value={'current': 2, 'max': 3, 'reset_on': 'round'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+combatants.2.resources.counters.smoke_bomb.name
+  Field required [type=missing, input_value={'current': 1, 'max': 2, 'reset_on': 'short_rest'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+combatants.2.resources.counters.smoke_bomb.resets_on
+  Field required [type=missing, input_value={'current': 1, 'max': 2, 'reset_on': 'short_rest'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+combatants.2.resources.counters.commanding_shout.name
+  Field required [type=missing, input_value={'current': 2, 'max': 3, 'reset_on': 'long_rest'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+combatants.2.resources.counters.commanding_shout.resets_on
+  Field required [type=missing, input_value={'current': 2, 'max': 3, 'reset_on': 'long_rest'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+

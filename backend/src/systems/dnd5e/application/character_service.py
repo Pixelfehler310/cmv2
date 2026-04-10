@@ -65,6 +65,54 @@ class CharacterWriteApplicationService:
     def __init__(self, db: AsyncSession):
         self._db = db
 
+    async def list_characters(
+        self,
+        *,
+        campaign_id: str,
+        player_id: str,
+        current_user: User,
+    ) -> list[CharacterResponse]:
+        if not campaign_id.strip():
+            raise CharacterWriteDenied(
+                code="MISSING_CAMPAIGN_ID",
+                message="campaign_id is required.",
+            )
+        if not player_id.strip():
+            raise CharacterWriteDenied(
+                code="MISSING_PLAYER_ID",
+                message="player_id is required.",
+            )
+
+        if not current_user.is_superuser:
+            current_user_id = str(current_user.id)
+            if player_id != current_user_id:
+                raise CharacterWriteDenied(
+                    code="PLAYER_OWNERSHIP_VIOLATION",
+                    message="Authenticated user does not own this character scope.",
+                )
+
+            member_stmt = select(CampaignMember).where(
+                CampaignMember.campaign_id == campaign_id,
+                CampaignMember.user_id == player_id,
+            )
+            member = (await self._db.execute(member_stmt)).scalar_one_or_none()
+            if member is None:
+                raise CharacterWriteDenied(
+                    code="CAMPAIGN_MEMBERSHIP_REQUIRED",
+                    message="Player is not a member of the target campaign.",
+                )
+
+        stmt = (
+            select(Character)
+            .where(
+                Character.campaign_id == campaign_id,
+                Character.player_id == player_id,
+            )
+            .order_by(Character.id.asc())
+        )
+        rows = (await self._db.execute(stmt)).scalars().all()
+        return [self._to_response(character) for character in rows]
+
     async def create_character(
         self,
         payload: CharacterWritePayload,
@@ -260,7 +308,8 @@ class CharacterWriteApplicationService:
         if payload.background_id:
             background_exists = (
                 await self._db.execute(
-                    select(Background.id).where(Background.id == payload.background_id)
+                    select(Background.id).where(
+                        Background.id == payload.background_id)
                 )
             ).scalar_one_or_none()
             if background_exists is None:
@@ -276,7 +325,8 @@ class CharacterWriteApplicationService:
                     await self._db.execute(
                         select(CompendiumDefinitionModel.id).where(
                             CompendiumDefinitionModel.family == "ability",
-                            CompendiumDefinitionModel.id.in_(payload.ability_ids),
+                            CompendiumDefinitionModel.id.in_(
+                                payload.ability_ids),
                         )
                     )
                 ).scalars()
