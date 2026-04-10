@@ -59,6 +59,12 @@ It uses a **Hybrid Architecture** with a Python Backend and React Frontend in a 
 - Each legacy debt issue must include: affected files/line references, impact/risk, explicit in-scope fix list, out-of-scope notes, and verification commands.
 - Keep implementation output quality first: issue capture is a finalization step and must not interrupt primary task delivery.
 
+## Project Management & AI Kanban (Mandatory Initialization)
+
+1. You **MUST** start every session or new task by reading `ISSUES/FLOW/CURRENT_TASK.md`.
+2. This file dictates the active priority. Do not perform implementation logic if it conflicts with the active task.
+3. Manage task states (In Progress, Blocked, Done) using the `issue-governor` skill, which will move files through the `ISSUES/FLOW/` directory and manage logs.
+
 ## Development Workflow
 
 - Prefer container-first development for day-to-day work.
