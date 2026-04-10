@@ -1,5 +1,11 @@
 # Active Work Assignment
 
-Currently, there is no active task assigned.
+Current active task:
 
-_To pick up a task, select one from `ISSUES/FLOW/02_READY/`, move it to `03_IN_PROGRESS/`, and update this file to point to its new path._
+- `ISSUES/FLOW/03_IN_PROGRESS/FEATURE_frontend_compendium_ui_master_blueprint.md`
+
+Secondary context ticket:
+
+- `ISSUES/FLOW/03_IN_PROGRESS/ISSUE_frontend_compendium_ui_vertical.md`
+
+If this task is paused, blocked, moved to review, or completed, update this pointer immediately.

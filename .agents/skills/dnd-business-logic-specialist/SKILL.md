@@ -1,4 +1,7 @@
-# DnD Business Logic Specialist
+---
+name: "dnd-business-logic-specialist"
+description: "Manages the local-first Kanban board in ISSUES/FLOW/. Use this whenever you need to start, block, review, or complete a task."
+---
 
 ## Purpose
 
