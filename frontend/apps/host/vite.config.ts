@@ -21,7 +21,14 @@ export default defineConfig({
       "/api": {
         target: process.env.VITE_BACKEND_URL || "http://localhost:8020",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
+        rewrite: (path) => {
+          // Keep /api for modern routers that already include it server-side.
+          const preserveApiPrefix = ["/api/compendium", "/api/characters", "/api/dev"];
+          if (preserveApiPrefix.some((prefix) => path.startsWith(prefix))) {
+            return path;
+          }
+          return path.replace(/^\/api/, "");
+        },
       },
       "/ws": {
         target: process.env.VITE_BACKEND_URL?.replace("http", "ws") || "ws://localhost:8020",
