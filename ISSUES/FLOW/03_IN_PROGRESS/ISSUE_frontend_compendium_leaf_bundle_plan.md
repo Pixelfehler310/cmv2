@@ -15,6 +15,13 @@ Define one implementation-ready plan for all leaf-first compendium entity editor
 2. Legacy path bypassed: any family-specific legacy CRUD surface or ad-hoc editor flow outside the unified compendium editor path.
 3. Intentional breaking behavior: no compatibility layer for legacy editor state shape, legacy draft keys, or legacy field aliases.
 
+## Implementation Progress From This Session
+
+1. Created a shared `useEntityForm` hook to centralize compendium create/update state, payload assembly, and validation error mapping.
+2. Created an `editorRegistry` and routed `ContentManager` through it so family-to-editor resolution is no longer hardcoded in the host component.
+3. Migrated the active leaf editors to the shared hook pattern: `LoreEditor`, `ConditionEditor`, `SpeciesEditor`, `BackgroundEditor`, `ClassEditor`, `FactionEditor`, `RegionEditor`, and `PlaceEditor`.
+4. Kept the world-cluster family trio in the same bundle so the `faction` / `region` / `place` work remains coordinated under one cutover plan.
+
 ## Why These Are The Leaf Bundle
 
 1. These families either have no content-level inbound dependencies or only bounded-world links.
@@ -261,7 +268,7 @@ _For this Leaf Bundle_, the Frontend simply needs to support graceful degradatio
 
 ## Build Order Inside This Issue
 
-1. Shared bundle primitives (`DefinitionHeader`, `StringListEditor`, validation map, draft guard).
+1. Shared bundle primitives (`DefinitionHeader`, `StringListEditor`, validation map, draft guard, `useEntityForm`, registry cutover).
 2. Lore and Species editors as low-complexity smoke path.
 3. Background and Class editors for list patterns.
 4. Condition editor for `ModifierSpec` complexity.
