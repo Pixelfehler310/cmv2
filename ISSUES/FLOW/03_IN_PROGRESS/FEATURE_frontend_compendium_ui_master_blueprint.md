@@ -105,3 +105,54 @@ Primary architecture references for later batch work:
 - `ISSUES/architecture/04_module_specifications/05_sheets.md`
 - `ISSUES/architecture/04_module_specifications/features/02_content_write_features.md`
 - `ISSUES/architecture/04_module_specifications/features/03_content_query_features.md`
+
+## Robust Frontend Compendium System Plan (April 2026)
+
+### Cutover Mode Declaration
+
+1. Target production path: one URL-driven compendium workspace backed only by `apiClient.compendium.*` and family-aware editor modules.
+2. Legacy path bypassed: local-tab-only selection flow, mixed legacy entity clients, and always-mounted detail/modal surfaces.
+3. Intentional break: remove compatibility for legacy route aliases and implicit in-memory panel state once URL-driven workbench is in place.
+
+### Phase 0: Stability Hotfixes
+
+1. Ensure detail drawer/dialog components fully unmount when closed (no hidden fixed overlays left in DOM).
+2. Add keyboard close behavior (`Escape`) and explicit close events for all compendium overlays.
+3. Add regression test coverage for open -> close -> reopen cycles across detail and editor drawers.
+
+### Phase 1: Shell Decomposition (File Size and Ownership)
+
+1. Split `ContentManager` into focused modules: `CompendiumWorkbenchShell`, `CompendiumWorkbenchHeader`, `CompendiumFamilyRail`, `CompendiumDefinitionPane`, and `CompendiumOverlayHost`.
+2. Extract family metadata/config into registry files (`familyConfig`, column config, family labels).
+3. Enforce a soft file budget of 220 lines for container components and 160 lines for leaf presentation components.
+
+### Phase 2: URL-State Workbench
+
+1. Canonical routes are `/content/:family`, `/content/:family/new`, and `/content/:family/:definitionId`.
+2. Replace local-only selection state with route-derived state so refresh/deep-linking is deterministic.
+3. Define modal/drawer policy from route state, not ad-hoc booleans, to prevent impossible states.
+
+### Phase 3: Overlay State Machine
+
+1. Introduce a single union-state controller for overlay modes: `none`, `detail`, `create`, `edit`, `create-pack`.
+2. Guarantee mutual exclusion between overlays and formalize transition guards.
+3. Encode close semantics centrally (backdrop, escape, success callback, route change).
+
+### Phase 4: Data Loading and Performance
+
+1. Move family data selection into one query hook (`useCompendiumFamilyData`) keyed by `(packId, family, search)`.
+2. Keep backend as truth: no client-side business-rule derivation; only view-model shaping.
+3. Add table virtualization for larger packs and defer raw JSON rendering until detail drawer opens.
+
+### Phase 5: Quality Gates
+
+1. Add unit tests for family config registry and overlay state transitions.
+2. Add integration tests for route-driven open/close flows and pack switching.
+3. Add a smoke test matrix that verifies each family list loads, row selection opens detail/editor correctly, close actions always return to non-overlay state, and create-pack flow returns to selected pack context.
+
+### Definition of Done Extension
+
+1. No compendium overlay remains mounted while closed.
+2. Compendium workspace is fully deep-linkable and refresh-safe.
+3. Oversized compendium host files are decomposed according to budget.
+4. All family editors remain backend-contract aligned with no legacy client fallback.

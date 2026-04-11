@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { X } from "lucide-react";
 import { RawJsonViewer } from "./RawJsonViewer";
 import { cn } from "@rpg/ui";
@@ -10,7 +10,26 @@ interface EntityDetailPanelProps {
 }
 
 export const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity, isOpen, onClose }) => {
-  if (!entity && isOpen) return null;
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !entity) {
+    return null;
+  }
 
   return (
     <>
@@ -39,6 +58,7 @@ export const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity, is
             </div>
             <button
               onClick={onClose}
+              type="button"
               className="p-2 rounded-full hover:bg-surface-200 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X size={24} />
@@ -77,6 +97,7 @@ export const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity, is
           <div className="p-6 border-t border-border bg-surface-50">
             <button
               onClick={onClose}
+              type="button"
               className="w-full py-3 bg-surface-200 hover:bg-surface-300 text-foreground font-semibold rounded-xl transition-colors"
             >
               Close

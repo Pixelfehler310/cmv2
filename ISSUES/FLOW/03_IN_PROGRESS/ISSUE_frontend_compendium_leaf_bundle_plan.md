@@ -21,6 +21,8 @@ Define one implementation-ready plan for all leaf-first compendium entity editor
 2. Created an `editorRegistry` and routed `ContentManager` through it so family-to-editor resolution is no longer hardcoded in the host component.
 3. Migrated the active leaf editors to the shared hook pattern: `LoreEditor`, `ConditionEditor`, `SpeciesEditor`, `BackgroundEditor`, `ClassEditor`, `FactionEditor`, `RegionEditor`, and `PlaceEditor`.
 4. Kept the world-cluster family trio in the same bundle so the `faction` / `region` / `place` work remains coordinated under one cutover plan.
+5. Started structure-first shell decomposition by extracting `CompendiumHeader`, `CompendiumFamilyTabs`, `CompendiumContentPane`, and `CompendiumOverlayHost`, reducing `ContentManager` orchestration size to 160 lines.
+6. Preserved existing runtime behavior while centralizing overlay ownership in `CompendiumOverlayHost` so detail, editor, and create-pack surfaces have one orchestration boundary.
 
 ## Why These Are The Leaf Bundle
 
