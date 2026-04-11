@@ -73,7 +73,7 @@ DefinitionPayload = Annotated[
 
 class ErrorResponse(BaseModel):
     error: str
-    message: str
+    message: Any
 
 
 class QueryContractEnvelope(BaseModel):
@@ -140,12 +140,37 @@ def _resolve_request_id(request: Request | None) -> str:
     return request.headers.get("x-request-id") or uuid4().hex
 
 
-def _domain_exception_parts(exc: Exception) -> tuple[int, str, str]:
+def _serialize_validation_error(exc: ValidationError) -> dict[str, Any]:
+    field_errors: dict[str, list[dict[str, str]]] = {}
+
+    for error in exc.errors():
+        raw_loc = error.get("loc", ())
+        if isinstance(raw_loc, (list, tuple)):
+            path_parts = tuple(raw_loc)
+        else:
+            path_parts = (raw_loc,)
+
+        field_path = ".".join(
+            str(part) for part in path_parts if part is not None) or "__root__"
+        field_errors.setdefault(field_path, []).append(
+            {
+                "type": str(error.get("type", "validation_error")),
+                "msg": str(error.get("msg", "Invalid value.")),
+            }
+        )
+
+    return {
+        "summary": str(exc),
+        "field_errors": field_errors,
+    }
+
+
+def _domain_exception_parts(exc: Exception) -> tuple[int, str, Any]:
     if isinstance(exc, ValidationError):
         return (
             status.HTTP_400_BAD_REQUEST,
             CompendiumErrorCode.VALIDATION_FAILED.value,
-            str(exc),
+            _serialize_validation_error(exc),
         )
 
     if isinstance(exc, ContentLifecycleError):

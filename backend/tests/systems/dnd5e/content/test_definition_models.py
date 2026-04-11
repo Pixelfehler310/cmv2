@@ -1,18 +1,23 @@
-import pytest
-
-pytestmark = [pytest.mark.v05, pytest.mark.gold]
-from datetime import datetime
-import pydantic
-
+from src.systems.dnd5e.content.domain.invariants import CompendiumErrorCode
+from src.systems.dnd5e.content.domain.pack_models import ContentPackRecord
+from src.systems.dnd5e.content.domain.definition_models import (
+    LoreDefinition,
+    SpeciesDefinition,
+    BackgroundDefinition,
+    ClassDefinition,
+)
 from src.systems.dnd5e.content.domain.primitives import (
     DefinitionFamily, LifecycleState,
     ActionOperationSpec, ActivationCost, TargetingType, OperationType,
     AttackRollPayload, HealPayload, ResultReference, ResultAttribute,
     TargetingSpec, DamageInstance
 )
-from src.systems.dnd5e.content.domain.definition_models import LoreDefinition
-from src.systems.dnd5e.content.domain.pack_models import ContentPackRecord
-from src.systems.dnd5e.content.domain.invariants import CompendiumErrorCode
+import pydantic
+from datetime import datetime
+import pytest
+
+pytestmark = [pytest.mark.v05, pytest.mark.gold]
+
 
 def test_definition_record_valid_content_version():
     """Content version must be >= 1"""
@@ -30,6 +35,7 @@ def test_definition_record_valid_content_version():
         rich_text_content="A scattered network of spellcasters and spies..."
     )
     assert lore.content_version == 1
+
 
 def test_definition_record_invalid_content_version():
     """Fails validation if content_version < 1"""
@@ -68,6 +74,48 @@ def test_definition_record_invalid_schema_version():
         )
     assert CompendiumErrorCode.VALIDATION_FAILED.value in str(exc.value)
 
+
+def test_leaf_bundle_definitions_include_new_default_fields():
+    """Leaf-bundle definitions expose required additive fields with safe defaults."""
+    common_kwargs = {
+        "id": "def-1",
+        "slug": "def-1",
+        "name": "Definition",
+        "lifecycle_state": LifecycleState.DRAFT,
+        "content_version": 1,
+        "schema_version": 1,
+        "pack_id": "pack-core",
+        "provenance_source": "test",
+        "provenance_updated_at": datetime.utcnow(),
+    }
+
+    species = SpeciesDefinition(
+        **common_kwargs,
+        family=DefinitionFamily.SPECIES,
+        speed=30,
+        size="medium",
+    )
+    assert species.languages == []
+
+    background = BackgroundDefinition(
+        **common_kwargs,
+        family=DefinitionFamily.BACKGROUND,
+        skill_proficiencies=["Stealth", "Sleight of Hand"],
+    )
+    assert background.tool_proficiencies == []
+    assert background.languages == []
+
+    class_def = ClassDefinition(
+        **common_kwargs,
+        family=DefinitionFamily.CLASS,
+        hit_die="1d8",
+        saving_throw_proficiencies=["DEX", "INT"],
+    )
+    assert class_def.spellcasting_ability is None
+    assert class_def.armor_proficiencies == []
+    assert class_def.weapon_proficiencies == []
+
+
 def test_action_operation_spec_valid():
     """An action payload correctly discriminates into AttackRollPayload based on operation_type"""
     # Simulate a JSON dictionary parsed from DB/Frontend
@@ -93,15 +141,16 @@ def test_action_operation_spec_valid():
         }
     }
     spec = ActionOperationSpec.model_validate(raw_dict)
-    
+
     assert spec.activation_cost == ActivationCost.ACTION
     assert isinstance(spec.payload, AttackRollPayload)
     assert spec.payload.attack_type == "melee_weapon"
     assert spec.payload.damage_instances[0].damage_type == "slashing"
 
+
 def test_life_drain_result_piping_validation():
     """Validates that a Heal operation can reference an Attack operation's result."""
-    
+
     # Example: Vampiric Touch
     # Op 1: Attack dealing damage
     attack_op = {
@@ -118,7 +167,7 @@ def test_life_drain_result_piping_validation():
             "damage_instances": [{"value": "3d6", "damage_type": "necrotic", "add_stat_modifier": False}]
         }
     }
-    
+
     # Op 2: Heal for 50% of Op 1's total damage
     heal_op = {
         "operation_id": "op-vamp-heal",
@@ -140,14 +189,15 @@ def test_life_drain_result_piping_validation():
             "temp_hp": False
         }
     }
-    
+
     op1 = ActionOperationSpec.model_validate(attack_op)
     op2 = ActionOperationSpec.model_validate(heal_op)
-    
+
     assert isinstance(op2.payload, HealPayload)
     assert isinstance(op2.payload.amount, ResultReference)
     assert op2.payload.amount.source_operation_id == "op-vamp-attack"
     assert op2.payload.amount.multiplier == 0.5
+
 
 def test_action_operation_spec_missing_fields():
     """Missing required payload fields should raise validation error"""

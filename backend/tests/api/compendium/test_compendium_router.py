@@ -257,4 +257,8 @@ async def test_error_contract_maps_not_found_and_validation_failures(client_and_
         },
     )
     assert validation_response.status_code == 400
-    assert validation_response.json()["detail"]["error"] == "VALIDATION_FAILED"
+    detail = validation_response.json()["detail"]
+    assert detail["error"] == "VALIDATION_FAILED"
+    assert "message" in detail
+    assert "summary" in detail["message"]
+    assert detail["message"]["field_errors"]["armor_class"][0]["type"] == "int_parsing"

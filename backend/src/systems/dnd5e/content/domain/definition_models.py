@@ -50,17 +50,24 @@ class SpeciesDefinition(DefinitionRecord):
     family: Literal[DefinitionFamily.SPECIES] = DefinitionFamily.SPECIES
     speed: int
     size: str
+    languages: List[str] = Field(default_factory=list)
 
 
 class BackgroundDefinition(DefinitionRecord):
     family: Literal[DefinitionFamily.BACKGROUND] = DefinitionFamily.BACKGROUND
     skill_proficiencies: List[str]
+    tool_proficiencies: List[str] = Field(default_factory=list)
+    languages: List[str] = Field(default_factory=list)
 
 
 class ClassDefinition(DefinitionRecord):
     family: Literal[DefinitionFamily.CLASS] = DefinitionFamily.CLASS
     hit_die: str
     saving_throw_proficiencies: List[str]
+    spellcasting_ability: Literal["STR", "DEX",
+                                  "CON", "INT", "WIS", "CHA"] | None = None
+    armor_proficiencies: List[str] = Field(default_factory=list)
+    weapon_proficiencies: List[str] = Field(default_factory=list)
 
 
 # --- Complex Definitions ---

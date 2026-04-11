@@ -53,6 +53,42 @@ export interface CharacterCommandEnvelope<TPayload = unknown> {
   payload: TPayload;
 }
 
+export class ApiClientError extends Error {
+  public readonly status: number;
+  public readonly statusText: string;
+  public readonly detail: unknown;
+
+  constructor(status: number, statusText: string, detail: unknown) {
+    const fallbackMessage = `API Error: ${status} ${statusText}`;
+    const detailMessage = ApiClientError.extractDetailMessage(detail);
+    super(detailMessage ?? fallbackMessage);
+    this.name = "ApiClientError";
+    this.status = status;
+    this.statusText = statusText;
+    this.detail = detail;
+  }
+
+  private static extractDetailMessage(detail: unknown): string | null {
+    if (!detail || typeof detail !== "object") {
+      return null;
+    }
+
+    const detailObject = detail as { message?: unknown };
+    if (typeof detailObject.message === "string" && detailObject.message.trim().length > 0) {
+      return detailObject.message;
+    }
+
+    if (detailObject.message && typeof detailObject.message === "object") {
+      const nested = detailObject.message as { summary?: unknown };
+      if (typeof nested.summary === "string" && nested.summary.trim().length > 0) {
+        return nested.summary;
+      }
+    }
+
+    return null;
+  }
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -71,14 +107,25 @@ class ApiClient {
 
   private async fetchJson<T>(path: string, options?: RequestInit): Promise<T> {
     const response = await fetch(`${this.baseUrl}${path}`, options);
+
+    const text = await response.text();
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      let parsedError: unknown = undefined;
+      if (text) {
+        try {
+          const parsedBody = JSON.parse(text) as { detail?: unknown };
+          parsedError = parsedBody.detail ?? parsedBody;
+        } catch {
+          parsedError = text;
+        }
+      }
+      throw new ApiClientError(response.status, response.statusText, parsedError);
     }
-    if (response.status === 204) {
+
+    if (response.status === 204 || !text) {
       return undefined as T;
     }
 
-    const text = await response.text();
     if (!text) {
       return undefined as T;
     }
