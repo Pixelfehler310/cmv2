@@ -1,0 +1,121 @@
+import React from "react";
+import { AlertCircle, Loader2, Package, Save } from "lucide-react";
+import { DefinitionHeader } from "./DefinitionHeader";
+import { useEntityForm } from "./useEntityForm";
+
+interface ItemEditorProps {
+  initialData?: any;
+  packId: string;
+  onSave?: (data: any) => void;
+  onCancel?: () => void;
+}
+
+export const ItemEditor: React.FC<ItemEditorProps> = ({ initialData, packId, onSave, onCancel }) => {
+  const { formData, setFormData, fieldErrors, handleSave, mutation } = useEntityForm<{
+    name: string;
+    slug: string;
+    type: string;
+    rarity: string;
+    price: number;
+    description: string;
+  }>({
+    initialData: initialData || {
+      name: "",
+      slug: "",
+      type: "adventuring-gear",
+      rarity: "common",
+      price: 0,
+      description: "",
+    },
+    packId,
+    family: "item",
+    onSave,
+  });
+
+  return (
+    <div className="flex flex-col h-full bg-background animate-in fade-in slide-in-from-right-4 duration-300">
+      <DefinitionHeader
+        name={formData.name}
+        slug={formData.slug}
+        id={initialData?.id}
+        packName={initialData?.pack_title || "Current Pack"}
+        status={initialData?.status || "draft"}
+        onNameChange={(name) => setFormData((prev) => ({ ...prev, name }))}
+      />
+
+      <div className="flex-1 overflow-y-auto p-6 space-y-8">
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 px-1">
+            <Package className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground/60">Item Metadata</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-2xl border border-border bg-surface-50 shadow-sm">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">Type</label>
+              <input
+                value={formData.type}
+                onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value }))}
+                className="w-full px-3 py-2.5 bg-surface-100 border border-border rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all text-sm"
+              />
+              {fieldErrors.type && (
+                <p className="text-xs text-destructive font-bold px-1 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> {fieldErrors.type}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">Rarity</label>
+              <input
+                value={formData.rarity}
+                onChange={(e) => setFormData((prev) => ({ ...prev, rarity: e.target.value }))}
+                className="w-full px-3 py-2.5 bg-surface-100 border border-border rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all text-sm"
+              />
+              {fieldErrors.rarity && (
+                <p className="text-xs text-destructive font-bold px-1 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> {fieldErrors.rarity}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">Price (gp)</label>
+              <input
+                type="number"
+                min={0}
+                value={formData.price}
+                onChange={(e) => setFormData((prev) => ({ ...prev, price: Number(e.target.value) }))}
+                className="w-full px-3 py-2.5 bg-surface-100 border border-border rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all text-sm font-mono"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                className="w-full min-h-[140px] px-3 py-2.5 bg-surface-100 border border-border rounded-xl focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all text-sm"
+              />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div className="p-6 border-t border-border bg-surface-50/50 flex items-center justify-between">
+        <button onClick={onCancel} className="px-6 py-2.5 rounded-xl font-bold text-sm text-muted-foreground hover:bg-surface-200 transition-all">
+          Discard Changes
+        </button>
+
+        <button
+          onClick={() => handleSave()}
+          disabled={mutation.isPending}
+          className="group relative flex items-center gap-2 px-8 py-2.5 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 transition-all"
+        >
+          {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {!initialData?.id ? "Create Item" : "Save Changes"}
+        </button>
+      </div>
+    </div>
+  );
+};

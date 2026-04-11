@@ -1,15 +1,15 @@
 import React from "react";
-import { MonsterEditor } from "./forms/MonsterEditor";
-import { SpellEditor } from "./forms/SpellEditor";
-import { ItemEditor } from "./forms/ItemEditor";
-import { SpeciesEditor } from "./forms/SpeciesEditor";
-import { ClassEditor } from "./forms/ClassEditor";
-import { BackgroundEditor } from "./forms/BackgroundEditor";
-import { LoreEditor } from "./forms/LoreEditor";
-import { ConditionEditor } from "./forms/ConditionEditor";
-import { FactionEditor } from "./forms/FactionEditor";
-import { RegionEditor } from "./forms/RegionEditor";
-import { PlaceEditor } from "./forms/PlaceEditor";
+import { MonsterEditor } from "../forms/MonsterEditor";
+import { SpellEditor } from "../forms/SpellEditor";
+import { ItemEditor } from "../forms/ItemEditor";
+import { SpeciesEditor } from "../forms/SpeciesEditor";
+import { ClassEditor } from "../forms/ClassEditor";
+import { BackgroundEditor } from "../forms/BackgroundEditor";
+import { LoreEditor } from "../forms/LoreEditor";
+import { ConditionEditor } from "../forms/ConditionEditor";
+import { FactionEditor } from "../forms/FactionEditor";
+import { RegionEditor } from "../forms/RegionEditor";
+import { PlaceEditor } from "../forms/PlaceEditor";
 
 export const getEditorComponent = (family: string, props: any) => {
   switch (family) {

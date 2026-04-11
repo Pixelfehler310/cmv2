@@ -12,12 +12,7 @@ COPY frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml frontend/package.json 
 COPY frontend/packages ./packages
 COPY frontend/apps ./apps
 
-# Configure pnpm to use the private registry inside Docker
-# Docker Desktop for Windows mapping host localhost to host.docker.internal
-RUN npm config set @civic:registry http://host.docker.internal:4873
-
-# Install all dependencies
-RUN pnpm install
+# In Docker dev, dependencies are installed at runtime after bind mounts are attached.
 
 
 # Expose the main host app port

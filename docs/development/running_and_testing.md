@@ -293,6 +293,36 @@ Cause: outdated variable syntax.
 
 Fix: use modern utility form (for example `border-(--border-default)`).
 
+## Frontend Docker: `Can't resolve '@civic/design-system'`
+
+Cause: bind-mount source path does not point at the real sibling civic repo, or the local link resolves to an empty path in container.
+
+Fix:
+
+```bash
+docker compose exec frontend sh -lc "ls -la /civic/packages/design-system && test -f /civic/packages/design-system/src/index.css"
+docker compose up -d --force-recreate frontend
+docker compose logs -f frontend
+```
+
+Expected: Vite starts without pre-transform resolve errors for `@civic/design-system`.
+
+## Frontend Docker: `Can't resolve 'tailwindcss' in '/civic/packages/design-system/src'`
+
+Cause: design-system is mounted outside `/app`, so resolver cannot find `tailwindcss` unless `/civic/node_modules` is bridged.
+
+Fix: ensure frontend startup links `/civic/node_modules` to the UI package node_modules before `pnpm dev`.
+
+## Frontend Docker: `Failed to resolve import "./forms/MonsterEditor"`
+
+Cause: stale relative path in `editorRegistry.tsx` and/or missing editor files for `monster`, `spell`, `item`.
+
+Fix:
+
+1. Import from sibling forms directory (`../forms/...`).
+2. Ensure `MonsterEditor.tsx`, `SpellEditor.tsx`, and `ItemEditor.tsx` exist in `management-view` forms folder.
+3. Recreate frontend and confirm no Vite pre-transform errors in logs.
+
 ## 7. Suggested CI Baseline
 
 Use this sequence in CI for broad confidence:

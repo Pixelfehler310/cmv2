@@ -57,6 +57,22 @@ No extra Docker watch feature is required for day-to-day development in this rep
 - Frontend reload is handled by Vite HMR.
 - Source code is mounted via Docker volumes.
 
+## Frontend Design System (Bind Mount + Local Link)
+
+The Docker dev default is a live bind-mount workflow for `@civic/design-system`.
+
+- `frontend/packages/ui/package.json` points to a local `link:` dependency.
+- `docker-compose.yml` mounts the sibling civic repo design-system into the frontend container.
+- Frontend startup runs `pnpm install` inside the container, then starts Vite.
+
+This path intentionally avoids requiring Verdaccio publish steps for day-to-day UI iteration.
+
+If design-system imports fail in Docker:
+
+1. Verify the bind mount source path is correct for your machine layout.
+2. Verify the mount target contains `src/index.css` inside the container.
+3. Recreate frontend: `docker compose up -d --force-recreate frontend`.
+
 ## Restart Guidance
 
 Restart only the changed service whenever possible.

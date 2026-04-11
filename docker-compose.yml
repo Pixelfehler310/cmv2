@@ -100,9 +100,7 @@ services:
       - VITE_BACKEND_URL=http://backend:8000
       - VITE_HMR_PORT=3020
       - VITE_FRONTEND_TESTING_DM_PROXY_DOCK=true
-    command: sh -c "pnpm install --config.@civic:registry=http://host.docker.internal:4873 && pnpm dev"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    command: sh -c "pnpm install --config.confirmModulesPurge=false && ln -sfn /app/packages/ui/node_modules /civic/node_modules && pnpm dev"
     ports:
       - "3020:3000"
     volumes:
@@ -115,8 +113,8 @@ services:
       - /app/packages/types/node_modules
       - /app/packages/dm-view/node_modules
       - /app/packages/shared/node_modules
-      # Mount the live design system from the external repo
-      - ../civic/packages/design-system:/app/vendor/design-system
+      # Mount the live design system at the path expected by the pnpm link target
+      - ../../civic/packages/design-system:/civic/packages/design-system
     depends_on:
       - backend
 
