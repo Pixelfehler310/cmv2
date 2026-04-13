@@ -4,8 +4,12 @@
       "path": ".",
     },
     {
-      "path": "C:\\Users\\simon\\Documents\\GitHub\\civic\\packages\\design-system",
+      "path": "../civic/packages/design-system",
       "name": "civic-design-system",
+    },
+    {
+      "path": "../civic/packages/civic-react-v2",
+      "name": "civic-react-v2",
     },
   ],
   "settings": {

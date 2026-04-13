@@ -113,8 +113,9 @@ services:
       - /app/packages/types/node_modules
       - /app/packages/dm-view/node_modules
       - /app/packages/shared/node_modules
-      # Mount the live design system at the path expected by the pnpm link target
-      - ../../civic/packages/design-system:/civic/packages/design-system
+      # Mount the live design system packages at the path expected by pnpm-workspace.yaml
+      - ../civic/packages/design-system:/civic/packages/design-system
+      - ../civic/packages/civic-react-v2:/civic/packages/civic-react-v2
     depends_on:
       - backend
 

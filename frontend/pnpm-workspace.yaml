@@ -1,3 +1,5 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "../../civic/packages/design-system"
+  - "../../civic/packages/civic-react-v2"
